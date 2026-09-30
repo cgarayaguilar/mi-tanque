@@ -2,10 +2,14 @@
   "name": "mi-tanque",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
   "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
     "date-fns": "^2.17.0",
     "dexie": "^3.0.3",
     "prop-types": "^15.7.2",
@@ -14,35 +18,21 @@
     "react-dom": "^17.0.1",
     "react-hook-geolocation": "^1.0.7",
     "react-icons": "^4.2.0",
-    "react-scripts": "4.0.2",
     "react-wavify": "^1.5.2",
     "styled-components": "^5.2.1",
     "sweetalert2": "^10.15.5",
     "web-vitals": "^1.0.1",
     "wouter": "^2.7.3"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "CI= react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
+    "@vitejs/plugin-react": "^6.1.1",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^30.1.1",
+    "vite": "^8.3.1",
+    "vite-plugin-svgr": "^5.2.0",
+    "vitest": "^5.0.3"
   }
 }

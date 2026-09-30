@@ -1,5 +1,5 @@
 import React from 'react'
-import { ReactComponent as TankIcon } from 'assets/tank.svg'
+import TankIcon from 'assets/tank.svg?react'
 
 import {
   TankContainer,

@@ -1,6 +1,5 @@
 import React from 'react'
 import { useState } from 'react'
-import { format } from 'date-fns/format'
 import Modal from 'components/Modal'
 import { DateRange, Buttons, Calendar } from './styles'
 import Button from 'components/Button'

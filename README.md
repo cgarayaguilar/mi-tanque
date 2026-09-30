@@ -1,70 +1,29 @@
-# Getting Started with Create React App
+# Mi tanque
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+App para medir el nivel de combustible de un tanque a partir de las pulgadas medidas.
 
-## Available Scripts
+Construida con React + [Vite](https://vite.dev/). Los datos se guardan localmente en el
+navegador (IndexedDB vía Dexie).
 
-In the project directory, you can run:
+## Requisitos
 
-### `yarn start`
+- Node.js `^20.19.0` o `>=22.12.0`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Scripts
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+| Comando           | Descripción                                               |
+| ----------------- | --------------------------------------------------------- |
+| `npm run dev`     | Servidor de desarrollo en http://localhost:3000           |
+| `npm run build`   | Build de producción en `build/`                           |
+| `npm run preview` | Sirve localmente el build de producción                   |
+| `npm test`        | Tests con Vitest (modo watch; `npx vitest run` una vez)   |
 
-### `yarn test`
+## Imports absolutos
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Las carpetas de primer nivel de `src/` (`components`, `hooks`, `pages`, `services`, `store`,
+`styles`, `utils`, `assets`) se importan sin ruta relativa, p. ej.
+`import Button from 'components/Button'`. Los alias están definidos en `vite.config.mjs`.
 
-### `yarn build`
+## SVG como componentes
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `yarn eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Se usa `vite-plugin-svgr`: `import Logo from 'assets/logo.svg?react'`.

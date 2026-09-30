@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { useLocation } from 'wouter'
 //Import icons
-import { ReactComponent as LogoIcon } from 'assets/logo.svg'
+import LogoIcon from 'assets/logo.svg?react'
 import { FaSun as LightModeIcon } from 'react-icons/fa'
 import { FaMoon as DarkModeIcon } from 'react-icons/fa'
 

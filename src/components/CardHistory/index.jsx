@@ -13,7 +13,7 @@ import {
 import { IoMdCalendar as CalendarIcon } from 'react-icons/io'
 import { IoMdPin as MarkerPin } from 'react-icons/io'
 import { formatDistanceToNow } from 'date-fns'
-import { es as esNI } from 'date-fns/locale/'
+import { es as esNI } from 'date-fns/locale'
 
 function CardHistory({ measurement, tankCapacity }) {
   const { date, inches, gallons, liters, location, fuelHeight } = measurement
