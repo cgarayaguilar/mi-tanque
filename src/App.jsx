@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useEffect } from 'react'
 import { Route } from 'wouter'
 import Home from 'pages/Home'
 import History from 'pages/History'
@@ -12,6 +12,13 @@ import AppBar from 'components/AppBar'
 
 function App() {
   const { theme } = useContext(AppContext)
+
+  // Keep the mobile status bar (installed PWA) in sync with light/dark mode
+  useEffect(() => {
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme.background)
+  }, [theme.background])
 
   return (
     <div>
