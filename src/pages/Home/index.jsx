@@ -8,7 +8,7 @@ import { AppContext } from 'store'
 import { Container, Wrapper, Results, NavBarContainer } from './styles'
 import { useLocation } from 'wouter'
 import useMeasurement from 'hooks/useMeasurement'
-import useGeolocation from 'react-hook-geolocation'
+import { getCurrentPosition } from 'utils/getCurrentPosition'
 
 const initialValues = {
   inches: 0,
@@ -18,9 +18,6 @@ const initialValues = {
 }
 
 export default function Home() {
-  //Estado que obtiene la latitud y longitud del usuario
-  const geolocation = useGeolocation()
-
   //Estado que obtiene el tanque predeterminado
   const { defaultTank } = useContext(AppContext)
   //Funcion para redireccionar a otras paginas
@@ -41,11 +38,11 @@ export default function Home() {
     const tankId = defaultTank.id
     let location = 'Sin ubicación'
 
-    if (!geolocation.error) {
-      location = await getNameOfCity({
-        latitude: geolocation.latitude,
-        longitude: geolocation.longitude,
-      })
+    //Latitud y longitud del usuario al momento de guardar la medicion
+    const position = await getCurrentPosition()
+
+    if (position) {
+      location = await getNameOfCity(position)
     }
 
     const measurements = { ..._results, date, location, tankId }

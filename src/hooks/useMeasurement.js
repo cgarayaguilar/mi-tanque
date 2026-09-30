@@ -55,29 +55,23 @@ export default function useMeasurement() {
   }
 
   const getTanksDetails = async ({ idsTanks }) => {
-    if (idsTanks) {
-      if (idsTanks.length < 1) return
-    }
-    if (!idsTanks) return
+    if (!Array.isArray(idsTanks) || idsTanks.length < 1) return []
 
     try {
       const allTanks = await readTanks()
 
-      if (!Array.isArray(allTanks)) return
+      if (!Array.isArray(allTanks)) return []
 
       //Recorrer la los ids de los tanques para obtener el detalle de cada tanque
-      const tanksWithDetails = idsTanks.map(id => {
-        //getTanksByIds({ id }).then(tankWithDetail=>tankWithDetail)
-        const _tank = allTanks.filter(tank => {
-          return Number(tank.id) === Number(id)
-        })
+      const tanksWithDetails = idsTanks.map(id =>
+        allTanks.find(tank => Number(tank.id) === Number(id))
+      )
 
-        return _tank[0]
-      })
-
-      return tanksWithDetails
+      //Descartar mediciones de tanques que ya no existen en la base de datos
+      return tanksWithDetails.filter(Boolean)
     } catch (error) {
       console.error(error)
+      return []
     }
   }
 
@@ -107,12 +101,22 @@ export default function useMeasurement() {
     }
   }
 
-  const getMeasurements = async () => {
+  //isCancelled evita actualizar el estado si el componente se desmontó o cambió el periodo
+  const getMeasurements = async ({ isCancelled }) => {
     try {
       const measurements = await readMeasurementsByDateRanges({
         startDate: date.start,
         endDate: date.end,
       })
+
+      if (isCancelled()) return
+
+      //Sin mediciones en el periodo: la interfaz muestra el mensaje de lista vacía
+      if (!Array.isArray(measurements) || measurements.length < 1) {
+        setListOfTanks(null)
+        setTotalGallons(initialTotalState)
+        return
+      }
 
       //Ordenar resultados
       measurements.sort((a, b) => {
@@ -132,6 +136,8 @@ export default function useMeasurement() {
       //Obtener detalle de tanques mediante ids
       const tanksWithDetails = await getTanksDetails({ idsTanks })
 
+      if (isCancelled()) return
+
       //Asociar mediciones a cada tanque
       const tanksWithMeasurements = tanksWithDetails.map(tank => ({
         tank: tank,
@@ -141,7 +147,9 @@ export default function useMeasurement() {
         }),
       }))
 
-      setListOfTanks(tanksWithMeasurements)
+      setListOfTanks(
+        tanksWithMeasurements.length > 0 ? tanksWithMeasurements : null
+      )
       setTotalGallons({
         start: measurements[0].gallons,
         end: measurements[measurements.length - 1].gallons,
@@ -150,6 +158,8 @@ export default function useMeasurement() {
           Number(measurements[measurements.length - 1].gallons),
       })
     } catch (err) {
+      if (isCancelled()) return
+
       setListOfTanks(null)
       setTotalGallons(initialTotalState)
       console.error(err)
@@ -157,7 +167,13 @@ export default function useMeasurement() {
   }
 
   useEffect(() => {
-    getMeasurements()
+    let cancelled = false
+
+    getMeasurements({ isCancelled: () => cancelled })
+
+    return () => {
+      cancelled = true
+    }
   }, [date])
 
   return {
