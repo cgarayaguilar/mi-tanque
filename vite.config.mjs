@@ -23,8 +23,8 @@ const absoluteImportDirs = [
   'utils',
 ]
 
-// Manifest and splash colors: the default (dark) background from the design tokens
-const themeColor = colorTokens.dark.background
+// Manifest and splash colors: the default (light) canvas from the design tokens
+const themeColor = colorTokens.light.canvas
 
 const pwa = VitePWA({
   // Ask the user before activating a new version (see src/registerServiceWorker.js)

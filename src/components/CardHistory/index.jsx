@@ -15,6 +15,8 @@ import { IoMdCalendar as CalendarIcon } from 'react-icons/io'
 import { IoMdPin as MarkerPin } from 'react-icons/io'
 import { formatDistanceToNow } from 'date-fns'
 import { es as esNI } from 'date-fns/locale'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 function CardHistory({ measurement, tankCapacity }) {
   const theme = useTheme()
@@ -26,7 +28,7 @@ function CardHistory({ measurement, tankCapacity }) {
         <Text>
           <CalendarIcon />
           <Typography
-            ml="5px"
+            ml={px(space.xxs)}
             variant="caption"
             value={formatDistanceToNow(date, {
               locale: esNI,
@@ -35,7 +37,7 @@ function CardHistory({ measurement, tankCapacity }) {
         </Text>
         <Text>
           <MarkerPin />
-          <Typography ml="5px" variant="caption" value={location} />
+          <Typography ml={px(space.xxs)} variant="caption" value={location} />
         </Text>
       </Header>
       <Results>
@@ -45,7 +47,7 @@ function CardHistory({ measurement, tankCapacity }) {
       </Results>
       <BarContainer>
         <Typography
-          mr="5px"
+          mr={px(space.xxs)}
           variant="caption"
           color={theme.accent}
           value={`${Math.round(fuelHeight)}%`}
@@ -55,7 +57,7 @@ function CardHistory({ measurement, tankCapacity }) {
             <BarProgress width={`${Math.round(fuelHeight)}%`}></BarProgress>
           </Bar>
           <Typography
-            mt="5px"
+            mt={px(space.xxs)}
             variant="caption"
             value={`${gallons} galones / ${tankCapacity} galones`}
           />

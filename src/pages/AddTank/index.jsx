@@ -14,6 +14,8 @@ import Button from 'components/Button'
 import { CgArrowsV as DiameterIcon } from 'react-icons/cg'
 import { CgArrowsH as LengthIcon } from 'react-icons/cg'
 import { Wrapper, Form, TankContainer, ButtonsContainer } from './styles'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 export default function AddTank() {
   //Funcion que guarda el tanque por defecto
@@ -94,7 +96,7 @@ export default function AddTank() {
     <Wrapper>
       <Form onSubmit={handleSubmit} id="formTank">
         <TextField
-          mb="16px"
+          mb={px(space.base)}
           type="number"
           label="Capacidad en galones de su tanque"
           placeholder="Ej. 100, 150, 200"
@@ -102,7 +104,7 @@ export default function AddTank() {
           onChange={e => setCapacity(e.target.value)}
         />
         <TextField
-          mb="16px"
+          mb={px(space.base)}
           type="number"
           label="Diámetro en pulgadas de su tanque"
           placeholder="Ej. 100, 150, 200"
@@ -111,7 +113,7 @@ export default function AddTank() {
           onChange={e => setDiameter(e.target.value)}
         />
         <TextField
-          mb="16px"
+          mb={px(space.base)}
           type="number"
           label="Longitud en pulgadas de su tanque"
           placeholder="Ej. 22, 23, 25"
@@ -131,7 +133,6 @@ export default function AddTank() {
 
       <ButtonsContainer>
         <Button
-          mb="8px"
           variant="filled"
           size="large"
           type="submit"

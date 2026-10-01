@@ -6,7 +6,8 @@ Instrucciones para asistentes de IA. `CLAUDE.md` importa este archivo: edita sol
 
 1. [`ENGINEERING_PRINCIPLES.md`](ENGINEERING_PRINCIPLES.md): el contrato del equipo. Todo cambio
    cumple su Definición de Terminado o documenta la excepción (ADR o comentario en el código).
-2. [`DESIGN.md`](DESIGN.md): tokens y componentes. Nunca escribas colores, espaciados ni tamaños de
+2. [`DESIGN.md`](DESIGN.md): tokens y componentes, basados en el sistema de ElevenLabs (original en
+   `docs/design/elevenlabs.md`). Nunca escribas colores, espaciados ni tamaños de
    fuente sueltos.
 3. [`docs/adr/0001-adopt-engineering-principles.md`](docs/adr/0001-adopt-engineering-principles.md):
    qué es heredado, qué es objetivo y las fases de migración. Revísalo antes de tocar código

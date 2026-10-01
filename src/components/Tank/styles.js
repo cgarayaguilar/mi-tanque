@@ -1,9 +1,10 @@
 import styled from 'styled-components'
+import { typeScale } from 'theme/tokens'
+import { typeStyle } from 'styles/type'
 
 const arrowWidth = '3px'
 
 export const Wrapper = styled.div`
-  //border: 1px dashed transparent;
   display: grid;
   grid-template-areas:
     'diameter tank'
@@ -29,8 +30,7 @@ export const TankContainer = styled.div`
 
 export const TankCapacity = styled.span`
   position: absolute;
-  font-size: 16px;
-  font-weight: bold;
+  ${typeStyle(typeScale.bodyStrong)}
   color: ${({ theme }) => theme.primaryText};
   &:after {
     content: ' gls';
@@ -55,7 +55,7 @@ export const TankLength = styled.div`
 export const HorizontalLine = styled.div`
   width: 100%;
   height: ${({ lineWidth }) => lineWidth};
-  background-color: ${({ theme }) => theme.primaryText};
+  background-color: ${({ theme }) => theme.secondaryText};
   position: relative;
   display: flex;
   align-items: center;
@@ -70,7 +70,7 @@ export const HorizontalLine = styled.div`
         right: 0;
         border-top: ${arrowWidth} solid transparent;
         border-bottom: ${arrowWidth} solid transparent;
-        border-left: ${arrowWidth} solid ${theme.primaryText};
+        border-left: ${arrowWidth} solid ${theme.secondaryText};
     `}
 
     ${({ right, theme }) =>
@@ -79,7 +79,7 @@ export const HorizontalLine = styled.div`
         left: 0;
         border-top: ${arrowWidth} solid transparent;
         border-bottom: ${arrowWidth} solid transparent;
-        border-right: ${arrowWidth} solid ${theme.primaryText};
+        border-right: ${arrowWidth} solid ${theme.secondaryText};
     `}
   }
 `
@@ -87,7 +87,7 @@ export const HorizontalLine = styled.div`
 export const VerticalLine = styled.div`
   width: ${({ lineWidth }) => lineWidth};
   height: 100%;
-  background-color: ${({ theme }) => theme.primaryText};
+  background-color: ${({ theme }) => theme.secondaryText};
   position: relative;
   display: flex;
   justify-content: center;
@@ -103,7 +103,7 @@ export const VerticalLine = styled.div`
         top: -${arrowWidth};
         border-top: ${arrowWidth} solid transparent;
         border-bottom: ${arrowWidth} solid transparent;
-        border-left: ${arrowWidth} solid ${theme.primaryText};
+        border-left: ${arrowWidth} solid ${theme.secondaryText};
     `}
 
     ${({ top, theme }) =>
@@ -113,13 +113,12 @@ export const VerticalLine = styled.div`
         bottom: -${arrowWidth};
         border-top: ${arrowWidth} solid transparent;
         border-bottom: ${arrowWidth} solid transparent;
-        border-right: ${arrowWidth} solid ${theme.primaryText};
+        border-right: ${arrowWidth} solid ${theme.secondaryText};
     `}
   }
 `
 export const Caption = styled.span`
   display: block;
-  font-size: 10px;
-  font-weight: normal;
-  color: ${({ theme }) => theme.primaryText};
+  ${typeStyle(typeScale.captionUppercase)}
+  color: ${({ theme }) => theme.secondaryText};
 `

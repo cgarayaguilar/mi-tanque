@@ -29,7 +29,7 @@ function DetailResultsMeasurements({ totalGallons, date }) {
           label="Diferencia"
           value={`${consumed.toFixed(2)} gls`}
           caption={`Del ${format(startDate, 'd/M/yy')} al ${format(
-            startDate,
+            endDate,
             'd/M/yy'
           )}`}
         />

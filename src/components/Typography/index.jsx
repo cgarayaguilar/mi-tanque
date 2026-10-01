@@ -1,4 +1,5 @@
 import {
+  Display,
   Title,
   Title2,
   Title3,
@@ -11,6 +12,13 @@ import {
 
 export default function Typography({ value, color, variant, mt, mb, ml, mr }) {
   switch (variant.toLowerCase()) {
+    case 'display':
+      return (
+        <Display mt={mt} ml={ml} mr={mr} mb={mb} color={color}>
+          {value}
+        </Display>
+      )
+
     case 'title':
       return (
         <Title mt={mt} ml={ml} mr={mr} mb={mb} color={color}>

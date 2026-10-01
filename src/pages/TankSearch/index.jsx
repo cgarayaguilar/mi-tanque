@@ -7,6 +7,8 @@ import TextField from 'components/TextField'
 import Button from 'components/Button'
 import useTanks from 'hooks/useTanks'
 import { AppContext } from 'store'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 export default function TankSearch() {
   const { addTankForDefault } = useContext(AppContext)
@@ -35,8 +37,8 @@ export default function TankSearch() {
       />
 
       <Typography
-        mt="24px"
-        mb="8px"
+        mt={px(space.lg)}
+        mb={px(space.xs)}
         value="Seleccione su tanque"
         variant="title2"
       />

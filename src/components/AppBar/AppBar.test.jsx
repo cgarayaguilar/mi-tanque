@@ -21,12 +21,13 @@ test('the logo is a link home', () => {
   ).toHaveAttribute('href', '/')
 })
 
-test('the theme toggle is a labelled button that switches the mode', () => {
+test('starts in light mode and the toggle switches it', () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Activar modo oscuro' }))
+
+  expect(window.localStorage.getItem('isDarkModeActive')).toBe('true')
+
   fireEvent.click(screen.getByRole('button', { name: 'Activar modo claro' }))
 
-  expect(
-    screen.getByRole('button', { name: 'Activar modo oscuro' })
-  ).toBeInTheDocument()
   expect(window.localStorage.getItem('isDarkModeActive')).toBe('false')
 })
 

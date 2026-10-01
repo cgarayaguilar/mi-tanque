@@ -1,5 +1,8 @@
 import styled from 'styled-components'
-const badgeSize = '20px'
+import { radius, space, typeScale } from 'theme/tokens'
+import { px, typeStyle } from 'styles/type'
+
+const badgeSize = px(space.lg)
 
 export const StepContainer = styled.form`
   max-width: 100%;
@@ -7,10 +10,10 @@ export const StepContainer = styled.form`
   flex-direction: column;
 `
 export const Step = styled.div`
-  margin-bottom: 8px;
+  margin-bottom: ${px(space.sm)};
   display: grid;
   grid-template-columns: ${badgeSize} 1fr;
-  grid-gap: 8px;
+  gap: ${px(space.sm)};
 `
 export const BadgeContainer = styled.div`
   display: grid;
@@ -21,20 +24,20 @@ export const BadgeContainer = styled.div`
 export const Line = styled.div`
   width: 1px;
   height: 100%;
-  background-color: ${({ theme }) => theme.secondaryText};
-  bottom: 0;
+  background-color: ${({ theme }) => theme.hairline};
 `
 
+// badge-pill from the design system: ink when the step is done
 export const Badge = styled.div`
-  font-size: 12px;
+  ${typeStyle(typeScale.captionUppercase)}
   width: ${badgeSize};
   height: ${badgeSize};
-  border-radius: 50%;
+  border-radius: ${px(radius.pill)};
   background-color: ${({ theme, completed }) =>
-    completed ? theme.accent : theme.secondaryText};
-  color: ${({ theme }) => theme.primaryText};
+    completed ? theme.accent : theme.cardStrong};
+  color: ${({ theme, completed }) =>
+    completed ? theme.onAccent : theme.secondaryText};
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
 `

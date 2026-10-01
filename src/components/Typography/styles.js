@@ -1,75 +1,75 @@
 import styled, { css } from 'styled-components'
+import { typeScale } from 'theme/tokens'
+import { typeStyle } from 'styles/type'
 
 const Primitive = css`
-  font-style: normal;
-  font-style: normal;
-  font-family: 'Roboto', sans-serif;
-
-  font-weight: 400;
-  margin-top: ${({ mt }) => (mt ? mt : 0)};
-  margin-bottom: ${({ mb }) => (mb ? mb : 0)};
-  margin-left: ${({ ml }) => (ml ? ml : 0)};
-  margin-right: ${({ mr }) => (mr ? mr : 0)};
+  margin-top: ${({ mt }) => mt ?? 0};
+  margin-bottom: ${({ mb }) => mb ?? 0};
+  margin-left: ${({ ml }) => ml ?? 0};
+  margin-right: ${({ mr }) => mr ?? 0};
 `
 
+/** Gauge figure: display-md, the editorial serif at weight 300. */
+export const Display = styled.span`
+  ${Primitive}
+  ${typeStyle(typeScale.displayMd)}
+  display: block;
+  color: ${({ color, theme }) => color ?? theme.primaryText};
+`
+
+/** App wordmark: display-sm. */
 export const Title = styled.h1`
   ${Primitive}
-  font-weight: 500;
-  font-size: 28px;
-  color: ${({ color, theme }) => (color ? color : theme.primaryText)};
+  ${typeStyle(typeScale.displaySm)}
+  color: ${({ color, theme }) => color ?? theme.primaryText};
 `
+
+/** Section heads: display-sm. */
 export const Title2 = styled.h2`
   ${Primitive}
-  font-weight: 500;
-  font-size: 20px;
-  color: ${({ color, theme }) => (color ? color : theme.primaryText)};
+  ${typeStyle(typeScale.displaySm)}
+  color: ${({ color, theme }) => color ?? theme.primaryText};
 `
 
+/** Card and list titles: title-sm. */
 export const Title3 = styled.h3`
   ${Primitive}
-  font-weight: bold;
-  font-size: 16px;
-  color: ${({ color, theme }) => (color ? color : theme.primaryText)};
-`
-export const Link = styled.h3`
-  ${Primitive}
-  font-weight: bold;
-  font-size: 16px;
-  color: ${({ color, theme }) => (color ? color : theme.accent)};
-  &:hover {
-    cursor: pointer;
-    text-decoration: underline;
-  }
+  ${typeStyle(typeScale.titleSm)}
+  color: ${({ color, theme }) => color ?? theme.primaryText};
 `
 
-export const Link2 = styled.h4`
+/** Tertiary text link look (visual only; interactive elements are buttons or links). */
+export const Link = styled.span`
   ${Primitive}
-  font-weight: bold;
-  font-size: 14px;
-  color: ${({ color, theme }) => (color ? color : theme.accent)};
-  &:hover {
-    cursor: pointer;
-    text-decoration: underline;
-  }
+  ${typeStyle(typeScale.button)}
+  display: block;
+  color: ${({ color, theme }) => color ?? theme.primaryText};
+  text-decoration: underline;
+  text-underline-offset: 3px;
+`
+
+export const Link2 = styled(Link)`
+  ${typeStyle(typeScale.caption)}
+  font-weight: ${typeScale.bodyStrong.fontWeight};
 `
 
 export const Body = styled.p`
   ${Primitive}
-  font-weight: 400;
-  font-size: 14px;
-  color: ${({ color, theme }) => (color ? color : theme.secondaryText)};
+  ${typeStyle(typeScale.bodySm)}
+  color: ${({ color, theme }) => color ?? theme.bodyText};
 `
 
 export const Caption = styled.span`
   ${Primitive}
-  font-weight: 400;
-  font-size: 12px;
-  color: ${({ color, theme }) => (color ? color : theme.secondaryText)};
+  ${typeStyle(typeScale.caption)}
+  display: block;
+  color: ${({ color, theme }) => color ?? theme.secondaryText};
 `
 
+/** Labels: caption-uppercase. */
 export const Caption2 = styled.span`
   ${Primitive}
-  font-weight: 300;
-  font-size: 10px;
-  color: ${({ color, theme }) => (color ? color : theme.accent)};
+  ${typeStyle(typeScale.captionUppercase)}
+  display: block;
+  color: ${({ color, theme }) => color ?? theme.secondaryText};
 `

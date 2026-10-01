@@ -1,211 +1,176 @@
 # DESIGN.md — Design system de Mi tanque
 
 > **Fuente canónica del sistema visual** (ENGINEERING_PRINCIPLES.md §14.3). La UI consume estos
-> tokens, nunca valores sueltos (§8.13). Si cambia este archivo, cambia el theme, y viceversa: van
-> **en sincronía**.
+> tokens, nunca valores sueltos (§8.13). Si cambia este archivo, cambia `src/theme/tokens.ts`, y
+> viceversa.
 >
-> **Implementación:** los tokens de este archivo viven en `src/theme/tokens.ts`. De ahí salen el
-> theme de MUI (`src/theme/muiTheme.ts`) y el theme heredado de styled-components
-> (`src/store/initialState.js`) mientras conviven, según el plan del
-> [ADR 0001](docs/adr/0001-adopt-engineering-principles.md).
+> **Base:** el sistema de ElevenLabs, instalado con `npx getdesign add elevenlabs` (getdesign
+> 0.6.25). El original se conserva sin modificar en
+> [`docs/design/elevenlabs.md`](docs/design/elevenlabs.md). Este archivo lo adapta a Mi tanque: una
+> PWA de una columna que se usa con una mano junto al tanque, con modo claro y oscuro. Cada
+> desviación del original está marcada como **Adaptación**.
+>
+> **Implementación:** `src/theme/tokens.ts` → theme de MUI (`src/theme/muiTheme.ts`) y theme heredado
+> de styled-components (`src/store/initialState.js`, con `src/styles/type.js` para la tipografía),
+> mientras conviven (ADR 0001).
 
-## Principios visuales
+## Principios
 
-- **Mobile-first, una columna.** La app se usa con una mano, junto al tanque. El contenido se
-  centra con un ancho máximo de 600px.
-- **Plano, sin sombras.** La jerarquía se da con el color de superficie (fondo → tarjeta), no con
-  elevación.
-- **Un solo color de acento** (cian) para acciones, progreso y nivel de combustible. Todo lo
-  interactivo o "lleno" es cian; el resto es neutro.
-- **Modo oscuro por defecto**, con modo claro disponible desde la barra superior.
+- **Editorial y sereno.** Fondo blanco roto, tinta casi negra y pesos tipográficos contenidos. La
+  marca se nota en la tipografía y la atmósfera, no en el color.
+- **Un solo color de acción: la tinta.** Los botones principales son píldoras de tinta. No hay
+  acento saturado.
+- **Los pasteles son atmósfera.** Solo como orbes radiales decorativos (detrás del medidor). Nunca
+  rellenos, texto, datos ni fondos de componentes.
+- **Línea fina + una sombra suave.** Las tarjetas se separan del fondo con 1px de `hairline`; la
+  sombra suave aparece solo al pasar el cursor.
+- **Píldora para acciones; radios suaves para tarjetas.**
 
 ## Color
 
 ### Tokens
 
-| Token           | Modo oscuro (por defecto) | Modo claro             | Uso                                                                        |
-| --------------- | ------------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| `background`    | `#142850`                 | `#FFFFFF`              | Fondo de la app                                                            |
-| `surface`       | `#27496D`                 | `#E1E1E1`              | Tarjetas, campos, barra de navegación, medidor                             |
-| `accent`        | `#00A8CC`                 | `#00A8CC`              | Botones, links, pasos completados, nivel de combustible, barra de progreso |
-| `onAccent`      | `#FFFFFF`                 | `#FFFFFF`              | Texto sobre `accent` (botón relleno)                                       |
-| `textPrimary`   | `#FFFFFF`                 | `#142850`              | Títulos, valores, etiquetas de campos                                      |
-| `textSecondary` | `rgba(255,255,255,0.57)`  | `rgba(39,73,109,0.54)` | Texto de apoyo, captions, bordes de campos, pasos pendientes               |
-| `error`         | `#B00020`                 | `#B00020`              | Errores                                                                    |
-| `overlay`       | `rgba(0,0,0,0.5)`         | `rgba(0,0,0,0.5)`      | Fondo de modales                                                           |
+| Token           | Claro (por defecto) | Oscuro            | Uso                                                                 |
+| --------------- | ------------------- | ----------------- | ------------------------------------------------------------------- |
+| `canvas`        | `#f5f5f5`           | `#0c0a09`         | Fondo de la app                                                     |
+| `surface`       | `#ffffff`           | `#1c1917`         | Tarjetas, diálogos, campos, barra de navegación                     |
+| `surfaceStrong` | `#f0efed`           | `#292524`         | Badges, pestaña activa, pista del medidor y de las barras           |
+| `hairline`      | `#e7e5e4`           | `#292524`         | Divisores y contorno de tarjetas (decorativo)                       |
+| `controlBorder` | `#8f8984`           | `#78716c`         | Borde que identifica un control (campos, botón de contorno)         |
+| `ink`           | `#0c0a09`           | `#ffffff`         | Títulos y texto principal                                           |
+| `body`          | `#4e4e4e`           | `#d6d3d1`         | Texto corrido                                                       |
+| `muted`         | `#6b655e`           | `#a8a29e`         | Etiquetas, metadatos, texto secundario                              |
+| `disabled`      | `#a8a29e`           | `#57534e`         | Texto y controles deshabilitados                                    |
+| `primary`       | `#292524`           | `#fafafa`         | Píldora de acción, estados activos, datos (ola, barras de progreso) |
+| `primaryActive` | `#0c0a09`           | `#e7e5e4`         | Presión y hover de la píldora                                       |
+| `onPrimary`     | `#ffffff`           | `#0c0a09`         | Texto sobre `primary`                                               |
+| `error`         | `#b91c1c`           | `#f87171`         | Errores                                                             |
+| `success`       | `#15803d`           | `#4ade80`         | Confirmaciones                                                      |
+| `overlay`       | `rgba(12,10,9,0.4)` | `rgba(0,0,0,0.6)` | Fondo de diálogos                                                   |
+| `gradientMint`  | `#a7e5d3`           | `#a7e5d3`         | Solo orbes atmosféricos                                             |
+| `gradientSky`   | `#a8c8e8`           | `#a8c8e8`         | Solo orbes atmosféricos                                             |
 
-**Marca** (fuera del theme): azul `#142850` y cian `#00A8CC`. Se usan en el icono de la app
-(`public/pwa-icon.svg`), el `theme_color` del manifest y el logo (`src/assets/logo.svg`).
+**Adaptación — modo oscuro.** El original solo define bandas oscuras de marketing. El modo oscuro
+de la app se deriva de esos tokens (`canvas-deep`, `surface-dark-elevated`, `on-dark`) y de la
+misma escala de grises cálidos (stone) en la que se basa el sistema. La píldora se invierte: blanca
+con texto en tinta. El modo claro es el predeterminado.
 
-### Contraste (WCAG 2.1 AA) — ⚠️ hay incumplimientos
+**Adaptación — contraste (WCAG AA, §8.11).** Los valores del original que no llegan a AA como texto
+de interfaz o borde de control se oscurecieron un paso dentro de la misma familia:
 
-AA exige **4.5:1** para texto normal y **3:1** para texto grande (≥ 24px, o ≥ 18.66px en negrita) y
-componentes de interfaz.
+| Token           | Original  | Proyecto  | Peor caso (original → proyecto)      |
+| --------------- | --------- | --------- | ------------------------------------ |
+| `muted`         | `#777169` | `#6b655e` | 4.20 → 5.01 (sobre `surfaceStrong`)  |
+| `error`         | `#dc2626` | `#b91c1c` | 4.20 → 5.63                          |
+| `success`       | `#16a34a` | `#15803d` | 3.02 → 4.60 (sobre `canvas`)         |
+| `controlBorder` | `#d6d3d1` | `#8f8984` | 1.49 → 3.01 (1.4.11, borde de campo) |
 
-| Combinación                       | Oscuro: fondo                                 | Oscuro: tarjeta | Claro: fondo | Claro: tarjeta |
-| --------------------------------- | --------------------------------------------- | --------------- | ------------ | -------------- |
-| `textPrimary`                     | 14.49 ✅                                      | 9.29 ✅         | 14.49 ✅     | 11.08 ✅       |
-| `textSecondary`                   | 5.71 ✅                                       | **4.24 ❌**     | **2.79 ❌**  | **2.54 ❌**    |
-| `accent` como texto               | 5.16 ✅                                       | **3.31 ❌**     | **2.81 ❌**  | **2.15 ❌**    |
-| `error` como texto                | **1.98 ❌**                                   | **1.27 ❌**     | 7.33 ✅      | 5.60 ✅        |
-| `onAccent` sobre `accent` (botón) | **2.81 ❌** (también falla como texto grande) |                 |              |                |
-
-**Corrección propuesta** (calculada; pendiente de aprobación porque cambia el aspecto visual):
-
-| Token                                         | Cambio propuesto                                               | Resultado                                                   |
-| --------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- |
-| `accentText` (nuevo, solo para texto y links) | Oscuro `#4FD0EB` · Claro `#00677F`                             | Oscuro 7.97 / 5.11 ✅ · Claro 6.47 / 4.95 ✅                |
-| `accent`                                      | Se mantiene `#00A8CC` para rellenos, iconos y el medidor       | —                                                           |
-| `onAccent`                                    | `#142850` en lugar de blanco                                   | 5.16 ✅                                                     |
-| `textSecondary`                               | Oscuro `rgba(255,255,255,0.70)` · Claro `rgba(39,73,109,0.85)` | Oscuro 5.48 en tarjeta ✅ · Claro 6.14 / 5.00 ✅            |
-| `error` (modo oscuro)                         | `#FF8A80`                                                      | 6.35 sobre fondo ✅ (4.07 sobre tarjeta: solo texto grande) |
+Todos los pares texto/fondo de la tabla de tokens cumplen AA (≥ 4.5:1) en ambos modos, y `primary`
+como gráfico cumple 3:1 sobre cualquier superficie. `success` como texto va sobre `canvas` o
+`surface`, no sobre `surfaceStrong` (4.36).
 
 ## Tipografía
 
-**Familia:** Roboto (Google Fonts, pesos 400, 500 y 700), con `sans-serif` como respaldo.
+| Familia               | Uso                                                   |
+| --------------------- | ----------------------------------------------------- |
+| **Newsreader** 300    | Display: títulos de sección, nombre de la app, cifras |
+| **Inter** 400/500/600 | Todo lo demás                                         |
 
-| Variante         | Elemento | Tamaño | Peso   | Color                                  |
-| ---------------- | -------- | ------ | ------ | -------------------------------------- |
-| `title`          | `h1`     | 28px   | 500    | `textPrimary`                          |
-| `title2`         | `h2`     | 20px   | 500    | `textPrimary`                          |
-| `title3`         | `h3`     | 16px   | 700    | `textPrimary`                          |
-| `link`           | `h3`     | 16px   | 700    | `accent`, subrayado al pasar el cursor |
-| `link2`          | `h4`     | 14px   | 700    | `accent`, subrayado al pasar el cursor |
-| `body`           | `p`      | 14px   | 400    | `textSecondary`                        |
-| `caption`        | `span`   | 12px   | 400    | `textSecondary`                        |
-| `caption2`       | `span`   | 10px   | 300 ⚠️ | `accent`                               |
-| `label` (campos) | `label`  | 16px   | 700    | `textPrimary`                          |
+**Adaptación — fuente display.** Waldenburg es de pago. El sustituto que propone el original, EB
+Garamond, no existe en peso 300 en Google Fonts; Newsreader sí, y es una serif editorial moderna.
 
-⚠️ `caption2` usa peso 300, que **no se carga** desde Google Fonts: el navegador lo sintetiza. Al
-migrar, pasa a 400 o se añade el peso 300 a la carga de fuentes.
+| Token              | Fuente     | Tamaño | Peso | Interlineado | Tracking | Uso en la app                                                           |
+| ------------------ | ---------- | ------ | ---- | ------------ | -------- | ----------------------------------------------------------------------- |
+| `displayMd`        | Newsreader | 32     | 300  | 1.13         | -0.32    | Galones del medidor                                                     |
+| `displaySm`        | Newsreader | 24     | 300  | 1.2          | 0        | Nombre de la app, títulos de sección y de diálogo, cifras de resultados |
+| `titleMd`          | Inter      | 20     | 500  | 1.35         | 0        | Títulos de componente (MUI `h6`)                                        |
+| `titleSm`          | Inter      | 18     | 500  | 1.44         | 0.18     | Títulos de tarjeta, cifras del resumen                                  |
+| `bodyMd`           | Inter      | 16     | 400  | 1.5          | 0.16     | Texto base, campos                                                      |
+| `bodyStrong`       | Inter      | 16     | 500  | 1.5          | 0.16     | Etiquetas de campo, capacidad en el diagrama                            |
+| `bodySm`           | Inter      | 15     | 400  | 1.47         | 0.15     | Mensajes y texto de apoyo                                               |
+| `caption`          | Inter      | 14     | 400  | 1.5          | 0        | Detalles de tarjeta, fechas, metadatos                                  |
+| `captionUppercase` | Inter      | 12     | 600  | 1.4          | 0.96     | Etiquetas de cifras ("GALONES"), badges, cotas                          |
+| `button`           | Inter      | 15     | 500  | 1            | 0        | Botones, pestañas, links                                                |
 
-Las variantes `link` y `link2` son solo visuales (texto en `accent`). Todo lo interactivo es un
-`<button>` o un `<a>` real, con foco visible (§8.11).
+- El display nunca va en negrita: 300 es la firma del sistema.
+- El cuerpo nunca baja a 300.
 
-## Espaciado
+## Espaciado, radios y elevación
 
-Base de **8px** con medio paso de 4px. MUI: `theme.spacing(1) = 8px`.
+**Espaciado** (base 4px; MUI `theme.spacing(1) = 4px`): `xxs` 4 · `xs` 8 · `sm` 12 · `base` 16 ·
+`md` 20 · `lg` 24 · `xl` 32 · `xxl` 48. El padding de pantalla es `base`.
 
-| Token | Valor | `theme.spacing()` |
-| ----- | ----- | ----------------- |
-| `xs`  | 4px   | `0.5`             |
-| `sm`  | 8px   | `1`               |
-| `md`  | 16px  | `2`               |
-| `lg`  | 24px  | `3`               |
-| `xl`  | 32px  | `4`               |
+**Radios:** `xs` 4 · `sm` 6 · `md` 8 (campos) · `lg` 12 (tarjetas compactas) · `xl` 16 (tarjetas
+destacadas, diálogos, pastilla del medidor) · `xxl` 24 · `pill` (botones, badges, navegación).
 
-Valores fuera de la escala en el código actual (3px, 5px, 20px, 25px) se redondean al token más
-cercano al migrar cada componente. El padding estándar de pantalla y de tarjeta es `md` (16px).
+**Elevación:** plano + `hairline`. Única sombra: `0 4px 16px rgba(0,0,0,0.04)`, solo en hover de
+tarjetas.
 
-## Radios y sombras
+## Layout
 
-| Token        | Valor   | Uso                                                      |
-| ------------ | ------- | -------------------------------------------------------- |
-| `radius`     | 8px     | Tarjetas, campos, botones, barra de navegación           |
-| `radiusFull` | 50%     | Badges del stepper, medidor circular del tanque          |
-| Sombras      | Ninguna | Diseño plano: MUI `elevation` 0 en todos los componentes |
+- Una columna de ancho máximo **600px**, centrada (**Adaptación:** el original es una web de
+  1200px).
+- Barra superior de **64px**.
+- Rejilla de tanques: columnas automáticas de mínimo 250px.
+- Medidor de **250px**.
 
-## Layout y breakpoints
+## Componentes
 
-- **Contenedor:** ancho máximo 600px, centrado (`body`). En MUI: `<Container maxWidth={false}
-sx={{ maxWidth: 600 }}>` en la raíz.
-- **Pantallas con navegación inferior** (Medición, Historial): columna de alto completo; la barra de
-  navegación se empuja al fondo.
-- **Rejilla de tanques:** columnas automáticas de mínimo 250px (`repeat(auto-fit, minmax(250px,
-1fr))`): 1 columna en teléfonos estrechos, 2 a partir de ~516px.
-- **Breakpoints de MUI:** los de por defecto; con el ancho máximo de 600px, en la práctica solo
-  importan `xs` y `sm`.
+| Componente                 | Especificación                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Botón primario**         | Píldora `primary` / `onPrimary`, `button`, alto **40px** · hover y presión `primaryActive` · deshabilitado `surfaceStrong` / `disabled` · muestra "Guardando…" mientras envía (§8.6). **Adaptación:** las acciones principales de ancho completo ("Calcular", "Guardar") miden **48px** (`size="large"`) porque se usan con una mano junto al tanque |
+| **Botón de contorno**      | Píldora transparente, texto `ink`, borde 1px `controlBorder`                                                                                                                                                                                                                                                                                         |
+| **Botón de texto**         | Texto `ink` subrayado, sin fondo                                                                                                                                                                                                                                                                                                                     |
+| **Campo de texto**         | Fondo `surface`, texto `bodyMd` en `ink`, alto **44px**, radio `md`, borde 1px `controlBorder`; con foco el borde pasa a **2px `ink`** · etiqueta `bodyStrong` · placeholder `muted`                                                                                                                                                                 |
+| **Tarjeta de tanque**      | Botón con fondo `surface`, 1px `hairline`, radio `lg`, padding `sm`, sombra suave en hover · título `titleSm`, detalles `caption`, CTA como texto subrayado                                                                                                                                                                                          |
+| **Resumen de galones**     | `feature-card`: fondo `surface`, 1px `hairline`, radio `xl`, padding `lg` · etiquetas `captionUppercase`, cifras `titleSm`                                                                                                                                                                                                                           |
+| **Medición del historial** | Tarjeta compacta (`surface`, `hairline`, radio `lg`) · barra de llenado de 4px en `primary` sobre `surfaceStrong`                                                                                                                                                                                                                                    |
+| **Fila de tanque**         | `voice-row`: botón de ancho completo con divisor `hairline`, `aria-expanded`                                                                                                                                                                                                                                                                         |
+| **Barra de navegación**    | Píldora `surface` con 1px `hairline`; pestañas de 48px · activa: `surfaceStrong` + `ink`; inactiva: `muted`                                                                                                                                                                                                                                          |
+| **Stepper**                | Badge circular de 24px: completado `primary`/`onPrimary`, pendiente `surfaceStrong`/`muted` · línea 1px `hairline`                                                                                                                                                                                                                                   |
+| **Diagrama de tanque**     | Cilindro en `ink` (SVG `currentColor`), cotas y flechas en `muted`, números `captionUppercase`                                                                                                                                                                                                                                                       |
+| **Medidor**                | Círculo de 250px en `surfaceStrong` con 1px `hairline`; ola en `primary`; cifras en una pastilla `surface` (radio `xl`) encima de la ola para leerse a cualquier nivel; **orbe atmosférico** (`gradientSky` → `gradientMint`) detrás                                                                                                                 |
+| **Diálogo** (MUI)          | Papel `surface`, radio `xl`, 1px `hairline` · título `displaySm` · acciones: `Cancelar` (texto) + principal (píldora) · pantalla completa en teléfonos · único tipo de modal (§8.8)                                                                                                                                                                  |
+| **Calendario**             | Dentro del diálogo: sigue los tokens (`surface`, `ink`, `muted`, `disabled`); rango en píldora `primary` con números `onPrimary`                                                                                                                                                                                                                     |
+| **Toast** (Sileo)          | Único canal de avisos (§8.8). Tema `light` en modo claro y `dark` en modo oscuro · títulos en mayúscula inicial · descripción del toast claro con 8.6:1                                                                                                                                                                                              |
+| **Barra superior**         | `top-nav`: fondo `canvas`, 64px · logo (`currentColor`) + nombre en `displaySm` · botón de tema de MUI                                                                                                                                                                                                                                               |
 
-## Movimiento
+### Estados de toast
 
-| Token              | Valor                                     | Uso                                       |
-| ------------------ | ----------------------------------------- | ----------------------------------------- |
-| `durationShort`    | 250ms                                     | Transiciones de botón y de borde de campo |
-| `durationCollapse` | 300ms                                     | Abrir/cerrar el historial de un tanque    |
-| `durationFill`     | 3s, `cubic-bezier(0.39, 0.575, 0.565, 1)` | Animación de llenado del medidor          |
-| Press              | `scale(0.95)`                             | Feedback táctil al pulsar un botón        |
+| Estado    | Uso                                                                      |
+| --------- | ------------------------------------------------------------------------ |
+| `success` | Una mutación salió bien; la app quedó lista sin conexión                 |
+| `error`   | Una operación falló (guardar, cargar)                                    |
+| `warning` | Un dato ingresado no es válido o ya existe                               |
+| `action`  | Aviso que requiere una acción, con botón (nueva versión); no expira solo |
 
-Respeta `prefers-reduced-motion`: el llenado del medidor se muestra sin animación cuando el usuario
-lo pide (pendiente: hoy no se respeta).
+## Foco, movimiento e iconos
 
-## Iconografía
+- **Foco:** todo control muestra el foco del teclado con un contorno de **2px en `primary`** y 2px
+  de separación (`focusRing` en los tokens; `src/styles/interactive.js` en el código heredado;
+  `MuiButtonBase` en MUI).
+- **Movimiento:** transiciones de 150ms en controles; llenado del medidor de 3s. Con
+  `prefers-reduced-motion` la ola no se anima.
+- **Iconos:** `@mui/icons-material` para código nuevo; `react-icons` hasta migrar cada pantalla.
+  Interactivos con `aria-label`, decorativos con `aria-hidden`.
 
-Hoy se usan cuatro familias de `react-icons` (Font Awesome, Material, BoxIcons, Ionicons). Al
-migrar se unifican en **`@mui/icons-material`** (imports con nombre, tree-shaking), con estos
-equivalentes de significado:
+## Icono de la app y colores de la PWA
 
-| Uso                 | Actual                            | Objetivo                    |
-| ------------------- | --------------------------------- | --------------------------- |
-| Modo claro / oscuro | `FaSun` / `FaMoon`                | `LightMode` / `DarkMode`    |
-| Historial           | `MdHistory`                       | `History`                   |
-| Medición            | `BiTachometer`                    | `Speed`                     |
-| Fecha / ubicación   | `IoMdCalendar` / `IoMdPin`        | `CalendarMonth` / `Place`   |
-| Buscar              | `MdSearch`                        | `Search`                    |
-| Expandir / contraer | `IoIosArrowDown` / `IoIosArrowUp` | `ExpandMore` / `ExpandLess` |
-
-Todo icono interactivo lleva `aria-label`; los decorativos, `aria-hidden`.
-
-## Foco
-
-Todo control muestra el foco del teclado: contorno de 2px en `accent` con 2px de separación
-(`src/styles/interactive.js` en el código heredado; los componentes de MUI usan su propio
-indicador).
-
-## Componentes base
-
-| Componente             | Variantes y estados                                                                                                                                                                            | Notas                                                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Button**             | `filled` (fondo `accent`), `outlined` (borde `accent`), `link` (texto `accent`) · tamaños `small` 14/700, `medium` 16/700, `large` 20/500 · alto 48px · ancho completo · `active`: escala 0.95 | `disabled`: opacidad 0.6, sin escala; muestra "Guardando…" mientras envía (§8.6)                                    |
-| **TextField**          | Etiqueta opcional, icono de búsqueda opcional · borde `textSecondary`, en foco `textPrimary` · fondo `surface`                                                                                 | ⚠️ El área táctil del input (~35px) es menor que los 48px recomendados. Faltan error inline y texto de ayuda (§8.7) |
-| **Card**               | Fondo `surface`, radio 8px, padding 8–16px                                                                                                                                                     | Tarjeta de tanque y de medición                                                                                     |
-| **AppBar**             | Logo + nombre a la izquierda, cambio de tema a la derecha                                                                                                                                      | Alto ~49px                                                                                                          |
-| **NavBar**             | Dos pestañas (Historial, Medición) con icono + texto · activa en `accent`                                                                                                                      | Fija al fondo de la pantalla                                                                                        |
-| **Stepper**            | Badge circular de 20px · completado `accent`, pendiente `textSecondary` · línea vertical de 1px                                                                                                | Formulario de medición en 3 pasos                                                                                   |
-| **Diagrama de tanque** | Cilindro con capacidad al centro y cotas de diámetro y longitud                                                                                                                                | SVG (`src/assets/tank.svg`)                                                                                         |
-| **Medidor**            | Círculo de 250px en `surface` con ola animada `accent` (`react-wavify`) que sube hasta el % de llenado                                                                                         | Muestra % y galones encima                                                                                          |
-| **Dialog** (MUI)       | Título + contenido + acciones (`Cancelar` texto, acción principal `contained`) · pantalla completa en `xs` · backdrop `overlay` · papel `surface` sin elevación                                | Todo modal de la app (§8.8). Hoy: selector de periodo del historial                                                 |
-
-## Mapeo al theme de MUI
-
-Implementado en `src/theme/muiTheme.ts` a partir de `src/theme/tokens.ts`:
-
-```ts
-palette: {
-  mode: 'dark' | 'light',
-  primary:    { main: accent, contrastText: onAccent },
-  background: { default: background, paper: surface },
-  text:       { primary: textPrimary, secondary: textSecondary },
-  error:      { main: error },
-},
-typography: { fontFamily: "'Roboto', sans-serif", button: { textTransform: 'none' } },
-spacing: 8,
-shape: { borderRadius: 8 },
-components: {
-  MuiPaper:    { styleOverrides: { root: { backgroundImage: 'none' } } }, // diseño plano
-  MuiBackdrop: { styleOverrides: { root: { backgroundColor: overlay } } },
-},
-```
+- Icono: logo en blanco sobre `primary` claro (`#292524`), generado desde `public/pwa-icon.svg`.
+- `theme_color` y `background_color` del manifest: `canvas` claro. La app sincroniza el
+  `theme-color` con el modo al arrancar.
 
 ## Colores fuera de los tokens (§8.13)
 
-Ninguno en el código: ESLint rechaza cualquier color hex fuera de `src/theme/tokens.ts`. La
-configuración de Vite (manifest) y la del generador de iconos importan sus colores de los tokens.
-Solo quedan dos excepciones que no pueden leer los tokens: el SVG fuente del icono
-(`public/pwa-icon.svg`) y el `theme-color` inicial de `index.html`, que la app sincroniza al
-arrancar.
+Ninguno en el código: ESLint rechaza cualquier color hex fuera de `src/theme/tokens.ts`. Solo hay
+dos excepciones, porque no pueden leer los tokens:
 
-## Toasts (Sileo)
+- El SVG fuente del icono (`public/pwa-icon.svg`).
+- El `theme-color` inicial de `index.html`.
 
-Todo aviso al usuario es un toast de Sileo (ENGINEERING_PRINCIPLES.md §8.8), en la parte inferior
-central. Tema del toast: `dark` en modo oscuro y `light` en modo claro. Dos ajustes globales en
-`src/styles/globalStyles.js`:
+## Hacer y no hacer
 
-- Títulos en mayúscula inicial solamente (Sileo los capitaliza palabra por palabra).
-- Descripción del toast claro al 70% de opacidad: 8.6:1 en lugar de 3.95:1 (AA).
-
-| Estado    | Uso                                                                                 |
-| --------- | ----------------------------------------------------------------------------------- |
-| `success` | Una mutación salió bien; la app quedó lista sin conexión                            |
-| `error`   | Una operación falló (guardar, cargar)                                               |
-| `warning` | Un dato ingresado no es válido o ya existe                                          |
-| `action`  | Aviso que requiere una acción, con botón (nueva versión disponible); no expira solo |
+- **Sí:** píldora `primary` para la acción principal; Newsreader 300 en títulos; Inter con tracking
+  ligero en el cuerpo; orbes pastel solo como atmósfera; tokens en todo.
+- **No:** un color de acción saturado; display en negrita; pasteles como relleno, texto o datos;
+  esquinas rectas en botones; valores sueltos.

@@ -3,7 +3,8 @@ import { colorTokens } from './src/theme/tokens.ts'
 
 // Source icon already has a full-bleed background and keeps the logo inside the
 // maskable safe zone, so no extra padding is needed.
-const background = colorTokens.dark.background
+// App icon: the ink pill color, the system's only action color
+const background = colorTokens.light.primary
 
 export default defineConfig({
   headLinkOptions: { preset: '2023' },

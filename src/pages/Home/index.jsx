@@ -11,6 +11,8 @@ import useMeasurement from 'hooks/useMeasurement'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
 import { sileo } from 'sileo'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 const initialValues = {
   inches: 0,
@@ -69,7 +71,7 @@ export default function Home() {
     <Container>
       <Wrapper>
         <Stepper onCalcFuelLevel={onCalcFuelLevel} resetValues={resetValues} />
-        <Typography value={'Resultados'} variant="title2" mt="32px" />
+        <Typography value={'Resultados'} variant="title2" mt={px(space.xl)} />
 
         <Results>
           <TextGroup label="Pulgadas" value={results.inches} />

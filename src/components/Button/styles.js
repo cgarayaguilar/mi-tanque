@@ -1,79 +1,79 @@
 import styled, { css } from 'styled-components'
 import { focusRing } from 'styles/interactive'
+import { controlHeight, radius, space, typeScale } from 'theme/tokens'
+import { px, typeStyle } from 'styles/type'
 
-const Small = css`
-  font-weight: 700;
-  font-size: 14px;
-`
-
-const Medium = css`
-  font-weight: 700;
-  font-size: 16px;
-`
-
-const Large = css`
-  font-weight: 500;
-  font-size: 20px;
-`
-
+// Pill buttons from the design system: 40px, or 48px for the full-width
+// primary actions used one-handed at the tank (size="large").
 const Primitive = css`
-  font-family: 'Roboto', sans-serif;
-  font-weight: 500;
-  font-size: 20px;
-  margin-top: ${({ mt }) => (mt ? mt : 0)};
-  margin-bottom: ${({ mb }) => (mb ? mb : 0)};
-  margin-left: ${({ ml }) => (ml ? ml : 0)};
-  margin-right: ${({ mr }) => (mr ? mr : 0)};
-
-  border-radius: 8px;
-
-  //text-transform: uppercase;
+  ${typeStyle(typeScale.button)}
+  margin-top: ${({ mt }) => mt ?? 0};
+  margin-bottom: ${({ mb }) => mb ?? 0};
+  margin-left: ${({ ml }) => ml ?? 0};
+  margin-right: ${({ mr }) => mr ?? 0};
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  border: none;
-  padding: 8px;
-  height: 48px;
+  min-height: ${({ size }) =>
+    px(size === 'large' ? controlHeight.buttonLarge : controlHeight.button)};
+  padding: 0 ${px(space.md)};
+  border-radius: ${px(radius.pill)};
   cursor: pointer;
-  transition: all 0.25s;
-  position: relative;
   white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   ${focusRing}
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
     transform: none;
   }
+`
 
-  //Aplicar estilos segun el tamaño
-  ${({ size }) => size === 'small' && `${Small}`}
-  ${({ size }) => size === 'medium' && `${Medium}`}
-    ${({ size }) => size === 'large' && `${Large}`}
+export const FilledButton = styled.button`
+  ${Primitive}
+  background-color: ${({ theme }) => theme.accent};
+  color: ${({ theme }) => theme.onAccent};
+  border: none;
+
+  &:hover:not(:disabled),
+  &:active:not(:disabled) {
+    background-color: ${({ theme }) => theme.accentActive};
+  }
+
+  &:disabled {
+    background-color: ${({ theme }) => theme.cardStrong};
+    color: ${({ theme }) => theme.disabledText};
+  }
 `
 
 export const OutLineButton = styled.button`
   ${Primitive}
   background-color: transparent;
-  color: ${({ theme }) => theme.accent};
-  border: 1px solid ${({ theme }) => theme.accent};
+  color: ${({ theme }) => theme.primaryText};
+  border: 1px solid ${({ theme }) => theme.controlBorder};
+
+  &:disabled {
+    color: ${({ theme }) => theme.disabledText};
+  }
 `
+
 export const LinkButton = styled.button`
   ${Primitive}
   background-color: transparent;
-  color: ${({ theme }) => theme.accent};
+  color: ${({ theme }) => theme.primaryText};
   border: none;
-`
-export const FilledButton = styled.button`
-  ${Primitive}
+  text-decoration: underline;
+  text-underline-offset: 3px;
 
-  background-color: ${({ theme }) => theme.accent};
-  color: ${({ theme }) => theme.onAccent};
-  border: none;
+  &:disabled {
+    color: ${({ theme }) => theme.disabledText};
+  }
 `

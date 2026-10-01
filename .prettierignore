@@ -5,3 +5,5 @@ coverage
 package-lock.json
 # Vendored third-party stylesheet
 src/styles/normalize.css
+# Vendor design reference, kept verbatim (getdesign add elevenlabs)
+docs/design/elevenlabs.md

@@ -1,4 +1,6 @@
 import { css } from 'styled-components'
+import { focusRing as focusRingToken } from 'theme/tokens'
+import { px } from 'styles/type'
 
 // Legacy styled-components helpers (ADR 0001): they go away when these
 // components move to MUI, whose ButtonBase already provides both.
@@ -17,10 +19,10 @@ export const resetInteractive = css`
   cursor: pointer;
 `
 
-/** Visible keyboard focus in the accent color (§8.11). */
+/** Visible keyboard focus in the primary (ink) color (§8.11). */
 export const focusRing = css`
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.accent};
-    outline-offset: 2px;
+    outline: ${px(focusRingToken.width)} solid ${({ theme }) => theme.accent};
+    outline-offset: ${px(focusRingToken.offset)};
   }
 `

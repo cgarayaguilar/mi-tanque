@@ -4,7 +4,7 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import { ThemeProvider } from '@mui/material/styles'
 import { muiThemes } from 'theme/muiTheme'
-import type { ColorMode } from 'theme/tokens'
+import { defaultColorMode, type ColorMode } from 'theme/tokens'
 import { reportError } from 'utils/reportError'
 
 interface ErrorBoundaryProps {
@@ -16,14 +16,14 @@ interface ErrorBoundaryState {
 }
 
 // The fallback renders outside the app providers, so it reads the stored
-// light/dark preference itself; dark (the app default) if it cannot.
+// light/dark preference itself, or uses the default mode if it cannot.
 const storedColorMode = (): ColorMode => {
   try {
-    return window.localStorage.getItem('isDarkModeActive') === 'false'
-      ? 'light'
-      : 'dark'
+    const stored = window.localStorage.getItem('isDarkModeActive')
+    if (stored === null) return defaultColorMode
+    return stored === 'true' ? 'dark' : 'light'
   } catch {
-    return 'dark'
+    return defaultColorMode
   }
 }
 
@@ -61,8 +61,8 @@ export default class ErrorBoundary extends Component<
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 2,
-            p: 3,
+            gap: 4,
+            p: 6,
             textAlign: 'center',
           }}
         >

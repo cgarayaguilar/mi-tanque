@@ -1,7 +1,9 @@
 import styled from 'styled-components'
+import { layout, space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 export const Container = styled.section`
-  height: calc(100vh - 49px);
+  min-height: calc(100vh - ${px(layout.appBarHeight)});
   display: flex;
   flex-direction: column;
 `
@@ -9,9 +11,10 @@ export const Container = styled.section`
 export const NavBarContainer = styled.div`
   width: 100%;
   margin-top: auto;
+  padding: 0 ${px(space.base)} ${px(space.base)};
 `
 
 export const Wrapper = styled.section`
   max-width: 100%;
-  padding: 16px;
+  padding: ${px(space.base)};
 `

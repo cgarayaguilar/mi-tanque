@@ -10,6 +10,8 @@ import { Wrapper, Container, NavBarContainer } from './styles'
 import Typography from 'components/Typography'
 
 import useMeasurement from 'hooks/useMeasurement'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 // Module scope: declared inside the component it was recreated (and remounted) on every render
 const DateModal = lazy(() => import('components/DateModal'))
@@ -42,7 +44,7 @@ function History() {
         <DetailResultsMeasurements totalGallons={totalGallons} date={date} />
 
         <Typography
-          mt="16px"
+          mt={px(space.base)}
           variant="title2"
           value="Historial de mediciones"
         />
@@ -61,7 +63,7 @@ function History() {
 
         {!listOfTanks && (
           <Typography
-            mt="16px"
+            mt={px(space.base)}
             variant="body"
             value={`No se encontraron mediciones del ${format(
               date.start,

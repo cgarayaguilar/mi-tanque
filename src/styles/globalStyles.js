@@ -1,8 +1,10 @@
 import { createGlobalStyle } from 'styled-components'
 import 'styles/normalize.css'
+import { layout, typeScale } from 'theme/tokens'
+import { px, typeStyle } from 'styles/type'
 
 export const GlobalStyle = createGlobalStyle`
-  *{ 
+  *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -13,11 +15,12 @@ export const GlobalStyle = createGlobalStyle`
     height: 100%;
     width: 100%;
     margin: auto;
-    max-width: 600px;
+    max-width: ${px(layout.maxWidth)};
     background: ${({ theme }) => theme.background};
-    color: ${({ theme }) => theme.primaryText};
-    font-weight: normal;
-    font-family: 'Roboto', sans-serif;
+    color: ${({ theme }) => theme.bodyText};
+    ${typeStyle(typeScale.bodyMd)}
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Sileo title-cases toast titles; Spanish uses sentence case (§9) */

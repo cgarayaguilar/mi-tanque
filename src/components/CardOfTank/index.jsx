@@ -3,6 +3,8 @@ import Typography from 'components/Typography'
 import Tank from 'components/Tank'
 import { Card } from './styles.js'
 import { useWindowWidth } from 'hooks/useWindowWidth'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 export default function CardOfTank({
   capacity,
@@ -32,19 +34,19 @@ export default function CardOfTank({
         <Typography
           value={`Tanque de ${capacity} ${!isSmallDevice ? 'gls' : ''} `}
           variant="title3"
-          mb="8px"
+          mb={px(space.xs)}
         />
         <Typography
-          value={`Diametro: ${diameter}  ${
+          value={`Diámetro: ${diameter}  ${
             !isSmallDevice ? 'pulgadas' : '"'
           }  `}
-          variant="body"
-          mb="4px"
+          variant="caption"
+          mb={px(space.xxs)}
         />
         <Typography
           value={`Longitud: ${length} ${!isSmallDevice ? 'pulgadas' : '"'}`}
-          variant="body"
-          mb="8px"
+          variant="caption"
+          mb={px(space.xs)}
         />
 
         <Typography value={ctaText} variant="link2" />

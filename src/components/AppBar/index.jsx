@@ -17,7 +17,7 @@ export default function AppBar() {
       <Link href="/">
         <Logo aria-label="Mi tanque, ir al inicio">
           <LogoIcon aria-hidden="true" />
-          <Typography ml="8px" variant="title" value="Mi tanque" />
+          <Typography variant="title" value="Mi tanque" />
         </Logo>
       </Link>
 

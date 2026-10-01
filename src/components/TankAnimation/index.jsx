@@ -1,34 +1,34 @@
 import { useTheme } from 'styled-components'
-import { Wrapper, Wave, FuelLevel } from './styles'
-
 import { FaGasPump as FuelIcon } from 'react-icons/fa'
 import Typography from 'components/Typography'
+import { Gauge, Wrapper, Wave, FuelLevel } from './styles'
+
+const prefersReducedMotion = () =>
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 export default function TankAnimation({ fuelHeight = 0, gallons = 0 }) {
   const theme = useTheme()
 
   return (
-    <Wrapper>
-      <FuelLevel>
-        <FuelIcon size={32} />
-        <Typography
-          mt="8px"
-          variant="body"
-          value={`${Math.round(fuelHeight)}%`}
-        />
-        <Typography mt="8px" variant="title" value={`${gallons} gls`} />
-      </FuelLevel>
-      <Wave
-        fuellevel={`${fuelHeight}%`}
-        fill={theme.accent}
-        paused={false}
-        options={{
-          height: 5,
-          amplitude: 20,
-          speed: 0.15,
-          points: 3,
-        }}
-      ></Wave>
-    </Wrapper>
+    <Gauge>
+      <Wrapper>
+        <FuelLevel>
+          <FuelIcon size={20} aria-hidden="true" />
+          <Typography variant="caption2" value={`${Math.round(fuelHeight)}%`} />
+          <Typography variant="display" value={`${gallons} gls`} />
+        </FuelLevel>
+        <Wave
+          fuellevel={`${fuelHeight}%`}
+          fill={theme.accent}
+          paused={prefersReducedMotion()}
+          options={{
+            height: 5,
+            amplitude: 20,
+            speed: 0.15,
+            points: 3,
+          }}
+        ></Wave>
+      </Wrapper>
+    </Gauge>
   )
 }

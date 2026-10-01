@@ -43,14 +43,14 @@ export default function NavBar({ activeTab }) {
         onClick={() => handleClickTab(Tabs.HISTORY)}
         active={checkActiveTab(Tabs.HISTORY)}
       >
-        <HistoryIcon size={32} />
+        <HistoryIcon size={20} aria-hidden="true" />
         <span>Historial</span>
       </NavItem>
       <NavItem
         onClick={() => handleClickTab(Tabs.METER)}
         active={checkActiveTab(Tabs.METER)}
       >
-        <MeterIcon size={32} />
+        <MeterIcon size={20} aria-hidden="true" />
         <span>Medición</span>
       </NavItem>
     </Nav>

@@ -9,6 +9,8 @@ import { AppContext } from 'store'
 import { convertGallonsToLiters } from 'utils/converts'
 import { calcFuelLevel } from 'utils/calcFuelLevel'
 import { sileo } from 'sileo'
+import { space } from 'theme/tokens'
+import { px } from 'styles/type'
 
 export default function Stepper({ onCalcFuelLevel, resetValues }) {
   const { defaultTank } = useContext(AppContext)
@@ -83,7 +85,11 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
         </BadgeContainer>
 
         <div>
-          <Typography mb="4px" value="Elija un  tanque" variant="title2" />
+          <Typography
+            mb={px(space.xxs)}
+            value="Elija un  tanque"
+            variant="title2"
+          />
           <CardOfTank
             capacity={defaultTank.capacity}
             diameter={defaultTank.diameter}
