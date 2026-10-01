@@ -250,3 +250,21 @@ export const softShadow = '0 4px 16px rgba(0, 0, 0, 0.04)'
 
 /** Focus ring for keyboard users (§8.11). px */
 export const focusRing = { width: 2, offset: 2 } as const
+
+/**
+ * Vehicle paint colors for the fleet's color dots (backend specs/0003). Data,
+ * not theme: the same in light and dark mode, drawn with a hairline ring.
+ */
+export const vehicleSwatches = {
+  white: '#ffffff',
+  black: '#1c1917',
+  silver: '#c7c9cc',
+  gray: '#78716c',
+  red: '#dc2626',
+  blue: '#2563eb',
+  green: '#16a34a',
+  yellow: '#facc15',
+  orange: '#f97316',
+  brown: '#7c4a2d',
+  beige: '#e8dcc4',
+} as const

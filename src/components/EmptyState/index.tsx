@@ -8,7 +8,8 @@ interface EmptyStateProps {
   icon: ReactNode
   title: string
   description: string
-  action: { label: string; onClick: () => void }
+  /** Omitted when the user cannot act (e.g. a read-only role). */
+  action?: { label: string; onClick: () => void } | undefined
   /** h1 when the state is the whole screen; h2 inside a page with its own title. */
   headingLevel?: 'h1' | 'h2'
 }
@@ -44,9 +45,11 @@ export default function EmptyState({
       <Typography variant="body1" sx={{ maxWidth: '36ch' }}>
         {description}
       </Typography>
-      <Button variant="contained" size="large" onClick={action.onClick}>
-        {action.label}
-      </Button>
+      {action && (
+        <Button variant="contained" size="large" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      )}
     </Stack>
   )
 }

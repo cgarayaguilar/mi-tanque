@@ -22,6 +22,7 @@ import {
   getFunctions,
   type Functions,
 } from 'firebase/functions'
+import type { FirebaseStorage } from 'firebase/storage'
 import {
   authDomainFor,
   emulatorHostFor,
@@ -92,6 +93,32 @@ export const loadFirebase = (): Promise<FirebaseServices> => {
   return services
 }
 
+let storage: Promise<FirebaseStorage> | null = null
+
+/**
+ * Storage, only for fleet photos: its SDK loads on the first photo shown or
+ * uploaded, not with the rest of the signed-in mode.
+ */
+export const loadStorage = (): Promise<FirebaseStorage> => {
+  storage ??= Promise.all([loadFirebase(), import('firebase/storage')])
+    .then(([{ app }, storageSdk]) => {
+      const instance = storageSdk.getStorage(app)
+      if (emulatorsEnabled()) {
+        storageSdk.connectStorageEmulator(
+          instance,
+          emulatorHostFor(window.location.hostname),
+          EMULATORS.storage
+        )
+      }
+      return instance
+    })
+    .catch((error: unknown) => {
+      storage = null
+      throw error
+    })
+  return storage
+}
+
 /**
  * Signs out and deletes the account data cached on this phone (specs/0002
  * RF-14): several drivers can share one device. The next loadFirebase()
@@ -105,4 +132,5 @@ export const signOutAndClearFirebase = async (): Promise<void> => {
   await clearIndexedDbPersistence(db)
   await deleteApp(app)
   services = null
+  storage = null
 }

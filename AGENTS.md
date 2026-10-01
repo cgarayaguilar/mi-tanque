@@ -75,7 +75,9 @@ en cada push y PR.
   `services/session` importa el SDK de Firebase. El store lo carga con `import()` y solo las páginas
   lazy (`/entrar`, `/bienvenida`, `/cuenta`) lo importan directo: así el modo básico nunca descarga
   el SDK (verifícalo en el build: el chunk `index` no debe contener Firestore). Las pantallas del
-  modo autenticado van dentro de `SessionGate`.
+  modo autenticado van dentro de `SessionGate`. La flota sigue el mismo patrón: `services/fleet`
+  (estático solo en páginas lazy) y `store/fleet` (con `import()`); el SDK de Storage se carga aparte,
+  solo al ver o subir una foto.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests

@@ -51,7 +51,7 @@ export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
 export const readTanks = async (): Promise<Tank[]> =>
   (await db.tanks.toArray()).map(toTank)
 
-const PREDEFINED_TANKS: TankDimensions[] = [
+export const PREDEFINED_TANKS: TankDimensions[] = [
   { capacity: 50, diameter: 25, length: 26 },
   { capacity: 75, diameter: 24, length: 41 },
   { capacity: 75, diameter: 25, length: 39 },

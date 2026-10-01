@@ -1,8 +1,10 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { useLocation } from 'wouter'
+import { useSessionStore } from 'store/session'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import HistoryIcon from '@mui/icons-material/History'
+import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import SpeedIcon from '@mui/icons-material/Speed'
 import {
   colorTokens,
@@ -23,9 +25,18 @@ const SECTIONS: Section[] = [
   { href: '/', label: 'Medición', icon: <SpeedIcon /> },
 ]
 
+// With a session the organization's fleet joins the tabs (specs/0003 RF-1)
+const FLEET: Section = {
+  href: '/flota',
+  label: 'Flota',
+  icon: <LocalShippingIcon />,
+}
+
 /** Pill tabs between the two main screens; the route decides the active one. */
 export default function NavBar() {
   const [location, navigate] = useLocation()
+  const signedIn = useSessionStore(state => state.status === 'ready')
+  const sections = signedIn ? [...SECTIONS, FLEET] : SECTIONS
 
   const go = (href: string) => (event: MouseEvent) => {
     // Real links (open in a new tab, copy) that navigate without a reload
@@ -51,7 +62,7 @@ export default function NavBar() {
         aria-label="Secciones"
         sx={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: `repeat(${String(sections.length)}, 1fr)`,
           gap: 1,
           p: 1,
           bgcolor: 'background.paper',
@@ -60,8 +71,11 @@ export default function NavBar() {
           borderRadius: `${String(radius.pill)}px`,
         }}
       >
-        {SECTIONS.map(({ href, label, icon }) => {
-          const active = location === href
+        {sections.map(({ href, label, icon }) => {
+          const active =
+            href === '/flota'
+              ? location.startsWith('/flota')
+              : location === href
           return (
             <ButtonBase
               key={href}

@@ -20,6 +20,8 @@ const History = lazy(() => import('pages/History'))
 const SignIn = lazy(() => import('pages/SignIn'))
 const Welcome = lazy(() => import('pages/Welcome'))
 const Account = lazy(() => import('pages/Account'))
+const Fleet = lazy(() => import('pages/Fleet'))
+const FleetItem = lazy(() => import('pages/FleetItem'))
 
 export default function App() {
   const mode = useColorModeStore(state => state.mode)
@@ -70,6 +72,9 @@ export default function App() {
         <Route path="/entrar" component={SignIn} />
         <Route path="/bienvenida" component={Welcome} />
         <Route path="/cuenta" component={Account} />
+        <Route path="/flota" component={Fleet} />
+        <Route path="/flota/:section" component={Fleet} />
+        <Route path="/flota/:section/:id" component={FleetItem} />
       </Suspense>
       {/* Single toast outlet for mutation feedback (§8.14) */}
       <Toaster
