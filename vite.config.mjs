@@ -34,8 +34,8 @@ const pwa = VitePWA({
     'pwa-icon.svg',
   ],
   manifest: {
-    name: 'Mi tanque',
-    short_name: 'Mi tanque',
+    name: 'Solo Camioneros',
+    short_name: 'Solo Camioneros',
     description: 'Mide el nivel de combustible de tu tanque',
     lang: 'es',
     start_url: '/',

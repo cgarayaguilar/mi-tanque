@@ -1,9 +1,10 @@
-# Mi tanque
+# Solo Camioneros
 
 App para medir el nivel de combustible de un tanque a partir de las pulgadas medidas. Es una PWA:
 se instala en el teléfono y funciona sin conexión.
 
-- **Producción:** https://mi-tanque.vercel.app
+- **Producción:** https://solocamioneros.com (`mi-tanque.vercel.app` redirige ahí)
+- **Backend:** repo hermano `solocamioneros-backend` (Firebase), con los specs de cada fase
 - **Stack actual:** React + [Vite](https://vite.dev/); datos guardados localmente en el navegador
   (IndexedDB vía Dexie). El stack objetivo y la migración están en el
   [ADR 0001](docs/adr/0001-adopt-engineering-principles.md).
@@ -49,8 +50,7 @@ La app queda en http://localhost:3000. `npm install` también instala el hook de
 - **Pre-commit** (husky + lint-staged): ESLint y Prettier sobre los archivos del commit.
 - **CI** (`.github/workflows/ci.yml`): tipos, lint, formato, tests y build en cada push a `main` y
   en cada pull request.
-- **TypeScript estricto** (`tsconfig.json`): el código nuevo se escribe en TS; el JS heredado
-  compila mientras se migra.
+- **TypeScript estricto** (`tsconfig.json`): todo `src/` es TypeScript.
 - `git blame` ignora los commits de formato masivo listados en `.git-blame-ignore-revs`. Para
   activarlo en tu clon: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
@@ -63,7 +63,7 @@ La app queda en http://localhost:3000. `npm install` también instala el hook de
 ## Imports absolutos
 
 Las carpetas de primer nivel de `src/` (`components`, `hooks`, `pages`, `schemas`, `services`,
-`store`, `styles`, `theme`, `utils`, `assets`) y el archivo `src/types.ts` se importan sin ruta relativa, p. ej.
+`store`, `theme`, `utils`, `assets`) y el archivo `src/types.ts` se importan sin ruta relativa, p. ej.
 `import Button from 'components/Button'`. Los alias están definidos en `tsconfig.json` y en
 `vite.config.mjs`.
 
@@ -79,7 +79,7 @@ La app es instalable y funciona sin conexión gracias a
 - **Service worker**: precachea todo el build y cachea Google Fonts. Solo se genera en el build
   (`npm run build && npm run preview`), no en `npm run dev`.
 - **Actualizaciones**: cuando se publica una versión nueva, la app pregunta si se quiere
-  actualizar (`src/registerServiceWorker.js`).
+  actualizar (`src/registerServiceWorker.ts`).
 - **Iconos**: se generan a partir de `public/pwa-icon.svg` con `npm run generate-pwa-assets`
   (config en `pwa-assets.config.mjs`).
 - **Instalar en el teléfono**: requiere HTTPS, así que hay que abrir la app desplegada (no la IP

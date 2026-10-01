@@ -37,12 +37,12 @@ export default function AppBar() {
         component="a"
         href="/"
         onClick={goHome}
-        aria-label="Mi tanque, ir al inicio"
+        aria-label="Solo Camioneros, ir al inicio"
         sx={{ gap: 2, borderRadius: `${String(radius.sm)}px` }}
       >
         <LogoIcon aria-hidden="true" />
         <Typography variant="h3" component="span">
-          Mi tanque
+          Solo Camioneros
         </Typography>
       </ButtonBase>
 

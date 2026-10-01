@@ -1,4 +1,4 @@
-// Design tokens from DESIGN.md (ElevenLabs-based system adapted to Mi tanque):
+// Design tokens from DESIGN.md (ElevenLabs-based system adapted to Solo Camioneros):
 // the single source for the MUI theme, the legacy styled-components theme and
 // the PWA colors. Change DESIGN.md and this file together.
 

@@ -6,7 +6,7 @@ test('renders the app bar and the tank list', async () => {
 
   render(<App />)
 
-  expect(screen.getByText('Mi tanque')).toBeInTheDocument()
+  expect(screen.getByText('Solo Camioneros')).toBeInTheDocument()
   expect(
     await screen.findByRole('heading', { name: 'Elige tu tanque' })
   ).toBeInTheDocument()

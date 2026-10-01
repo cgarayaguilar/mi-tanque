@@ -14,7 +14,7 @@ beforeEach(async () => {
 
 test('the logo is a link home', () => {
   expect(
-    screen.getByRole('link', { name: 'Mi tanque, ir al inicio' })
+    screen.getByRole('link', { name: 'Solo Camioneros, ir al inicio' })
   ).toHaveAttribute('href', '/')
 })
 

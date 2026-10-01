@@ -1,4 +1,4 @@
-# DESIGN.md — Design system de Mi tanque
+# DESIGN.md — Design system de Solo Camioneros
 
 > **Fuente canónica del sistema visual** (ENGINEERING_PRINCIPLES.md §14.3). La UI consume estos
 > tokens, nunca valores sueltos (§8.13). Si cambia este archivo, cambia `src/theme/tokens.ts`, y
