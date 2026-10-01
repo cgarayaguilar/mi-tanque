@@ -13,9 +13,11 @@ const absoluteImportDirs = [
   'components',
   'hooks',
   'pages',
+  'schemas',
   'services',
   'store',
   'styles',
+  'types',
   'utils',
 ]
 
@@ -93,5 +95,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/setupTests.js',
+    clearMocks: true,
   },
 })

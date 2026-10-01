@@ -9,6 +9,8 @@ import { Container, Wrapper, Results, NavBarContainer } from './styles'
 import { useLocation } from 'wouter'
 import useMeasurement from 'hooks/useMeasurement'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
+import { reportError } from 'utils/reportError'
+import { sileo } from 'sileo'
 
 const initialValues = {
   inches: 0,
@@ -23,7 +25,7 @@ export default function Home() {
   //Funcion para redireccionar a otras paginas
   const [_, setLocation] = useLocation()
   //Funcion que guarda la medicion en la bbdd
-  const { saveMeasurements, getNameOfCity } = useMeasurement()
+  const { saveMeasurement, getNameOfCity } = useMeasurement()
   //Estado que guarda los resultados de la medicion
   const [results, seResults] = useState(initialValues)
 
@@ -34,22 +36,24 @@ export default function Home() {
     seResults(_results)
 
     const date = new Date()
-
     const tankId = defaultTank.id
-    let location = 'Sin ubicación'
 
-    //Latitud y longitud del usuario al momento de guardar la medicion
-    const position = await getCurrentPosition()
+    try {
+      //Latitud y longitud del usuario al momento de guardar la medicion
+      const position = await getCurrentPosition()
+      const location = position
+        ? await getNameOfCity(position)
+        : 'Sin ubicación'
 
-    if (position) {
-      location = await getNameOfCity(position)
+      await saveMeasurement({ ..._results, date, location, tankId })
+      sileo.success({ title: 'Medición guardada' })
+    } catch (error) {
+      reportError(error, { operation: 'createMeasurement', tankId })
+      sileo.error({
+        title: 'No pudimos guardar la medición',
+        description: 'Reintenta en un momento.',
+      })
     }
-
-    const measurements = { ..._results, date, location, tankId }
-
-    saveMeasurements({
-      measurements,
-    })
   }
 
   useEffect(() => {

@@ -1,22 +1,30 @@
-import { db } from 'services/db'
+import { db, type StoredTank } from 'services/db'
+import { tankDimensionsSchema } from 'schemas/tank'
+import type { Tank, TankDimensions } from 'types'
 
-export const createTank = async ({ capacity, diameter, length }) => {
-  try {
-    const newTank = await db.tanks.add({ capacity, diameter, length })
+const toTank = (stored: StoredTank): Tank => {
+  if (stored.id === undefined) throw new Error('Stored tank without id')
 
-    return newTank
-  } catch (err) {
-    console.error(err)
+  return {
+    id: stored.id,
+    capacity: Number(stored.capacity),
+    diameter: Number(stored.diameter),
+    length: Number(stored.length),
   }
 }
 
-export const readTanks = async () => {
-  const allTanks = await db.tanks.toArray()
+/** Saves a tank and returns it normalized. Rejects on invalid dimensions or storage errors. */
+export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
+  const valid = tankDimensionsSchema.parse(dimensions)
+  const id = await db.tanks.add(valid)
 
-  return allTanks
+  return { id, ...valid }
 }
 
-const PREDEFINED_TANKS = [
+export const readTanks = async (): Promise<Tank[]> =>
+  (await db.tanks.toArray()).map(toTank)
+
+const PREDEFINED_TANKS: TankDimensions[] = [
   { capacity: 50, diameter: 25, length: 26 },
   { capacity: 75, diameter: 24, length: 41 },
   { capacity: 75, diameter: 25, length: 39 },
@@ -37,7 +45,7 @@ const PREDEFINED_TANKS = [
 // Check and insert inside one read-write transaction: IndexedDB serializes
 // them, so concurrent first visits (two tabs, or StrictMode running effects
 // twice) cannot seed the predefined tanks twice.
-export const seedPredefinedTanks = () =>
+export const seedPredefinedTanks = (): Promise<void> =>
   db.transaction('rw', db.tanks, async () => {
     if ((await db.tanks.count()) === 0) {
       await db.tanks.bulkAdd(PREDEFINED_TANKS)

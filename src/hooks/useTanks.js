@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
+import { sileo } from 'sileo'
 import { createTank, readTanks, seedPredefinedTanks } from 'services/tanks'
+import { reportError } from 'utils/reportError'
 
 export default function useTank() {
   const [tanks, setTanks] = useState(null)
@@ -7,34 +9,19 @@ export default function useTank() {
 
   const updateKeyword = _keyword => setKeyword(_keyword)
 
-  const saveTank = (tank, onSave = () => {}) => {
-    const { capacity, diameter, length } = tank
-
+  // Resolves with the saved tank; the caller reports failures and informs the user
+  const saveTank = ({ capacity, diameter, length }) =>
     createTank({ capacity, diameter, length })
-      .then(tankAddedID => {
-        onSave(tankAddedID)
-      })
-      .catch(error => {
-        console.error(error)
-      })
-  }
 
   const doesThisTankExist = async ({ capacity, diameter, length }) => {
-    try {
-      const tanks = await readTanks()
+    const tanks = await readTanks()
 
-      const tankExist = tanks.some(tank => {
-        return (
-          Number(tank.capacity) === Number(capacity) &&
-          Number(tank.diameter) === Number(diameter) &&
-          Number(tank.length) === Number(length)
-        )
-      })
-
-      return tankExist
-    } catch (error) {
-      console.error(error)
-    }
+    return tanks.some(
+      tank =>
+        tank.capacity === Number(capacity) &&
+        tank.diameter === Number(diameter) &&
+        tank.length === Number(length)
+    )
   }
 
   const getTanks = () => {
@@ -43,7 +30,11 @@ export default function useTank() {
       .then(() => readTanks())
       .then(tanks => setTanks(tanks))
       .catch(error => {
-        console.error(error)
+        reportError(error, { operation: 'loadTanks' })
+        sileo.error({
+          title: 'No pudimos cargar los tanques',
+          description: 'Recarga la página para reintentar.',
+        })
       })
   }
 

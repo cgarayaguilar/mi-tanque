@@ -5,13 +5,14 @@ import History from 'pages/History'
 import TankSearch from 'pages/TankSearch'
 import AddTank from 'pages/AddTank'
 import { ThemeProvider } from 'styled-components'
+import { Toaster } from 'sileo'
 import { AppContext } from 'store'
 
 import { GlobalStyle } from 'styles/globalStyles'
 import AppBar from 'components/AppBar'
 
 function App() {
-  const { theme } = useContext(AppContext)
+  const { theme, isDarkModeActive } = useContext(AppContext)
 
   // Keep the mobile status bar (installed PWA) in sync with light/dark mode
   useEffect(() => {
@@ -30,6 +31,11 @@ function App() {
         <Route path="/tanques/crear" default component={AddTank} />
         <Route path="/history" component={History} />
       </ThemeProvider>
+      {/* Single toast outlet for mutation feedback (§8.14) */}
+      <Toaster
+        position="bottom-center"
+        theme={isDarkModeActive ? 'dark' : 'light'}
+      />
     </div>
   )
 }

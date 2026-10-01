@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { sileo } from 'sileo'
 import App from '../../App'
 import AppProvider from 'store'
 import { db } from 'services/db'
@@ -40,12 +41,13 @@ let consoleError
 beforeEach(async () => {
   window.localStorage.clear()
   await db.measurements.clear()
+  await db.tanks.clear()
   consoleError = vi.spyOn(console, 'error')
   mockGeolocation()
 })
 
 afterEach(() => {
-  consoleError.mockRestore()
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   delete navigator.geolocation
 })
@@ -94,4 +96,37 @@ test('saves the measurement with the city name of the current position', async (
     location: 'Managua, Nicaragua',
   })
   expect(fetch.mock.calls[0][0]).toContain('point.lat=12.13&point.lon=-86.25')
+  expect(sileo.success).toHaveBeenCalledWith({ title: 'Medición guardada' })
+})
+
+const selectTankAndCalculate = async inches => {
+  const tankId = await db.tanks.add({ capacity: 50, diameter: 25, length: 26 })
+  window.localStorage.setItem(
+    'defaultTank',
+    JSON.stringify({ id: tankId, capacity: 50, diameter: 25, length: 26 })
+  )
+  renderAt('/')
+
+  fireEvent.change(
+    await screen.findByPlaceholderText('Ingrese la cantidad de pulgadas'),
+    { target: { value: inches } }
+  )
+  fireEvent.click(screen.getByText('Calcular'))
+}
+
+// Regression: a failed save used to be silent (only console.error)
+test('tells the user when the measurement could not be saved', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(db.measurements, 'add').mockRejectedValueOnce(new Error('Aborted'))
+
+  await selectTankAndCalculate('12')
+
+  await waitFor(() =>
+    expect(sileo.error).toHaveBeenCalledWith({
+      title: 'No pudimos guardar la medición',
+      description: 'Reintenta en un momento.',
+    })
+  )
+  expect(sileo.success).not.toHaveBeenCalled()
+  expect(await db.measurements.count()).toBe(0)
 })

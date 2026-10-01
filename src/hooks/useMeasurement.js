@@ -5,6 +5,8 @@ import {
 } from 'services/measurements'
 import { readTanks } from 'services/tanks'
 import { addDays, addHours } from 'date-fns'
+import { sileo } from 'sileo'
+import { reportError } from 'utils/reportError'
 
 const initialTotalState = {
   start: 0,
@@ -31,15 +33,8 @@ export default function useMeasurement() {
     })
   }
 
-  const saveMeasurements = ({ measurements, onSave = () => {} }) => {
-    createMeasurement(measurements)
-      .then(() => {
-        onSave()
-      })
-      .catch(error => {
-        console.error(error)
-      })
-  }
+  // Resolves with the saved id; the caller reports failures and informs the user
+  const saveMeasurement = measurement => createMeasurement(measurement)
 
   const getIdsOfTanks = ({ data }) => {
     if (!data) return []
@@ -57,22 +52,15 @@ export default function useMeasurement() {
   const getTanksDetails = async ({ idsTanks }) => {
     if (!Array.isArray(idsTanks) || idsTanks.length < 1) return []
 
-    try {
-      const allTanks = await readTanks()
+    const allTanks = await readTanks()
 
-      if (!Array.isArray(allTanks)) return []
+    //Recorrer la los ids de los tanques para obtener el detalle de cada tanque
+    const tanksWithDetails = idsTanks.map(id =>
+      allTanks.find(tank => tank.id === Number(id))
+    )
 
-      //Recorrer la los ids de los tanques para obtener el detalle de cada tanque
-      const tanksWithDetails = idsTanks.map(id =>
-        allTanks.find(tank => Number(tank.id) === Number(id))
-      )
-
-      //Descartar mediciones de tanques que ya no existen en la base de datos
-      return tanksWithDetails.filter(Boolean)
-    } catch (error) {
-      console.error(error)
-      return []
-    }
+    //Descartar mediciones de tanques que ya no existen en la base de datos
+    return tanksWithDetails.filter(Boolean)
   }
 
   const getNameOfCity = async ({ latitude, longitude }) => {
@@ -86,7 +74,9 @@ export default function useMeasurement() {
 
       return `${location.locality}, ${location.country}`
     } catch (error) {
-      console.error(error)
+      // The place name is optional: without it the measurement is still saved.
+      // Being offline is expected, so only report failures while online.
+      if (navigator.onLine) reportError(error, { operation: 'reverseGeocode' })
       return 'Sin ubicación'
     }
   }
@@ -162,7 +152,11 @@ export default function useMeasurement() {
 
       setListOfTanks(null)
       setTotalGallons(initialTotalState)
-      console.error(err)
+      reportError(err, { operation: 'loadMeasurements' })
+      sileo.error({
+        title: 'No pudimos cargar el historial',
+        description: 'Recarga la página para reintentar.',
+      })
     }
   }
 
@@ -177,7 +171,7 @@ export default function useMeasurement() {
   }, [date])
 
   return {
-    saveMeasurements,
+    saveMeasurement,
     getNameOfCity,
     listOfTanks,
     totalGallons,

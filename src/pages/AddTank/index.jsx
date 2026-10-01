@@ -2,7 +2,9 @@ import { useContext, useState } from 'react'
 import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import useTanks from 'hooks/useTanks'
-import { validationAlert, successAlert } from 'utils/alerts'
+import { validationAlert } from 'utils/alerts'
+import { reportError } from 'utils/reportError'
+import { sileo } from 'sileo'
 
 //Import components
 import TextField from 'components/TextField'
@@ -37,27 +39,35 @@ export default function AddTank() {
     if (length < 10 || length > 150)
       return validationAlert('Ingresa una longitud valida para tu tanque')
 
-    const exists = await doesThisTankExist({ capacity, diameter, length })
+    try {
+      const exists = await doesThisTankExist({ capacity, diameter, length })
 
-    if (exists) return validationAlert('Ya existe un tanque con estas medidas')
+      if (exists)
+        return validationAlert('Ya existe un tanque con estas medidas')
 
-    const tank = {
-      capacity,
-      diameter,
-      length,
-    }
+      const newTank = await saveTank({ capacity, diameter, length })
 
-    saveTank(tank, tankAddedID => {
       //Limpiar campos
       setCapacity('')
       setDiameter('')
       setLength('')
       //Seleccionar tanque agregado como predeterminado
-      addTankForDefault({ tank: { ...tank, id: tankAddedID } })
-      successAlert('Tanque agregado correctamente')
+      addTankForDefault({ tank: newTank })
+      sileo.success({ title: 'Tanque agregado' })
       //Redireccionar a la home
       setLocation('/')
-    })
+    } catch (error) {
+      reportError(error, {
+        operation: 'createTank',
+        capacity,
+        diameter,
+        length,
+      })
+      sileo.error({
+        title: 'No pudimos guardar el tanque',
+        description: 'Reintenta en un momento.',
+      })
+    }
   }
 
   //Redireccionar a la home

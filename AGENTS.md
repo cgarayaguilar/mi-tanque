@@ -62,6 +62,13 @@ en cada push y PR.
   `import Button from 'components/Button'`. Los alias están en `tsconfig.json` (`paths`) y en
   `vite.config.mjs`: mantenlos sincronizados.
 - **SVG como componentes:** `import Logo from 'assets/logo.svg?react'`.
+- **Tipos y esquemas:** las entidades se tipan en `src/types.ts` (`import type { Tank } from 'types'`)
+  y se validan en la frontera de datos con los esquemas Zod de `src/schemas/`.
+- **Errores:** todo `catch` llama a `reportError(error, { operation, ...contexto })`
+  (`src/utils/reportError.ts`, el canal único de §7.3) y avisa al usuario con Sileo. Nunca pongas
+  ubicaciones ni datos personales en el contexto.
+- **Feedback:** cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
+  `sileo` está simulado globalmente (`src/setupTests.js`): verifica las llamadas, no el DOM.
 - **Idioma:** código, identificadores, comentarios y logs en inglés; texto de cara al usuario en
   español, con la voz de `ENGINEERING_PRINCIPLES.md` §9 (tú, español neutro).
 - **Commits:** Conventional Commits, un cambio lógico por commit, en una rama (nunca directo en

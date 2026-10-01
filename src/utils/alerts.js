@@ -8,16 +8,6 @@ export const validationAlert = message => {
   })
 }
 
-export const successAlert = message => {
-  return Swal.fire({
-    position: 'top-end',
-    icon: 'success',
-    title: message,
-    showConfirmButton: false,
-    timer: 1500,
-  })
-}
-
 export const updateAvailableAlert = () => {
   return Swal.fire({
     icon: 'info',
