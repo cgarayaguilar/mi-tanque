@@ -9,7 +9,7 @@ import { sileo } from 'sileo'
 
 //Import components
 import TextField from 'components/TextField'
-import Tank from 'components/Tank'
+import TankDiagram from 'components/TankDiagram'
 import Button from 'components/Button'
 //Import Icons
 import { CgArrowsV as DiameterIcon } from 'react-icons/cg'
@@ -129,12 +129,7 @@ export default function AddTank() {
         />
       </Form>
       <TankContainer>
-        <Tank
-          capacity={capacity}
-          diameter={diameter}
-          length={length}
-          lineWidth="1px"
-        />
+        <TankDiagram capacity={capacity} diameter={diameter} length={length} />
       </TankContainer>
 
       <ButtonsContainer>

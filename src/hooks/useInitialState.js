@@ -1,6 +1,7 @@
 import { darkTheme, lightTheme } from 'store/initialState'
 import { useLocalStorage } from 'hooks/useLocalStorage'
 import { defaultColorMode } from 'theme/tokens'
+import { useSelectedTankStore } from 'store/selectedTank'
 
 const useInitialState = () => {
   // Only the preference is stored; colors always come from the design tokens
@@ -9,8 +10,10 @@ const useInitialState = () => {
     'isDarkModeActive',
     defaultColorMode === 'dark'
   )
-  //Estado que guarda el tanque seleccionado
-  const [defaultTank, setDefaultTank] = useLocalStorage('defaultTank', {})
+  // Backed by the Zustand store so migrated and legacy screens share one source
+  const selectedTank = useSelectedTankStore(state => state.selectedTank)
+  const selectTank = useSelectedTankStore(state => state.selectTank)
+  const defaultTank = selectedTank ?? {}
 
   const theme = isDarkModeActive ? darkTheme : lightTheme
 
@@ -23,7 +26,7 @@ const useInitialState = () => {
   }
 
   const addTankForDefault = ({ tank }) => {
-    setDefaultTank(tank)
+    selectTank(tank)
   }
 
   return {

@@ -118,7 +118,15 @@ Se adelanta a la fase 2 en todo lo que no depende del backend. Mientras no exist
 stores de Zustand se apoyan en la capa de servicios actual (`src/services`): cuando llegue el
 backend solo cambian los servicios, no las pantallas.
 
-Orden: Medición (`Home` + `Stepper`) → Tanques (`TankSearch` + `AddTank`) → Historial. Cada
+Orden: Medición (`Home` + `Stepper`) → Tanques (`TankSearch` + `AddTank`) → Historial.
+
+**Medición ✅ (2026-10-01).** `pages/Home` en TSX: `Stepper` de MUI, React Hook Form + Zod
+(`schemas/measurementForm`, errores junto al campo), store de Zustand `selectedTank` (misma clave
+de `localStorage`; el Context heredado lo lee de ahí), `useSaveMeasurement` como único punto de
+guardado y los 5 estados (vacío con CTA en vez de redirigir, parcial con "—", guardando, error con
+Sileo, ideal). Componentes nuevos compartidos: `TankDiagram` y `Stat` (ya usados también por las
+pantallas heredadas), `TankCard`, `FuelGauge` y `EmptyState`. Eliminados: `Stepper`,
+`TankAnimation`, `TextGroup` y `Tank`. Medición ya no carga el historial al abrirse. Cada
 pantalla pasa a TSX con theme de MUI (desde `DESIGN.md`), React Hook Form + Zod, Sileo, store de
 Zustand sobre Firestore filtrado por `accountId`, los 5 estados y la voz de §9.
 

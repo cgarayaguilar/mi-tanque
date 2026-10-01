@@ -1,6 +1,6 @@
 import CardHistory from 'components/CardHistory'
 import React, { useId, useState } from 'react'
-import Tank from 'components/Tank'
+import TankDiagram from 'components/TankDiagram'
 import Typography from 'components/Typography'
 import { IoIosArrowDown as ArrowDownIcon } from 'react-icons/io'
 import { IoIosArrowUp as ArrowUpIcon } from 'react-icons/io'
@@ -23,7 +23,7 @@ function TankHistoryCollapse({ tank, measurements }) {
         aria-expanded={collapseIsactive}
         aria-controls={collapseIsactive ? listId : undefined}
       >
-        <Tank capacity={capacity} diameter={diameter} length={length} />
+        <TankDiagram capacity={capacity} diameter={diameter} length={length} />
         <div>
           <Typography variant="title3" value={`Tanque ${capacity} gls`} />
           <Typography

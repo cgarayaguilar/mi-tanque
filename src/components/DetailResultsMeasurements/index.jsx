@@ -1,4 +1,4 @@
-import TextGroup from 'components/TextGroup'
+import Stat from 'components/Stat'
 import Typography from 'components/Typography'
 import React from 'react'
 import { Wrapper, Results } from './styles'
@@ -12,19 +12,19 @@ function DetailResultsMeasurements({ totalGallons, date }) {
     <Wrapper>
       <Typography value="Galones de combustible" variant="title3" />
       <Results>
-        <TextGroup
+        <Stat
           size="small"
           label="Al iniciar"
           value={`${start} gls`}
           caption={format(startDate, 'd/M/yy')}
         />
-        <TextGroup
+        <Stat
           size="small"
           label="Al finalizar"
           value={`${end} gls`}
           caption={format(endDate, 'd/M/yy')}
         />
-        <TextGroup
+        <Stat
           size="small"
           label="Diferencia"
           value={`${consumed.toFixed(2)} gls`}

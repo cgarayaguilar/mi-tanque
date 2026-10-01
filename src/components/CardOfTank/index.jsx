@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Typography from 'components/Typography'
-import Tank from 'components/Tank'
+import TankDiagram from 'components/TankDiagram'
 import { Card } from './styles.js'
 import { useWindowWidth } from 'hooks/useWindowWidth'
 import { space } from 'theme/tokens'
@@ -28,7 +28,7 @@ export default function CardOfTank({
       onClick={onClick}
       aria-label={`${ctaText}: tanque de ${capacity} galones, ${diameter} por ${length} pulgadas`}
     >
-      <Tank capacity={capacity} diameter={diameter} length={length} />
+      <TankDiagram capacity={capacity} diameter={diameter} length={length} />
 
       <div>
         <Typography

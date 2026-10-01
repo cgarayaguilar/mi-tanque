@@ -99,8 +99,68 @@ const createMuiTheme = (mode: ColorMode): Theme => {
       MuiBackdrop: {
         styleOverrides: { root: { backgroundColor: color.overlay } },
       },
+      MuiFormLabel: {
+        styleOverrides: {
+          root: {
+            ...typeScale.bodyStrong,
+            color: color.ink,
+            marginBottom: space.xs,
+            '&.Mui-focused': { color: color.ink },
+            '&.Mui-error': { color: color.ink },
+          },
+        },
+      },
+      MuiFormHelperText: {
+        styleOverrides: {
+          root: {
+            ...typeScale.caption,
+            marginInline: 0,
+            color: color.muted,
+            '&.Mui-error': { color: color.error },
+          },
+        },
+      },
+      MuiInputAdornment: {
+        styleOverrides: { root: { color: color.muted } },
+      },
+      MuiStepLabel: {
+        styleOverrides: {
+          label: {
+            ...typeScale.titleSm,
+            color: color.ink,
+            '&.Mui-active, &.Mui-completed': {
+              color: color.ink,
+              fontWeight: typeScale.titleSm.fontWeight,
+            },
+          },
+        },
+      },
+      MuiStepIcon: {
+        styleOverrides: {
+          root: {
+            color: color.surfaceStrong,
+            '& .MuiStepIcon-text': {
+              fill: color.muted,
+              ...typeScale.captionUppercase,
+            },
+            '&.Mui-active, &.Mui-completed': { color: color.primary },
+            '&.Mui-active .MuiStepIcon-text': { fill: color.onPrimary },
+          },
+        },
+      },
+      MuiStepConnector: {
+        styleOverrides: { line: { borderColor: color.hairline } },
+      },
+      MuiStepContent: {
+        styleOverrides: { root: { borderColor: color.hairline } },
+      },
       MuiOutlinedInput: {
         styleOverrides: {
+          input: {
+            // MUI's input line box is 1.4375em; the padding completes the 44px control
+            ...typeScale.bodyMd,
+            padding: `${String((controlHeight.input - typeScale.bodyMd.fontSize * 1.4375) / 2)}px ${String(space.base)}px`,
+          },
           root: {
             borderRadius: radius.md,
             backgroundColor: color.surface,
@@ -110,6 +170,10 @@ const createMuiTheme = (mode: ColorMode): Theme => {
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
               borderColor: color.ink,
               borderWidth: 2,
+            },
+            // After the focus rule so an invalid field stays red while focused
+            '&.Mui-error .MuiOutlinedInput-notchedOutline': {
+              borderColor: color.error,
             },
           },
         },

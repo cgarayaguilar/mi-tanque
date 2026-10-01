@@ -19,3 +19,18 @@ vi.mock('sileo', () => ({
   },
   Toaster: () => null,
 }))
+
+// jsdom has no matchMedia (real browsers do): report no media preference
+Object.defineProperty(window, 'matchMedia', {
+  configurable: true,
+  value: query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }),
+})

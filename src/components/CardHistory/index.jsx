@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTheme } from 'styled-components'
-import TextGroup from 'components/TextGroup'
+import Stat from 'components/Stat'
 import Typography from 'components/Typography'
 import {
   Wrapper,
@@ -41,9 +41,9 @@ function CardHistory({ measurement, tankCapacity }) {
         </Text>
       </Header>
       <Results>
-        <TextGroup size="small" label="Pulgadas" value={inches} />
-        <TextGroup size="small" label="Galones" value={gallons} />
-        <TextGroup size="small" label="Litros" value={liters} />
+        <Stat size="small" label="Pulgadas" value={inches} />
+        <Stat size="small" label="Galones" value={gallons} />
+        <Stat size="small" label="Litros" value={liters} />
       </Results>
       <BarContainer>
         <Typography

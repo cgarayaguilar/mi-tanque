@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  createMeasurement,
-  readMeasurementsByDateRanges,
-} from 'services/measurements'
+import { readMeasurementsByDateRanges } from 'services/measurements'
 import { readTanks } from 'services/tanks'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import { sileo } from 'sileo'
@@ -36,9 +33,6 @@ export default function useMeasurement() {
     })
   }
 
-  // Resolves with the saved id; the caller reports failures and informs the user
-  const saveMeasurement = measurement => createMeasurement(measurement)
-
   const getIdsOfTanks = ({ data }) => {
     if (!data) return []
     const ids = data.map(measurement => measurement.tankId)
@@ -64,24 +58,6 @@ export default function useMeasurement() {
 
     //Descartar mediciones de tanques que ya no existen en la base de datos
     return tanksWithDetails.filter(Boolean)
-  }
-
-  const getNameOfCity = async ({ latitude, longitude }) => {
-    try {
-      const response = await fetch(
-        `https://app.geocodeapi.io/api/v1/reverse?point.lat=${latitude}&point.lon=${longitude}&apikey=6384fa00-7b09-11eb-b491-2511be64546d`
-      )
-
-      const data = await response.json()
-      const location = data?.features[0].properties
-
-      return `${location.locality}, ${location.country}`
-    } catch (error) {
-      // The place name is optional: without it the measurement is still saved.
-      // Being offline is expected, so only report failures while online.
-      if (navigator.onLine) reportError(error, { operation: 'reverseGeocode' })
-      return 'Sin ubicación'
-    }
   }
 
   const getMeasurementsByTank = ({ id, data }) => {
@@ -174,8 +150,6 @@ export default function useMeasurement() {
   }, [date])
 
   return {
-    saveMeasurement,
-    getNameOfCity,
     listOfTanks,
     totalGallons,
     onSelectDate,
