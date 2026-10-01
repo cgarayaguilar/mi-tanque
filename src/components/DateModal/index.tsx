@@ -9,8 +9,9 @@ import DialogTitle from '@mui/material/DialogTitle'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-// date-fns 2 (the app's version): MUI X names this adapter AdapterDateFns too
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV2'
+// MUI X v7 (the version the license covers): this adapter is for date-fns 2,
+// the app's version
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import type { PickersInputLocaleText } from '@mui/x-date-pickers/locales'
 import { esES } from '@mui/x-date-pickers-pro/locales'
 import { StaticDateRangePicker } from '@mui/x-date-pickers-pro/StaticDateRangePicker'
@@ -45,7 +46,7 @@ const localeText = Object.fromEntries(
   Object.entries(
     esES.components.MuiLocalizationProvider.defaultProps.localeText
   ).filter(([, text]) => text !== undefined)
-) as PickersInputLocaleText
+) as PickersInputLocaleText<Date>
 
 /**
  * The history's period (ADR 0001, phase 3): MUI X's range calendar in a
