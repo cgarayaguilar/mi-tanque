@@ -1,15 +1,29 @@
 import { useState } from 'react'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import { useTheme, type SxProps, type Theme } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+// date-fns 2 (the app's version): MUI X names this adapter AdapterDateFns too
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV2'
+import type { PickersInputLocaleText } from '@mui/x-date-pickers/locales'
+import { esES } from '@mui/x-date-pickers-pro/locales'
+import { StaticDateRangePicker } from '@mui/x-date-pickers-pro/StaticDateRangePicker'
+import type { DateRange } from '@mui/x-date-pickers-pro/models'
+import { LicenseInfo } from '@mui/x-license'
+import { isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { DateRange, type Range, type RangeKeyDict } from 'react-date-range'
-import 'react-date-range/dist/styles.css'
-import 'react-date-range/dist/theme/default.css'
+import { PERIOD_SHORTCUTS } from './periodShortcuts'
+
+// MUI X Pro license from the environment (never committed). This module is
+// a lazy chunk: the license and the picker load only when choosing a period
+const licenseKey = import.meta.env.VITE_MUI_X_LICENSE_KEY
+if (licenseKey) LicenseInfo.setLicenseKey(licenseKey)
 
 export interface DateRangeSelection {
   startDate: Date
@@ -22,52 +36,21 @@ interface DateModalProps {
   onClose: () => void
 }
 
-const RANGE_KEY = 'selection'
-
-// react-date-range ships light-only CSS that loads with this lazy chunk; these
-// rules are scoped here (and win on specificity) so it follows the theme
-const calendarStyles: SxProps<Theme> = theme => {
-  const { palette } = theme
-  // Same selector shape as the library's rule, so the dialog's class wins
-  const selectedDay = ['.rdrStartEdge', '.rdrEndEdge', '.rdrInRange']
-    .map(edge => `& .rdrDay:not(.rdrDayPassive) ${edge} ~ .rdrDayNumber span`)
-    .join(', ')
-
-  return {
-    px: 0,
-    display: 'flex',
-    justifyContent: 'center',
-    '& .rdrCalendarWrapper, & .rdrDateDisplayWrapper, & .rdrMonthAndYearWrapper':
-      {
-        backgroundColor: palette.background.paper,
-        color: palette.text.primary,
-        fontFamily: theme.typography.fontFamily,
-      },
-    '& .rdrMonthAndYearPickers select': {
-      color: palette.text.primary,
-      backgroundColor: palette.background.paper,
-    },
-    '& .rdrDateDisplayItem': {
-      backgroundColor: palette.background.paper,
-      border: `1px solid ${palette.divider}`,
-      boxShadow: 'none',
-      '& input': { color: palette.text.primary },
-    },
-    '& .rdrDateDisplayItemActive': { borderColor: palette.primary.main },
-    '& .rdrMonthName, & .rdrWeekDay': { color: palette.text.secondary },
-    '& .rdrDayNumber span': { color: palette.text.primary },
-    '& .rdrDayPassive .rdrDayNumber span, & .rdrDayDisabled .rdrDayNumber span':
-      { color: palette.text.disabled },
-    '& .rdrDayDisabled': { backgroundColor: 'transparent' },
-    [selectedDay]: { color: palette.primary.contrastText },
-    '& .rdrDayToday .rdrDayNumber span:after': {
-      backgroundColor: palette.primary.main,
-    },
-  }
-}
 // Earliest date the app can hold measurements for
 const MIN_DATE = new Date(2020, 0, 6)
 
+// Spanish texts; the locale marks every key optional, the provider wants
+// the ones it has
+const localeText = Object.fromEntries(
+  Object.entries(
+    esES.components.MuiLocalizationProvider.defaultProps.localeText
+  ).filter(([, text]) => text !== undefined)
+) as PickersInputLocaleText
+
+/**
+ * The history's period (ADR 0001, phase 3): MUI X's range calendar in a
+ * dialog, with quick periods. Replaces react-date-range and its patch.
+ */
 export default function DateModal({
   initialRange,
   onSelect,
@@ -75,16 +58,15 @@ export default function DateModal({
 }: DateModalProps) {
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
-  const [range, setRange] = useState<Range>({ ...initialRange, key: RANGE_KEY })
-
-  const handleChange = (ranges: RangeKeyDict) => {
-    const selection = ranges[RANGE_KEY]
-    if (selection) setRange(selection)
-  }
+  const [range, setRange] = useState<DateRange<Date>>([
+    initialRange.startDate,
+    initialRange.endDate,
+  ])
+  const [start, end] = range
+  const today = new Date()
 
   const apply = () => {
-    const { startDate, endDate } = range
-    if (startDate && endDate) onSelect({ startDate, endDate })
+    if (start && end) onSelect({ startDate: start, endDate: end })
     onClose()
   }
 
@@ -93,28 +75,57 @@ export default function DateModal({
       open
       onClose={onClose}
       fullScreen={fullScreen}
+      maxWidth="md"
       aria-labelledby="date-modal-title"
     >
       <DialogTitle id="date-modal-title">Selecciona un periodo</DialogTitle>
-      <DialogContent sx={calendarStyles}>
-        <DateRange
-          ranges={[range]}
-          onChange={handleChange}
-          locale={es}
-          dateDisplayFormat="d MMM yyyy"
-          rangeColors={[theme.palette.primary.main]}
-          color={theme.palette.primary.main}
-          showMonthArrow={false}
-          editableDateInputs
-          moveRangeOnFirstSelection={false}
-          scroll={{ enabled: true, calendarHeight: 500 }}
-          minDate={MIN_DATE}
-          maxDate={new Date()}
-        />
+      <DialogContent sx={{ px: 0 }}>
+        {/* Above the month, not beside it: a phone keeps all 7 weekdays */}
+        <Box
+          role="group"
+          aria-label="Periodos rápidos"
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: 3, pb: 2 }}
+        >
+          {PERIOD_SHORTCUTS.map(shortcut => {
+            const [from, to] = shortcut.range(today)
+            const active =
+              start !== null &&
+              end !== null &&
+              isSameDay(start, from) &&
+              isSameDay(end, to)
+            return (
+              <Chip
+                key={shortcut.label}
+                label={shortcut.label}
+                color={active ? 'primary' : 'default'}
+                aria-pressed={active}
+                onClick={() => {
+                  setRange([from, to])
+                }}
+              />
+            )
+          })}
+        </Box>
+        <LocalizationProvider
+          dateAdapter={AdapterDateFns}
+          adapterLocale={es}
+          localeText={localeText}
+        >
+          <StaticDateRangePicker
+            value={range}
+            onChange={setRange}
+            calendars={fullScreen ? 1 : 2}
+            minDate={MIN_DATE}
+            maxDate={today}
+            disableFuture
+            displayStaticWrapperAs="desktop"
+            slotProps={{ actionBar: { actions: [] } }}
+          />
+        </LocalizationProvider>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={apply}>
+        <Button variant="contained" onClick={apply} disabled={!start || !end}>
           Aplicar
         </Button>
       </DialogActions>
