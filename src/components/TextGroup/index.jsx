@@ -1,5 +1,4 @@
 import Typography from 'components/Typography'
-import React from 'react'
 
 export default function TextGroup({
   label,

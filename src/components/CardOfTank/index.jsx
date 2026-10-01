@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Typography from 'components/Typography'
 import Tank from 'components/Tank'
 import { Card } from './styles.js'

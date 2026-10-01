@@ -1,4 +1,3 @@
-import React from 'react'
 import { Wrapper, Wave, FuelLevel } from './styles'
 
 import { FaGasPump as FuelIcon } from 'react-icons/fa'

@@ -5,7 +5,9 @@ export const useLocalStorage = (key, initialValue) => {
     try {
       const item = window.localStorage.getItem(key)
       return item !== null ? JSON.parse(item) : initialValue
-    } catch (e) {
+    } catch (error) {
+      // A corrupt stored value must not break the app: fall back to the default
+      console.warn(`Ignoring invalid localStorage value for "${key}"`, error)
       return initialValue
     }
   })

@@ -14,28 +14,13 @@ export const calcFuelLevel = ({ tankDiameter, tankLength, fuelHeight }) => {
   const teta1 = 2 * Math.asin(senTeta)
   const senTeta1 = Math.sin(teta1)
   const aSegment = (Math.pow(radius, 2) * (teta1 - senTeta1)) / 2
-  const vSegmentMTS = Math.round(aSegment * length * 100) / 100
   const vSegmentLTS = Math.round(aSegment * length * 100000) / 100
-
-  const volumeTotalMTS =
-    Math.round(Math.PI * Math.pow(radius, 2) * length * 100) / 100
 
   const volumeTotalLTS =
     Math.round(Math.PI * Math.pow(radius, 2) * length * 100000) / 100
 
-  const volumeUtilMTS =
-    hutil <= radius ? vSegmentMTS : volumeTotalMTS - vSegmentMTS
-
   const volumeUtilLTS =
     hutil <= radius ? vSegmentLTS : volumeTotalLTS - vSegmentLTS
-
-  //Totales
-  /*console.log('Volumen Total m3 :', volumeTotalMTS)
-  console.log('Volumen Útil m3 : :', volumeUtilMTS)
-
-  console.log('Volumen Total lts:', volumeTotalLTS)
-  console.log('Volumen Útil lts:', volumeUtilLTS)
-*/
 
   return convertLitersToGallons({ liters: volumeUtilLTS })
 }

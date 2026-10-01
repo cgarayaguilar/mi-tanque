@@ -1,5 +1,5 @@
 import NavBar from 'components/NavBar'
-import React, { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import Stepper from 'components/Stepper'
 import TankAnimation from 'components/TankAnimation'
 import TextGroup from 'components/TextGroup'

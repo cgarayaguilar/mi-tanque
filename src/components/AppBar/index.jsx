@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import { useContext } from 'react'
 import { useLocation } from 'wouter'
 //Import icons
 import LogoIcon from 'assets/logo.svg?react'
@@ -14,9 +14,8 @@ import { Header, Logo } from './styles'
 export default function AppBar() {
   const [_, setLocation] = useLocation()
 
-  const { isDarkModeActive, disableDarkMode, activateDarkMode } = useContext(
-    AppContext
-  )
+  const { isDarkModeActive, disableDarkMode, activateDarkMode } =
+    useContext(AppContext)
 
   const goToHome = () => setLocation('/')
 

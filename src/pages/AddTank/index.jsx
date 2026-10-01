@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import { useContext, useState } from 'react'
 import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import useTanks from 'hooks/useTanks'

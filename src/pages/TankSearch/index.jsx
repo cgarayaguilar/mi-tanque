@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import { useContext, useEffect } from 'react'
 import { useLocation } from 'wouter'
 import CardOfTank from 'components/CardOfTank'
 import Typography from 'components/Typography'

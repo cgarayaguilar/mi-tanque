@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 import { MdHistory as HistoryIcon } from 'react-icons/md'
 import { BiTachometer as MeterIcon } from 'react-icons/bi'

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import { useContext, useEffect } from 'react'
 import { Route } from 'wouter'
 import Home from 'pages/Home'
 import History from 'pages/History'

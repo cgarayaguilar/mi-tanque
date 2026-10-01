@@ -1,4 +1,3 @@
-import React from 'react'
 import TankIcon from 'assets/tank.svg?react'
 
 import {
