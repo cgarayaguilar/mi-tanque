@@ -126,10 +126,12 @@ en cada push y PR.
 - El service worker solo existe en el build de producción: prueba el comportamiento de PWA con
   `npm run build && npm run preview`. Tras un deploy, las apps instaladas muestran el aviso de nueva
   versión.
-- `patches/react-list+0.8.19.patch` (aplicado por `patch-package` en `postinstall`) corrige el
-  calendario del historial en desarrollo: `StrictMode` remonta los componentes y `react-list` perdía
-  su listener de scroll. Bórralo junto con `react-date-range` cuando se reemplace el calendario
-  (fase 3).
+- **El calendario del periodo** (`components/DateModal`) es el `StaticDateRangePicker` de **MUI X
+  Pro**. La licencia se lee de `VITE_MUI_X_LICENSE_KEY` (Vercel y `.env.local`; nunca en el repo).
+  Sin ella funciona igual, pero muestra una marca de agua; en los tests es lo esperado.
+- **MUI está fijado en la 7** (`@mui/material`, `@mui/icons-material` y MUI X): la licencia de MUI X
+  Pro cubre la v7, y MUI X v7 solo acepta `@mui/material` 5–7. Con una clave de otra versión mayor
+  sale "License key version mismatch" y la marca de agua. No los subas sin una licencia nueva.
 - **Tras instalar o quitar dependencias, o renombrar archivos (p. ej. `.js` → `.ts`), reinicia
   `npm run dev`.** Con el servidor encendido, Vite puede servir dos copias de React ("Invalid hook
   call") o seguir pidiendo el archivo viejo (404), y la app queda en blanco. Si pasa: para el

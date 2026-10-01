@@ -21,7 +21,7 @@ Restricciones verificadas:
   pantalla migrada.
 - **MUI, React Hook Form y Zod** funcionan con React 17, 18 y 19.
 - Las dependencias heredadas (`react-date-range`, `react-wavify`, `wouter`, `styled-components`)
-  declaran compatibilidad con React 19.
+  declaran compatibilidad con React 19. (`react-date-range` ya no está: ver abajo.)
 - **TypeScript 7** es la versión `latest`, pero `typescript-eslint` solo soporta hasta la 6.0: el
   repo fija `typescript@~6.0` hasta que haya soporte.
 - **Sileo está en 0.x** (API sin estabilizar): se fija la versión exacta al instalarlo.
@@ -88,7 +88,10 @@ Hallazgos adicionales resueltos en la fase:
 - **React 19 + `StrictMode`** sembraba los tanques predefinidos dos veces (30 en vez de 15): ahora
   se siembran en una transacción.
 - **`react-list`** (usado por el calendario) perdía su listener de scroll al remontarse en
-  desarrollo: parcheado con `patch-package` hasta reemplazar el calendario.
+  desarrollo: parcheado con `patch-package` hasta reemplazar el calendario. **Resuelto
+  (2026-10-01):** el calendario pasó al `StaticDateRangePicker` de MUI X Pro, con atajos de
+  periodo; se quitaron `react-date-range`, `react-list`, el parche y `patch-package`. MUI y MUI
+  X quedan en la 7, la versión que cubre la licencia.
 - Tanques guardados con medidas en texto: se normalizan a números al leer y al escribir.
 - Sileo pone en mayúscula cada palabra del título y su descripción no llega a AA en el toast
   claro: corregido con dos reglas en `globalStyles`.
