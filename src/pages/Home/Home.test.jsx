@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import App from '../../App'
 import AppProvider from 'store'
 import { db } from 'services/db'
+import { settle } from '../../testUtils'
 
 const renderAt = path => {
   window.history.pushState({}, '', path)
@@ -55,7 +56,7 @@ test('redirects to the tank list without updating Home after it unmounts', async
   expect(await screen.findByText('Seleccione su tanque')).toBeInTheDocument()
 
   // Let pending IndexedDB queries and geolocation callbacks settle
-  await new Promise(resolve => setTimeout(resolve, 200))
+  await settle()
 
   expect(consoleError).not.toHaveBeenCalled()
 })

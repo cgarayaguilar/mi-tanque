@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import App from '../../App'
 import AppProvider from 'store'
 import { db } from 'services/db'
+import { settle } from '../../testUtils'
 
 const renderHistory = () => {
   window.history.pushState({}, '', '/history')
@@ -38,7 +39,7 @@ test('shows the empty message without errors when there are no measurements', as
   renderHistory()
 
   // The empty message is also the initial state, so let the IndexedDB query settle first
-  await new Promise(resolve => setTimeout(resolve, 200))
+  await settle()
 
   expect(screen.getByText(/No se encontraron mediciones/)).toBeInTheDocument()
   expect(consoleError).not.toHaveBeenCalled()
@@ -76,7 +77,7 @@ test('shows the empty message when every measurement points to a missing tank', 
 
   renderHistory()
 
-  await new Promise(resolve => setTimeout(resolve, 200))
+  await settle()
 
   expect(screen.getByText(/No se encontraron mediciones/)).toBeInTheDocument()
   expect(consoleError).not.toHaveBeenCalled()

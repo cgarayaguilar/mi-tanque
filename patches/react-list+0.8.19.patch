@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-list/react-list.js b/node_modules/react-list/react-list.js
+index 450662f..011db0b 100644
+--- a/node_modules/react-list/react-list.js
++++ b/node_modules/react-list/react-list.js
+@@ -196,6 +196,9 @@
+         window.removeEventListener('resize', this.updateFrameAndClearCache);
+         this.scrollParent.removeEventListener('scroll', this.updateFrameAndClearCache, PASSIVE);
+         this.scrollParent.removeEventListener('mousewheel', NOOP, PASSIVE);
++        // React 18+ StrictMode remounts the same instance: forget the parent so
++        // updateScrollParent() attaches the scroll listener again.
++        this.scrollParent = null;
+       }
+     }, {
+       key: "getOffset",

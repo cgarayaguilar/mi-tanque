@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types'
 import {
   Title,
   Title2,
@@ -96,14 +95,4 @@ export default function Typography({
         </Body>
       )
   }
-}
-
-Typography.propTypes = {
-  value: PropTypes.string.isRequired,
-  variant: PropTypes.string.isRequired,
-  color: PropTypes.string,
-  mt: PropTypes.string,
-  mb: PropTypes.string,
-  ml: PropTypes.string,
-  mr: PropTypes.string,
 }

@@ -28,7 +28,6 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 | Área        | Heredado (no extender)                                  | Objetivo (todo código nuevo)                                                 |
 | ----------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Lenguaje    | JavaScript (`.js`/`.jsx`)                               | TypeScript estricto (`.ts`/`.tsx`)                                           |
-| React       | 17                                                      | 19 (fase 1 del ADR 0001)                                                     |
 | UI          | styled-components, theme en `src/store/initialState.js` | MUI con theme derivado de `DESIGN.md`                                        |
 | Estado      | Context + `useLocalStorage`                             | Stores de Zustand por dominio, con selectores                                |
 | Datos       | IndexedDB vía Dexie (`src/services`)                    | Firestore, filtrado por `accountId`                                          |
@@ -80,6 +79,10 @@ en cada push y PR.
 - El service worker solo existe en el build de producción: prueba el comportamiento de PWA con
   `npm run build && npm run preview`. Tras un deploy, las apps instaladas muestran el aviso de nueva
   versión.
+- `patches/react-list+0.8.19.patch` (aplicado por `patch-package` en `postinstall`) corrige el
+  calendario del historial en desarrollo: `StrictMode` remonta los componentes y `react-list` perdía
+  su listener de scroll. Bórralo junto con `react-date-range` cuando se reemplace el calendario
+  (fase 3).
 - `typescript` está fijado en `~6.0` porque `typescript-eslint` todavía no soporta la 7.
 - Si `npm install` falla con `EACCES` en `~/.npm`, la caché global de npm del usuario tiene
   problemas de permisos: usa `--cache <directorio temporal>` en vez de cambiar el sistema del
