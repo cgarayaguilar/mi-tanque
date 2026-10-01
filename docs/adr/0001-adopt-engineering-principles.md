@@ -1,7 +1,7 @@
 # ADR 0001 — Adoptar los principios de ingeniería y migrar el frontend por fases
 
-- **Estado:** Propuesto — la fase 0 está hecha; el orden de las fases 1–3 espera la aprobación del
-  dueño.
+- **Estado:** Aceptado. Fases 0 y 1 hechas. Por decisión del dueño (2026-09-30), el backend
+  (fase 2) se pospone: lo siguiente es la parte de la fase 3 que no depende de él.
 - **Fecha:** 2026-09-30
 
 ## Contexto
@@ -46,9 +46,9 @@ Restricciones verificadas:
 | §              | Incumplimiento                                                                                                                                                                                                                                                                                             | Dónde                                                                            | Severidad          | Fase                   |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------ | ---------------------- |
 | §5.5           | **API key de geocodeapi.io en el bundle y en el historial de git.** Cualquiera puede usarla con cargo a la cuenta.                                                                                                                                                                                         | `src/hooks/useMeasurement.js`                                                    | Crítica            | 2                      |
-| §7.1, §7.2     | **Errores tragados que muestran éxito falso.** `createTank`/`createMeasurement` capturan el error, lo registran y resuelven igual: "Tanque agregado correctamente" aparece aunque no se haya guardado, y el tanque queda seleccionado **sin id**, así que las mediciones siguientes se guardan sin tanque. | `src/services/tanks.js`, `src/services/measurements.js`, `src/hooks/useTanks.js` | Alta (bug)         | 1                      |
-| §4, §8.6       | **Doble envío.** "Calcular" no se deshabilita mientras se guarda. Dos toques guardan dos mediciones y falsean el consumo. La ventana ahora llega a 10 s porque la ubicación se pide al guardar.                                                                                                            | `src/components/Stepper`, `src/pages/Home`                                       | Alta (bug)         | 1                      |
-| §8.14          | Guardar una medición no da ningún feedback, ni de éxito ni de fallo.                                                                                                                                                                                                                                       | `src/pages/Home`                                                                 | Alta               | 1                      |
+| §7.1, §7.2     | **Errores tragados que muestran éxito falso.** `createTank`/`createMeasurement` capturan el error, lo registran y resuelven igual: "Tanque agregado correctamente" aparece aunque no se haya guardado, y el tanque queda seleccionado **sin id**, así que las mediciones siguientes se guardan sin tanque. | `src/services/tanks.js`, `src/services/measurements.js`, `src/hooks/useTanks.js` | Alta (bug)         | 1 ✅                   |
+| §4, §8.6       | **Doble envío.** "Calcular" no se deshabilita mientras se guarda. Dos toques guardan dos mediciones y falsean el consumo. La ventana ahora llega a 10 s porque la ubicación se pide al guardar.                                                                                                            | `src/components/Stepper`, `src/pages/Home`                                       | Alta (bug)         | 1 ✅                   |
+| §8.14          | Guardar una medición no da ningún feedback, ni de éxito ni de fallo.                                                                                                                                                                                                                                       | `src/pages/Home`                                                                 | Alta               | 1 ✅                   |
 | §6.1           | Todo el código es JavaScript.                                                                                                                                                                                                                                                                              | `src/`                                                                           | Alta (estructural) | 1–3                    |
 | §8 (5 estados) | El historial no tiene estado de carga ni de error: mientras carga muestra "No se encontraron mediciones".                                                                                                                                                                                                  | `src/pages/History`                                                              | Media              | 3                      |
 | §8.7           | Formularios sin React Hook Form + Zod; errores en diálogos en vez de inline.                                                                                                                                                                                                                               | `Stepper`, `AddTank`                                                             | Media              | 3                      |
@@ -72,15 +72,37 @@ Documentación (`ENGINEERING_PRINCIPLES.md`, `DESIGN.md`, `AGENTS.md`/`CLAUDE.md
 `tsconfig.json` estricto, ESLint, Prettier, husky + lint-staged, CI en GitHub Actions y tests de
 caracterización del cálculo.
 
-### Fase 1 — Integridad y React 19 (frontend; antes del backend)
+### Fase 1 — Integridad y React 19 ✅
 
-1. Subir a React 19 (`createRoot`) y verificar las dependencias heredadas en el navegador.
-2. Corregir los bugs de integridad: errores tragados (propagar y avisar), doble envío de
-   "Calcular" y feedback al guardar. Cada uno con su test de regresión (§11.4).
-3. Crear `src/types.ts` y migrar a TypeScript la lógica pura (`converts`, `calcFuelLevel`,
-   validaciones de medición), con esquemas Zod reutilizables por el backend (§8.7).
+1. React 19 con `createRoot`; Testing Library 16. Verificado en el navegador, pantalla por pantalla.
+2. Bugs de integridad corregidos, cada uno con su test de regresión (§11.4):
+   - Los errores de guardado ya no se tragan: los servicios los propagan, `reportError()` los
+     registra con contexto y Sileo avisa del éxito o del fallo.
+   - Doble envío: botón deshabilitado ("Guardando…") con guard de reentrada, más un `intentId` por
+     medición que el servicio comprueba y escribe en una sola transacción (IndexedDB v3 con índice
+     único). Lo mismo para "Guardar" al crear un tanque.
+3. `src/types.ts`, esquemas Zod en la frontera de datos (`src/schemas/`) y servicios, cálculo y
+   conversiones en TypeScript estricto.
 
-### Fase 2 — Backend base (repo hermano)
+Hallazgos adicionales resueltos en la fase:
+
+- **React 19 + `StrictMode`** sembraba los tanques predefinidos dos veces (30 en vez de 15): ahora
+  se siembran en una transacción.
+- **`react-list`** (usado por el calendario) perdía su listener de scroll al remontarse en
+  desarrollo: parcheado con `patch-package` hasta reemplazar el calendario.
+- Tanques guardados con medidas en texto: se normalizan a números al leer y al escribir.
+- Sileo pone en mayúscula cada palabra del título y su descripción no llega a AA en el toast
+  claro: corregido con dos reglas en `globalStyles`.
+- **Tamaño del bundle principal:** pasó de 128 KB (gzip) con React 17 a 206 KB. React 19 suma ~20 KB
+  y Sileo ~49 KB, porque depende de Framer Motion. Zod se usa como `zod/mini` (~5 KB en vez de
+  ~24 KB). **Decisión pendiente del dueño:** cómo cargar Sileo (ver la conversación de la fase 1).
+- Código muerto eliminado: `propTypes` (React 19 los ignora), `reportWebVitals`, `readMeasurements`
+  (además leía la tabla entera sin límite) y `convertMillimetersToInches`.
+
+La validación de pulgadas contra el diámetro del tanque sigue en el `Stepper` hasta la fase 3, donde
+pasa a un esquema Zod con React Hook Form.
+
+### Fase 2 — Backend base (repo hermano) — pospuesta
 
 1. Cerrar con ADRs las decisiones abiertas de §0: región, modelo de cuenta (`accountId`) y roles,
    monitoreo, migración de los datos locales.
@@ -91,6 +113,10 @@ caracterización del cálculo.
    bundle.
 
 ### Fase 3 — Pantallas, una por una
+
+Se adelanta a la fase 2 en todo lo que no depende del backend. Mientras no exista Firestore, los
+stores de Zustand se apoyan en la capa de servicios actual (`src/services`): cuando llegue el
+backend solo cambian los servicios, no las pantallas.
 
 Orden: Medición (`Home` + `Stepper`) → Tanques (`TankSearch` + `AddTank`) → Historial. Cada
 pantalla pasa a TSX con theme de MUI (desde `DESIGN.md`), React Hook Form + Zod, Sileo, store de
