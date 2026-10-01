@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography'
 import TankDiagram from 'components/TankDiagram'
 import { radius, softShadow } from 'theme/tokens'
 import type { TankDimensions } from 'types'
+import { formatNumber } from 'utils/formatNumber'
 
 interface TankCardProps {
   tank: TankDimensions
@@ -22,7 +23,7 @@ export default function TankCard({
   return (
     <ButtonBase
       onClick={onClick}
-      aria-label={`${actionLabel}: tanque de ${String(capacity)} galones, ${String(diameter)} por ${String(length)} pulgadas`}
+      aria-label={`${actionLabel}: tanque de ${formatNumber(capacity)} galones, ${formatNumber(diameter)} por ${formatNumber(length)} pulgadas`}
       sx={{
         width: '100%',
         display: 'grid',
@@ -46,21 +47,21 @@ export default function TankCard({
           variant="subtitle1"
           sx={{ display: 'block', mb: 1 }}
         >
-          Tanque de {capacity} gls
+          Tanque de {formatNumber(capacity)} gls
         </Typography>
         <Typography
           component="span"
           variant="caption"
           sx={{ display: 'block', color: 'text.secondary' }}
         >
-          Diámetro: {diameter} pulgadas
+          Diámetro: {formatNumber(diameter)} pulgadas
         </Typography>
         <Typography
           component="span"
           variant="caption"
           sx={{ display: 'block', color: 'text.secondary', mb: 2 }}
         >
-          Longitud: {length} pulgadas
+          Longitud: {formatNumber(length)} pulgadas
         </Typography>
         <Typography
           component="span"

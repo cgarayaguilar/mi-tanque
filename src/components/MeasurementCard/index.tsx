@@ -8,6 +8,7 @@ import { colorTokens, radius } from 'theme/tokens'
 import type { Measurement, Tank } from 'types'
 import { formatMeasurementDate } from 'utils/formatDate'
 import { fillPercent } from 'utils/measurementHistory'
+import { formatNumber } from 'utils/formatNumber'
 
 interface MeasurementCardProps {
   measurement: Measurement
@@ -60,9 +61,9 @@ export default function MeasurementCard({
           my: 3,
         }}
       >
-        <Stat size="small" label="Pulgadas" value={inches} />
-        <Stat size="small" label="Galones" value={gallons} />
-        <Stat size="small" label="Litros" value={liters} />
+        <Stat size="small" label="Pulgadas" value={formatNumber(inches)} />
+        <Stat size="small" label="Galones" value={formatNumber(gallons, 2)} />
+        <Stat size="small" label="Litros" value={formatNumber(liters, 2)} />
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -89,7 +90,7 @@ export default function MeasurementCard({
         component="p"
         sx={{ color: 'text.secondary', mt: 1 }}
       >
-        {gallons} de {tank.capacity} galones
+        {formatNumber(gallons, 2)} de {formatNumber(tank.capacity)} galones
       </Typography>
     </Box>
   )

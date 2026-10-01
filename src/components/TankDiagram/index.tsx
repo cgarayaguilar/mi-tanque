@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import { styled } from '@mui/material/styles'
 import TankIcon from 'assets/tank.svg?react'
 import { typeScale } from 'theme/tokens'
+import { formatNumber } from 'utils/formatNumber'
 
 // Illustration geometry (px): the cylinder drawing and its dimension arrows
 const TANK_WIDTH = 94
@@ -62,15 +63,18 @@ interface TankDiagramProps {
 }
 
 /** Cylinder with its capacity and dimension callouts (diameter and length). */
-export default function TankDiagram({
-  capacity,
-  diameter,
-  length,
-}: TankDiagramProps) {
+/** Numbers in Spanish format; text (what the user is typing) as it is. */
+const show = (value: number | string) =>
+  typeof value === 'number' ? formatNumber(value) : value
+
+export default function TankDiagram(props: TankDiagramProps) {
+  const capacity = show(props.capacity)
+  const diameter = show(props.diameter)
+  const length = show(props.length)
   return (
     <Box
       role="img"
-      aria-label={`Tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`}
+      aria-label={`Tanque de ${capacity} galones, ${diameter} pulgadas de diámetro y ${length} de largo`}
       sx={{
         display: 'grid',
         gridTemplateColumns: `min-content ${String(TANK_WIDTH)}px`,

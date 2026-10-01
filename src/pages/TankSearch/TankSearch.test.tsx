@@ -92,6 +92,12 @@ test('a decimal search matches with a comma or a dot', async () => {
   search('24,5')
 
   expect(await screen.findByText('1 tanque')).toBeInTheDocument()
+  // Shown the way it was typed
+  expect(
+    screen.getByRole('button', {
+      name: 'Seleccionar: tanque de 80 galones, 24,5 por 50 pulgadas',
+    })
+  ).toBeInTheDocument()
 })
 
 test('a failed load explains it and can be retried', async () => {

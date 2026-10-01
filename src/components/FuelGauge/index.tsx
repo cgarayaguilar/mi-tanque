@@ -5,6 +5,7 @@ import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import Wave from 'react-wavify'
 import { colorTokens, layout, space, typeScale } from 'theme/tokens'
 import type { FuelReading } from 'types'
+import { formatNumber } from 'utils/formatNumber'
 
 const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -49,7 +50,7 @@ export default function FuelGauge({ reading }: FuelGaugeProps) {
         role="img"
         aria-label={
           reading
-            ? `Tanque al ${String(Math.round(fillPercent))}%: ${reading.gallons} galones`
+            ? `Tanque al ${String(Math.round(fillPercent))}%: ${formatNumber(reading.gallons, 2)} galones`
             : 'Tanque sin medir'
         }
         sx={{
@@ -113,7 +114,7 @@ export default function FuelGauge({ reading }: FuelGaugeProps) {
                 component="span"
                 sx={{ ...typeScale.figureMd, color: 'inherit' }}
               >
-                {reading.gallons} gls
+                {formatNumber(reading.gallons, 2)} gls
               </Typography>
             </>
           ) : (

@@ -9,6 +9,7 @@ import Stat from 'components/Stat'
 import TankDiagram from 'components/TankDiagram'
 import { radius } from 'theme/tokens'
 import type { TankHistory } from 'utils/measurementHistory'
+import { formatNumber } from 'utils/formatNumber'
 
 interface TankHistoryCardProps {
   history: TankHistory
@@ -21,10 +22,10 @@ const plural = (count: number, one: string, many: string) =>
 /** "−10.00 gal." reads as fuel used; the caption says which way it went. */
 const describeChange = (change: number, count: number) => {
   if (change < 0)
-    return { value: Math.abs(change).toFixed(2), caption: 'gal. menos' }
-  if (change > 0) return { value: change.toFixed(2), caption: 'gal. más' }
+    return { value: formatNumber(Math.abs(change), 2), caption: 'gal. menos' }
+  if (change > 0) return { value: formatNumber(change, 2), caption: 'gal. más' }
   return {
-    value: '0.00',
+    value: formatNumber(0, 2),
     caption: count === 1 ? 'una sola medición' : 'sin cambios',
   }
 }
@@ -61,7 +62,7 @@ export default function TankHistoryCard({
         />
         <div>
           <Typography id={titleId} variant="subtitle1" component="h2">
-            Tanque de {tank.capacity} gls
+            Tanque de {formatNumber(tank.capacity)} gls
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {plural(count, 'medición', 'mediciones')}
@@ -80,13 +81,13 @@ export default function TankHistoryCard({
         <Stat
           size="small"
           label="Al inicio"
-          value={firstGallons.toFixed(2)}
+          value={formatNumber(firstGallons, 2)}
           caption="galones"
         />
         <Stat
           size="small"
           label="Al final"
-          value={lastGallons.toFixed(2)}
+          value={formatNumber(lastGallons, 2)}
           caption="galones"
         />
         <Stat
@@ -123,7 +124,7 @@ export default function TankHistoryCard({
       <Collapse in={expanded} id={listId}>
         <Box
           component="ul"
-          aria-label={`Mediciones del tanque de ${String(tank.capacity)} galones`}
+          aria-label={`Mediciones del tanque de ${formatNumber(tank.capacity)} galones`}
           sx={{
             listStyle: 'none',
             m: 0,

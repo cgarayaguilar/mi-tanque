@@ -119,7 +119,7 @@ test('saves the measurement with the city name and shows the reading', async () 
     'point.lat=12.13&point.lon=-86.25'
   )
   expect(
-    screen.getByRole('img', { name: 'Tanque al 48%: 26.22 galones' })
+    screen.getByRole('img', { name: 'Tanque al 48%: 26,22 galones' })
   ).toBeInTheDocument()
 })
 
@@ -155,7 +155,9 @@ test('accepts decimal inches with a comma', async () => {
     expect(sileo.success).toHaveBeenCalled()
   })
   const [saved] = await db.measurements.toArray()
+  // Stored with a dot, shown with a comma
   expect(saved).toMatchObject({ inches: 12.5, fuelHeight: '50.00' })
+  expect(screen.getByText('12,5')).toBeInTheDocument()
 })
 
 // §8.7: validation errors are shown inline under the field, not as toasts

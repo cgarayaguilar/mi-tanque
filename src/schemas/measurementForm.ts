@@ -1,5 +1,6 @@
 import * as z from 'zod/mini'
 import { parseDecimal } from 'utils/parseDecimal'
+import { formatNumber } from 'utils/formatNumber'
 
 /**
  * The measurement form: the inches typed by the user, checked against the
@@ -21,7 +22,7 @@ export const measurementFormSchema = (tankDiameter: number) =>
         abort: true,
       }),
       z.refine(value => parseDecimal(value) <= tankDiameter, {
-        error: `Tu tanque mide ${String(tankDiameter)} pulgadas de diámetro. Ingresa hasta ${String(tankDiameter)}.`,
+        error: `Tu tanque mide ${formatNumber(tankDiameter)} pulgadas de diámetro. Ingresa hasta ${formatNumber(tankDiameter)}.`,
       })
     ),
   })

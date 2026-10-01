@@ -26,6 +26,7 @@ import { layout } from 'theme/tokens'
 import type { FuelReading, Tank } from 'types'
 import { calculateReading } from 'utils/fuelReading'
 import { parseDecimal } from 'utils/parseDecimal'
+import { formatNumber } from 'utils/formatNumber'
 
 const NOT_MEASURED = '—'
 
@@ -44,9 +45,18 @@ function Results({ reading }: { reading: FuelReading | null }) {
         aria-live="polite"
         sx={{ display: 'flex', justifyContent: 'space-between', py: 4 }}
       >
-        <Stat label="Pulgadas" value={reading?.inches ?? NOT_MEASURED} />
-        <Stat label="Galones" value={reading?.gallons ?? NOT_MEASURED} />
-        <Stat label="Litros" value={reading?.liters ?? NOT_MEASURED} />
+        <Stat
+          label="Pulgadas"
+          value={reading ? formatNumber(reading.inches) : NOT_MEASURED}
+        />
+        <Stat
+          label="Galones"
+          value={reading ? formatNumber(reading.gallons, 2) : NOT_MEASURED}
+        />
+        <Stat
+          label="Litros"
+          value={reading ? formatNumber(reading.liters, 2) : NOT_MEASURED}
+        />
       </Box>
       <FuelGauge reading={reading} />
     </Box>
@@ -105,7 +115,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
                 label="Pulgadas de combustible"
                 unit="pulg."
                 placeholder="Ej. 12,5"
-                hint={`Entre 0 y ${String(tank.diameter)}, el diámetro de tu tanque.`}
+                hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque.`}
                 error={errors.inches?.message}
                 registration={register('inches')}
               />
