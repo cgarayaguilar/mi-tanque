@@ -28,7 +28,7 @@ export default function FuelGauge({ reading }: FuelGaugeProps) {
         isolation: 'isolate',
         display: 'flex',
         justifyContent: 'center',
-        py: 8,
+        py: 4,
         // Atmospheric orb: a circle of its own that fades out inside itself
         '&::before': {
           content: '""',

@@ -1,80 +1,78 @@
 import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
-import TankDiagram from 'components/TankDiagram'
-import { radius, softShadow } from 'theme/tokens'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import { radius, softShadow, typeScale } from 'theme/tokens'
 import type { TankDimensions } from 'types'
 import { formatNumber } from 'utils/formatNumber'
 
 interface TankCardProps {
   tank: TankDimensions
-  /** Call to action shown in the card and used in its accessible name. */
+  /** Verb used in the accessible name, e.g. "Seleccionar". */
   actionLabel: string
+  /** The tank the user measures now. */
+  selected?: boolean
   onClick: () => void
 }
 
-/** Compact card (DESIGN.md): the whole card is the button. */
+/**
+ * Compact tile (DESIGN.md, Tarjeta de tanque): capacity first, then the
+ * dimensions. Two per row on a phone, so the list of tanks stays short.
+ */
 export default function TankCard({
   tank,
   actionLabel,
+  selected = false,
   onClick,
 }: TankCardProps) {
-  const { capacity, diameter, length } = tank
+  const capacity = formatNumber(tank.capacity)
+  const diameter = formatNumber(tank.diameter)
+  const length = formatNumber(tank.length)
 
   return (
     <ButtonBase
       onClick={onClick}
-      aria-label={`${actionLabel}: tanque de ${formatNumber(capacity)} galones, ${formatNumber(diameter)} por ${formatNumber(length)} pulgadas`}
+      aria-label={`${actionLabel}: tanque de ${capacity} galones, ${diameter} por ${length} pulgadas`}
+      aria-current={selected ? 'true' : undefined}
       sx={{
+        position: 'relative',
         width: '100%',
-        display: 'grid',
-        gridTemplateColumns: 'min-content 1fr',
-        alignItems: 'center',
-        gap: 3,
-        p: 3,
+        height: '100%',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        px: 4,
+        py: 3,
         textAlign: 'left',
         bgcolor: 'background.paper',
         border: 1,
-        borderColor: 'divider',
+        borderColor: selected ? 'text.primary' : 'divider',
+        // Same footprint selected or not: the ring is drawn inside
+        boxShadow: selected
+          ? theme => `inset 0 0 0 1px ${theme.palette.text.primary}`
+          : 'none',
         borderRadius: `${String(radius.lg)}px`,
         transition: 'box-shadow 0.15s',
-        '&:hover': { boxShadow: softShadow },
+        '&:hover': { boxShadow: selected ? undefined : softShadow },
       }}
     >
-      <TankDiagram capacity={capacity} diameter={diameter} length={length} />
-      <span>
-        <Typography
-          component="span"
-          variant="subtitle1"
-          sx={{ display: 'block', mb: 1 }}
-        >
-          Tanque de {formatNumber(capacity)} gls
-        </Typography>
-        <Typography
-          component="span"
-          variant="caption"
-          sx={{ display: 'block', color: 'text.secondary' }}
-        >
-          Diámetro: {formatNumber(diameter)} pulgadas
-        </Typography>
-        <Typography
-          component="span"
-          variant="caption"
-          sx={{ display: 'block', color: 'text.secondary', mb: 2 }}
-        >
-          Longitud: {formatNumber(length)} pulgadas
-        </Typography>
-        <Typography
-          component="span"
-          variant="button"
-          sx={{
-            textDecoration: 'underline',
-            textUnderlineOffset: 3,
-            color: 'text.primary',
-          }}
-        >
-          {actionLabel}
-        </Typography>
-      </span>
+      {selected && (
+        <CheckCircleIcon
+          aria-hidden="true"
+          sx={{ position: 'absolute', top: 12, right: 12, fontSize: 18 }}
+        />
+      )}
+      <Typography
+        component="span"
+        sx={{ ...typeScale.figureMd, color: 'text.primary' }}
+      >
+        {capacity} gls
+      </Typography>
+      <Typography
+        component="span"
+        variant="caption"
+        sx={{ color: 'text.secondary' }}
+      >
+        {diameter} × {length} pulg.
+      </Typography>
     </ButtonBase>
   )
 }

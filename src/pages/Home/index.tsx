@@ -4,10 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Step from '@mui/material/Step'
-import StepContent from '@mui/material/StepContent'
-import StepLabel from '@mui/material/StepLabel'
-import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
@@ -15,35 +11,93 @@ import FuelGauge from 'components/FuelGauge'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
-import TankCard from 'components/TankCard'
 import { useSaveMeasurement } from 'hooks/useSaveMeasurement'
 import {
   measurementFormSchema,
   type MeasurementFormValues,
 } from 'schemas/measurementForm'
 import { useSelectedTankStore } from 'store/selectedTank'
-import { layout } from 'theme/tokens'
+import { layout, radius } from 'theme/tokens'
 import type { FuelReading, Tank } from 'types'
 import { calculateReading } from 'utils/fuelReading'
-import { parseDecimal } from 'utils/parseDecimal'
 import { formatNumber } from 'utils/formatNumber'
+import { parseDecimal } from 'utils/parseDecimal'
 
 const NOT_MEASURED = '—'
 
+// Read by screen readers only: the gauge and figures speak for themselves
+const visuallyHidden = {
+  position: 'absolute',
+  // Strings: in sx, 1 would mean 100%
+  width: '1px',
+  height: '1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const
+
+/** The chosen tank in one row, so the reading fits on a phone screen. */
+function TankSummary({ tank, onChange }: { tank: Tank; onChange: () => void }) {
+  const capacity = formatNumber(tank.capacity)
+  const diameter = formatNumber(tank.diameter)
+  const length = formatNumber(tank.length)
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 3,
+        px: 4,
+        py: 3,
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: `${String(radius.lg)}px`,
+      }}
+    >
+      <div>
+        <Typography
+          variant="overline"
+          component="p"
+          sx={{ color: 'text.secondary' }}
+        >
+          Tu tanque
+        </Typography>
+        <Typography variant="subtitle1" component="p">
+          {capacity} galones
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {diameter} × {length} pulgadas
+        </Typography>
+      </div>
+      <Button
+        variant="outlined"
+        onClick={onChange}
+        aria-label={`Cambiar tanque: tanque de ${capacity} galones, ${diameter} por ${length} pulgadas`}
+      >
+        Cambiar
+      </Button>
+    </Box>
+  )
+}
+
 function Results({ reading }: { reading: FuelReading | null }) {
   return (
-    <Box component="section" aria-labelledby="results-title" sx={{ mt: 8 }}>
-      <Typography id="results-title" variant="h3" component="h2">
+    <Box component="section" aria-labelledby="results-title">
+      <Typography id="results-title" component="h2" sx={visuallyHidden}>
         Resultados
       </Typography>
-      {reading === null && (
-        <Typography variant="body2" sx={{ mt: 1 }}>
-          Ingresa las pulgadas y calcula para ver cuánto combustible tienes.
-        </Typography>
-      )}
+      <FuelGauge reading={reading} />
       <Box
         aria-live="polite"
-        sx={{ display: 'flex', justifyContent: 'space-between', py: 4 }}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 2,
+          textAlign: 'center',
+        }}
       >
         <Stat
           label="Pulgadas"
@@ -58,7 +112,6 @@ function Results({ reading }: { reading: FuelReading | null }) {
           value={reading ? formatNumber(reading.liters, 2) : NOT_MEASURED}
         />
       </Box>
-      <FuelGauge reading={reading} />
     </Box>
   )
 }
@@ -81,6 +134,9 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
   })
 
   const onSubmit = async ({ inches }: MeasurementFormValues) => {
+    // Closes the phone keyboard so the result is in view
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur()
     const next = calculateReading(tank, parseDecimal(inches))
     setReading(next)
     await saveMeasurement(tank, next)
@@ -88,6 +144,8 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
 
   return (
     <>
+      <TankSummary tank={tank} onChange={onChangeTank} />
+
       <Box
         component="form"
         noValidate
@@ -95,48 +153,27 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
         onSubmit={event => {
           void handleSubmit(onSubmit)(event)
         }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}
       >
-        <Stepper orientation="vertical" activeStep={1}>
-          <Step completed expanded>
-            <StepLabel>Elige tu tanque</StepLabel>
-            <StepContent>
-              <TankCard
-                tank={tank}
-                actionLabel="Cambiar tanque"
-                onClick={onChangeTank}
-              />
-            </StepContent>
-          </Step>
-          <Step expanded>
-            <StepLabel>Mide el combustible</StepLabel>
-            <StepContent>
-              <NumberField
-                id="inches"
-                label="Pulgadas de combustible"
-                unit="pulg."
-                placeholder="Ej. 12,5"
-                hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque.`}
-                error={errors.inches?.message}
-                registration={register('inches')}
-              />
-            </StepContent>
-          </Step>
-          <Step expanded>
-            <StepLabel>Calcula el nivel</StepLabel>
-            <StepContent>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                fullWidth
-                loading={isSubmitting}
-                loadingPosition="start"
-              >
-                {isSubmitting ? 'Guardando…' : 'Calcular'}
-              </Button>
-            </StepContent>
-          </Step>
-        </Stepper>
+        <NumberField
+          id="inches"
+          label="Pulgadas de combustible"
+          unit="pulg."
+          placeholder="Ej. 12,5"
+          hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque.`}
+          error={errors.inches?.message}
+          registration={register('inches')}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          fullWidth
+          loading={isSubmitting}
+          loadingPosition="start"
+        >
+          {isSubmitting ? 'Guardando…' : 'Calcular'}
+        </Button>
       </Box>
 
       <Results reading={reading} />
@@ -156,12 +193,12 @@ export default function Home() {
     <Box
       component="main"
       sx={{
-        minHeight: `calc(100vh - ${String(layout.appBarHeight)}px)`,
+        minHeight: `calc(100dvh - ${String(layout.appBarHeight)}px)`,
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      <Box sx={{ p: 4, flexGrow: 1 }}>
+      <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
         {selectedTank ? (
           // A different tank is a new form (fresh values and intent)
           <Measurement
@@ -178,9 +215,7 @@ export default function Home() {
           />
         )}
       </Box>
-      <Box sx={{ px: 4, pb: 4 }}>
-        <NavBar />
-      </Box>
+      <NavBar />
     </Box>
   )
 }

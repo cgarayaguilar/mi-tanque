@@ -57,7 +57,11 @@ export default function App() {
         <Route path="/history" component={History} />
       </Suspense>
       {/* Single toast outlet for mutation feedback (§8.14) */}
-      <Toaster position="bottom-center" theme={mode} />
+      <Toaster
+        position="bottom-center"
+        offset={{ bottom: layout.bottomNavSpace }}
+        theme={mode}
+      />
     </ThemeProvider>
   )
 }

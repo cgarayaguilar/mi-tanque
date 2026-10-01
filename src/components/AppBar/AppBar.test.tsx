@@ -9,7 +9,7 @@ beforeEach(async () => {
   await db.tanks.clear()
   window.history.pushState({}, '', '/tanques')
   render(<App />)
-  await screen.findByText('Tanque de 50 gls')
+  await screen.findByText('15 tanques')
 })
 
 test('the logo is a link home', () => {

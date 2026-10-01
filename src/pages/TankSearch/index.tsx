@@ -20,8 +20,15 @@ import { radius } from 'theme/tokens'
 import type { Tank } from 'types'
 
 // Roughly a TankCard, so the page does not jump when the list arrives
-const CARD_HEIGHT = 112
-const PLACEHOLDER_CARDS = 4
+const CARD_HEIGHT = 72
+const PLACEHOLDER_CARDS = 6
+
+// Two tiles per row on a phone, more on wider screens
+const tileGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+  gap: 2,
+} as const
 
 /** "24,5" and "24.5" find the same tank. */
 const matches = (tank: Tank, query: string) =>
@@ -34,6 +41,7 @@ export default function TankSearch() {
   const status = useTanksStore(state => state.status)
   const load = useTanksStore(state => state.load)
   const selectTank = useSelectedTankStore(state => state.selectTank)
+  const selectedTankId = useSelectedTankStore(state => state.selectedTank?.id)
   const [, navigate] = useLocation()
   const [search, setSearch] = useState('')
   const query = useDeferredValue(search.trim().replace(',', '.'))
@@ -83,7 +91,7 @@ export default function TankSearch() {
 
     if (!hasTanks)
       return (
-        <Stack spacing={3} aria-busy="true" aria-label="Cargando tanques">
+        <Box aria-busy="true" aria-label="Cargando tanques" sx={tileGrid}>
           {Array.from({ length: PLACEHOLDER_CARDS }, (_, index) => (
             <Skeleton
               key={index}
@@ -92,7 +100,7 @@ export default function TankSearch() {
               sx={{ borderRadius: `${String(radius.lg)}px` }}
             />
           ))}
-        </Stack>
+        </Box>
       )
 
     if (visibleTanks.length === 0)
@@ -112,24 +120,24 @@ export default function TankSearch() {
       )
 
     return (
-      <Stack
+      <Box
         component="ul"
-        spacing={3}
         aria-label="Tanques"
-        sx={{ listStyle: 'none', m: 0, p: 0 }}
+        sx={{ ...tileGrid, listStyle: 'none', m: 0, p: 0 }}
       >
         {visibleTanks.map(tank => (
           <li key={tank.id}>
             <TankCard
               tank={tank}
               actionLabel="Seleccionar"
+              selected={tank.id === selectedTankId}
               onClick={() => {
                 choose(tank)
               }}
             />
           </li>
         ))}
-      </Stack>
+      </Box>
     )
   }
 

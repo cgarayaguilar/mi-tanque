@@ -87,8 +87,8 @@ test('summarizes each tank and lists its measurements, newest first', async () =
     name: 'Mediciones del tanque de 75 galones',
   })
   const [newest, oldest] = Array.from(list.querySelectorAll('li'))
-  expect(newest).toHaveTextContent('30,00 de 75 galones')
-  expect(oldest).toHaveTextContent('40,00 de 75 galones')
+  expect(newest).toHaveTextContent('30,00 gal de 75')
+  expect(oldest).toHaveTextContent('40,00 gal de 75')
   expect(
     screen.getAllByRole('progressbar', { name: 'Nivel del tanque: 42%' })
   ).toHaveLength(2)

@@ -123,37 +123,6 @@ const createMuiTheme = (mode: ColorMode): Theme => {
       MuiInputAdornment: {
         styleOverrides: { root: { color: color.muted } },
       },
-      MuiStepLabel: {
-        styleOverrides: {
-          label: {
-            ...typeScale.titleSm,
-            color: color.ink,
-            '&.Mui-active, &.Mui-completed': {
-              color: color.ink,
-              fontWeight: typeScale.titleSm.fontWeight,
-            },
-          },
-        },
-      },
-      MuiStepIcon: {
-        styleOverrides: {
-          root: {
-            color: color.surfaceStrong,
-            '& .MuiStepIcon-text': {
-              fill: color.muted,
-              ...typeScale.captionUppercase,
-            },
-            '&.Mui-active, &.Mui-completed': { color: color.primary },
-            '&.Mui-active .MuiStepIcon-text': { fill: color.onPrimary },
-          },
-        },
-      },
-      MuiStepConnector: {
-        styleOverrides: { line: { borderColor: color.hairline } },
-      },
-      MuiStepContent: {
-        styleOverrides: { root: { borderColor: color.hairline } },
-      },
       MuiOutlinedInput: {
         styleOverrides: {
           input: {

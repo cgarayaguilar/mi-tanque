@@ -239,8 +239,10 @@ export const layout = {
   maxWidth: 600,
   /** The system's top-nav height. */
   appBarHeight: 64,
-  /** Fuel gauge diameter. */
-  gaugeSize: 250,
+  /** Fuel gauge diameter: small enough for the whole reading on one phone screen. */
+  gaugeSize: 200,
+  /** Room the sticky bottom navigation takes; toasts sit above it. */
+  bottomNavSpace: 88,
 } as const
 
 /** The system's single shadow tier: hovered cards only. */

@@ -96,7 +96,7 @@ export default function History() {
     <Box
       component="main"
       sx={{
-        minHeight: `calc(100vh - ${String(layout.appBarHeight)}px)`,
+        minHeight: `calc(100dvh - ${String(layout.appBarHeight)}px)`,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -130,9 +130,7 @@ export default function History() {
         {renderHistories()}
       </Box>
 
-      <Box sx={{ px: 4, pb: 4 }}>
-        <NavBar />
-      </Box>
+      <NavBar />
 
       {pickerIsOpen && (
         <Suspense fallback={null}>

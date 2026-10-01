@@ -77,7 +77,8 @@ export default function TankDiagram(props: TankDiagramProps) {
       aria-label={`Tanque de ${capacity} galones, ${diameter} pulgadas de diámetro y ${length} de largo`}
       sx={{
         display: 'grid',
-        gridTemplateColumns: `min-content ${String(TANK_WIDTH)}px`,
+        // Room for a decimal diameter, so cards line up whatever their numbers
+        gridTemplateColumns: `minmax(4.5ch, min-content) ${String(TANK_WIDTH)}px`,
         gridTemplateRows: `${String(TANK_HEIGHT)}px min-content`,
         gap: 1,
         flexShrink: 0,

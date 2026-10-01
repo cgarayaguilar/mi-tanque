@@ -1,21 +1,22 @@
 import Box from '@mui/material/Box'
 import LinearProgress from '@mui/material/LinearProgress'
 import Typography from '@mui/material/Typography'
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import PlaceIcon from '@mui/icons-material/Place'
-import Stat from 'components/Stat'
-import { colorTokens, radius } from 'theme/tokens'
+import { colorTokens, radius, typeScale } from 'theme/tokens'
 import type { Measurement, Tank } from 'types'
 import { formatMeasurementDate } from 'utils/formatDate'
-import { fillPercent } from 'utils/measurementHistory'
 import { formatNumber } from 'utils/formatNumber'
+import { fillPercent } from 'utils/measurementHistory'
 
 interface MeasurementCardProps {
   measurement: Measurement
   tank: Tank
 }
 
-/** One measurement of the history: when, where, the reading and the fill bar. */
+/**
+ * One measurement of the history in three short lines (when and how full,
+ * the amounts, where), so a week of readings fits on a phone screen.
+ */
 export default function MeasurementCard({
   measurement,
   tank,
@@ -24,73 +25,75 @@ export default function MeasurementCard({
   const percent = fillPercent(measurement, tank)
 
   return (
-    <Box sx={{ py: 4 }}>
+    <Box sx={{ py: 3 }}>
       <Box
         sx={{
           display: 'flex',
-          flexWrap: 'wrap',
-          columnGap: 4,
-          rowGap: 1,
-          color: 'text.secondary',
-          '& svg': { fontSize: 16 },
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          gap: 2,
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-        >
-          <CalendarTodayIcon aria-hidden="true" />
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           <time dateTime={date.toISOString()}>
             {formatMeasurementDate(date)}
           </time>
         </Typography>
         <Typography
           variant="caption"
-          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          sx={{ color: 'text.primary', fontWeight: 600 }}
         >
-          <PlaceIcon aria-hidden="true" />
-          {location}
+          {percent}%
         </Typography>
       </Box>
 
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 2,
-          my: 3,
+          display: 'flex',
+          alignItems: 'baseline',
+          flexWrap: 'wrap',
+          columnGap: 2,
+          mt: 1,
         }}
       >
-        <Stat size="small" label="Pulgadas" value={formatNumber(inches)} />
-        <Stat size="small" label="Galones" value={formatNumber(gallons, 2)} />
-        <Stat size="small" label="Litros" value={formatNumber(liters, 2)} />
+        <Typography
+          component="span"
+          sx={{ ...typeScale.figureSm, color: 'text.primary' }}
+        >
+          {formatNumber(gallons, 2)} gal
+        </Typography>
+        {/* Not laid out in a flex row, but keeps the words apart when read */}{' '}
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          de {formatNumber(tank.capacity)} · {formatNumber(liters, 2)} L ·{' '}
+          {formatNumber(inches)} pulg.
+        </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.primary', fontWeight: 600, minWidth: '4ch' }}
-        >
-          {percent}%
-        </Typography>
-        <LinearProgress
-          variant="determinate"
-          value={percent}
-          aria-label={`Nivel del tanque: ${String(percent)}%`}
-          sx={{
-            flexGrow: 1,
-            height: 4,
-            borderRadius: `${String(radius.pill)}px`,
-            bgcolor: theme => colorTokens[theme.palette.mode].surfaceStrong,
-          }}
-        />
-      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={percent}
+        aria-label={`Nivel del tanque: ${String(percent)}%`}
+        sx={{
+          my: 2,
+          height: 4,
+          borderRadius: `${String(radius.pill)}px`,
+          bgcolor: theme => colorTokens[theme.palette.mode].surfaceStrong,
+        }}
+      />
+
       <Typography
         variant="caption"
         component="p"
-        sx={{ color: 'text.secondary', mt: 1 }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          color: 'text.secondary',
+          '& svg': { fontSize: 14 },
+        }}
       >
-        {formatNumber(gallons, 2)} de {formatNumber(tank.capacity)} galones
+        <PlaceIcon aria-hidden="true" />
+        {location}
       </Typography>
     </Box>
   )

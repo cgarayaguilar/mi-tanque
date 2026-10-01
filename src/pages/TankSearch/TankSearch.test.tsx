@@ -25,7 +25,9 @@ beforeEach(async () => {
   await db.tanks.clear()
 })
 
-afterEach(() => {
+afterEach(async () => {
+  // A load still in flight would otherwise finish in the next test
+  await settle()
   vi.restoreAllMocks()
 })
 
@@ -118,4 +120,26 @@ test('"Agregar tanque" opens the form', async () => {
   await waitFor(() => {
     expect(window.location.pathname).toBe('/tanques/crear')
   })
+})
+
+test('marks the tank being measured', async () => {
+  await useTanksStore.getState().load()
+  const measured = useTanksStore
+    .getState()
+    .tanks.find(tank => tank.capacity === 75 && tank.length === 41)
+  if (!measured) throw new Error('Predefined tank missing')
+  useSelectedTankStore.getState().selectTank(measured)
+
+  renderTankSearch()
+
+  expect(
+    await screen.findByRole('button', {
+      name: 'Seleccionar: tanque de 75 galones, 24 por 41 pulgadas',
+    })
+  ).toHaveAttribute('aria-current', 'true')
+  expect(
+    screen.getByRole('button', {
+      name: 'Seleccionar: tanque de 50 galones, 25 por 26 pulgadas',
+    })
+  ).not.toHaveAttribute('aria-current')
 })
