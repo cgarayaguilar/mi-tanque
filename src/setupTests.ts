@@ -24,7 +24,7 @@ vi.mock('sileo', () => ({
 // jsdom has no matchMedia (real browsers do): report no media preference
 Object.defineProperty(window, 'matchMedia', {
   configurable: true,
-  value: query => ({
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,

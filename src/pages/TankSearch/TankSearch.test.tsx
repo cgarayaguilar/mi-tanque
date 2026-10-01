@@ -1,7 +1,6 @@
 import { StrictMode } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../../App'
-import AppProvider from 'store'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
@@ -9,11 +8,7 @@ import { settle } from '../../testUtils'
 
 const renderTankSearch = ({ strict = false } = {}) => {
   window.history.pushState({}, '', '/tanques')
-  const app = (
-    <AppProvider>
-      <App />
-    </AppProvider>
-  )
+  const app = <App />
   render(strict ? <StrictMode>{app}</StrictMode> : app)
 }
 

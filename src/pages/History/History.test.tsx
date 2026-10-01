@@ -1,17 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../../App'
-import AppProvider from 'store'
 import { db, type StoredMeasurement } from 'services/db'
 import { useHistoryStore } from 'store/history'
 import { settle } from '../../testUtils'
 
 const renderHistory = () => {
   window.history.pushState({}, '', '/history')
-  render(
-    <AppProvider>
-      <App />
-    </AppProvider>
-  )
+  render(<App />)
 }
 
 const DAY = 24 * 60 * 60 * 1000

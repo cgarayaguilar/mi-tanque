@@ -74,18 +74,6 @@ export default defineConfig([
     },
   },
 
-  // Legacy JavaScript (ADR 0001): classic hook rules only. The React Compiler
-  // rules below apply to TypeScript, so code is held to them as it is migrated
-  // instead of through a mass refactor (§3.4).
-  {
-    files: ['src/**/*.{js,jsx}'],
-    plugins: { 'react-hooks': reactHooks },
-    rules: {
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-    },
-  },
-
   // TypeScript: strict, type-aware rules (§6.1, §6.2)
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -114,7 +102,7 @@ export default defineConfig([
   },
 
   {
-    files: ['src/**/*.test.{js,jsx,ts,tsx}', 'src/setupTests.js'],
+    files: ['src/**/*.test.{js,jsx,ts,tsx}', 'src/setupTests.ts'],
     languageOptions: { globals: { ...globals.browser, ...globals.vitest } },
   },
 

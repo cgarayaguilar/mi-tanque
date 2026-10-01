@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { sileo, type SileoOptions } from 'sileo'
 import App from '../../App'
-import AppProvider from 'store'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
@@ -15,11 +14,7 @@ interface Dimensions {
 
 const fill = async ({ capacity, diameter, length }: Dimensions) => {
   window.history.pushState({}, '', '/tanques/crear')
-  render(
-    <AppProvider>
-      <App />
-    </AppProvider>
-  )
+  render(<App />)
 
   fireEvent.change(await screen.findByLabelText('Capacidad'), {
     target: { value: capacity },

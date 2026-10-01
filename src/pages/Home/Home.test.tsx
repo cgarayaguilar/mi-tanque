@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { sileo } from 'sileo'
 import type { MockInstance } from 'vitest'
 import App from '../../App'
-import AppProvider from 'store'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { settle } from '../../testUtils'
@@ -11,11 +10,7 @@ const tank = { capacity: 50, diameter: 25, length: 26 }
 
 const renderHome = () => {
   window.history.pushState({}, '', '/')
-  render(
-    <AppProvider>
-      <App />
-    </AppProvider>
-  )
+  render(<App />)
 }
 
 const selectTank = async () => {

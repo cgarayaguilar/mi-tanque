@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import App from '../../App'
-import AppProvider from 'store'
 import { db } from 'services/db'
 import { useTanksStore } from 'store/tanks'
 
@@ -9,11 +8,7 @@ beforeEach(async () => {
   useTanksStore.setState({ tanks: [], status: 'idle' })
   await db.tanks.clear()
   window.history.pushState({}, '', '/tanques')
-  render(
-    <AppProvider>
-      <App />
-    </AppProvider>
-  )
+  render(<App />)
   await screen.findByText('Tanque de 50 gls')
 })
 

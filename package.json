@@ -34,7 +34,6 @@
     "react-hook-form": "^7.89.0",
     "react-wavify": "^1.5.2",
     "sileo": "0.1.5",
-    "styled-components": "^5.2.1",
     "wouter": "^2.7.3",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
