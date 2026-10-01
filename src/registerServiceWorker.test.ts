@@ -14,13 +14,15 @@ const register = (): RegisterSWOptions => {
   return options
 }
 
-test('offers the new version in a toast that stays until acted on', () => {
+// Regression: with duration null the toast showed collapsed and hid the button
+test('offers the new version expanded, with its button visible', () => {
   register().onNeedRefresh?.()
 
   expect(sileo.action).toHaveBeenCalledWith(
     expect.objectContaining({
       title: 'Nueva versión disponible',
-      duration: null,
+      duration: 24 * 60 * 60 * 1000,
+      autopilot: { expand: 0, collapse: 0 },
       button: expect.objectContaining({ title: 'Actualizar' }) as unknown,
     })
   )
