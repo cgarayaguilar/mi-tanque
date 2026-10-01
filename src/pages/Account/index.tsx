@@ -20,6 +20,11 @@ import Stat from 'components/Stat'
 import TextField from 'components/TextField'
 import { useSignOut } from 'hooks/useSignOut'
 import {
+  CreateOrganizationButton,
+  DeleteAccountButton,
+} from 'pages/Account/AccountDialogs'
+import TeamSection from 'pages/Account/TeamSection'
+import {
   CURRENCY_NAMES,
   CURRENCY_OPTIONS,
   organizationFormSchema,
@@ -257,6 +262,7 @@ function OrganizationSection() {
           </Stack>
         )
       )}
+      <CreateOrganizationButton />
     </Section>
   )
 }
@@ -301,6 +307,7 @@ function AccountScreen() {
       <Stack spacing={4}>
         <ProfileSection />
         <OrganizationSection />
+        <TeamSection />
         <ImportSection />
       </Stack>
       <Button
@@ -315,6 +322,7 @@ function AccountScreen() {
       >
         Cerrar sesión
       </Button>
+      <DeleteAccountButton />
       {dialog}
     </Box>
   )

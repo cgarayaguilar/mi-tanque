@@ -13,6 +13,14 @@ const importApi = vi.hoisted(() => ({
 }))
 vi.mock('services/importLocal', () => importApi)
 
+// Mi cuenta → Equipo reads the team (specs/0005); not under test here
+vi.mock('services/team', () => ({
+  readTeam: vi.fn(() => Promise.resolve([])),
+  readPendingInvitations: vi.fn(() => Promise.resolve([])),
+  readOwnershipBlocks: vi.fn(() => Promise.resolve([])),
+  callTeam: vi.fn(() => Promise.resolve({ ok: true })),
+}))
+
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(() =>
     Promise.resolve({ trucks: [], trailers: [], tanks: [] })
