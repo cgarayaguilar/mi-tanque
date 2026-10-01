@@ -77,8 +77,13 @@ export default function App() {
         <Route path="/flota" component={Fleet} />
         <Route path="/flota/:section" component={Fleet} />
         <Route path="/flota/:section/:id" component={FleetItem} />
-        {sessionStatus === 'ready' && <ImportOffer />}
       </Suspense>
+      {/* Its own boundary: loading its chunk must not blank the page */}
+      {sessionStatus === 'ready' && (
+        <Suspense fallback={null}>
+          <ImportOffer />
+        </Suspense>
+      )}
       {/* Single toast outlet for mutation feedback (§8.14) */}
       <Toaster
         position="bottom-center"
