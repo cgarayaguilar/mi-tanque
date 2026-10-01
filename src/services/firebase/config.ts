@@ -55,4 +55,5 @@ export const EMULATORS = {
  * tokens through the project, with no secret key. Empty: App Check is not
  * started.
  */
-export const RECAPTCHA_SITE_KEY: string = ''
+export const RECAPTCHA_SITE_KEY: string =
+  '6LcUB9otAAAAAObQCzUh6Qell_658ccYu_wiA8bx'
