@@ -1,4 +1,5 @@
 import { authDomainFor, emulatorHostFor } from 'services/firebase/config'
+import type * as Config from 'services/firebase/config'
 
 const sdk = vi.hoisted(() => ({
   initializeApp: vi.fn(() => ({ name: 'app' })),
@@ -19,6 +20,19 @@ const sdk = vi.hoisted(() => ({
   clearIndexedDbPersistence: vi.fn(() => Promise.resolve()),
   getFunctions: vi.fn(() => ({ name: 'functions' })),
   connectFunctionsEmulator: vi.fn(),
+  initializeAppCheck: vi.fn(),
+  ReCaptchaV3Provider: vi.fn(function (this: { key: string }, key: string) {
+    this.key = key
+  }),
+}))
+
+// The site key is empty until the owner creates it (specs/0008)
+const config = vi.hoisted(() => ({ siteKey: '' }))
+vi.mock('services/firebase/config', async importOriginal => ({
+  ...(await importOriginal<typeof Config>()),
+  get RECAPTCHA_SITE_KEY() {
+    return config.siteKey
+  },
 }))
 
 vi.mock('firebase/app', () => ({
@@ -40,6 +54,10 @@ vi.mock('firebase/firestore', () => ({
   terminate: sdk.terminate,
   clearIndexedDbPersistence: sdk.clearIndexedDbPersistence,
 }))
+vi.mock('firebase/app-check', () => ({
+  initializeAppCheck: sdk.initializeAppCheck,
+  ReCaptchaV3Provider: sdk.ReCaptchaV3Provider,
+}))
 vi.mock('firebase/functions', () => ({
   getFunctions: sdk.getFunctions,
   connectFunctionsEmulator: sdk.connectFunctionsEmulator,
@@ -53,6 +71,8 @@ const load = async () => {
 
 afterEach(() => {
   vi.unstubAllEnvs()
+  vi.clearAllMocks()
+  config.siteKey = ''
 })
 
 test('initializes the app once, with a persistent cache and Functions in us-central1', async () => {
@@ -151,4 +171,45 @@ test('reuses an app that already exists instead of setting it up again', async (
   expect(sdk.initializeFirestore).not.toHaveBeenCalled()
   expect(db).toEqual({ name: 'existing-db' })
   expect(sdk.connectFirestoreEmulator).not.toHaveBeenCalled()
+})
+
+describe('App Check (specs/0008 RF-7, RF-8)', () => {
+  test('starts with reCAPTCHA v3 and token refresh, once, before the other services', async () => {
+    config.siteKey = 'site-key'
+    const { loadFirebase } = await load()
+    await Promise.all([loadFirebase(), loadFirebase()])
+
+    expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(1)
+    expect(sdk.initializeAppCheck).toHaveBeenCalledWith(
+      { name: 'app' },
+      { provider: { key: 'site-key' }, isTokenAutoRefreshEnabled: true }
+    )
+    expect(sdk.initializeAppCheck.mock.invocationCallOrder[0]).toBeLessThan(
+      sdk.getAuth.mock.invocationCallOrder[0] ?? 0
+    )
+  })
+
+  test('not with the emulators, nor without a site key', async () => {
+    config.siteKey = 'site-key'
+    vi.stubEnv('VITE_USE_EMULATORS', 'true')
+    await (await load()).loadFirebase()
+    vi.unstubAllEnvs()
+    config.siteKey = ''
+    await (await load()).loadFirebase()
+    expect(sdk.initializeAppCheck).not.toHaveBeenCalled()
+  })
+
+  test("the basic mode's place lookup gets App Check and Functions, never Firestore (RF-5)", async () => {
+    config.siteKey = 'site-key'
+    vi.resetModules()
+    const { firebaseApp, functionsFor } = await import('services/firebase/core')
+    functionsFor(firebaseApp().app)
+    expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(1)
+    expect(sdk.getFunctions).toHaveBeenCalledWith(
+      { name: 'app' },
+      'us-central1'
+    )
+    expect(sdk.initializeFirestore).not.toHaveBeenCalled()
+    expect(sdk.getAuth).not.toHaveBeenCalled()
+  })
 })

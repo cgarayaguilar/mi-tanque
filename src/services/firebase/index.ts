@@ -1,11 +1,6 @@
 // Imported only by services/session, which the session store loads with
 // import(): the SDK lives in that chunk and the basic mode never downloads it.
-import {
-  deleteApp,
-  getApps,
-  initializeApp,
-  type FirebaseApp,
-} from 'firebase/app'
+import { deleteApp, type FirebaseApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, signOut, type Auth } from 'firebase/auth'
 import {
   clearIndexedDbPersistence,
@@ -17,19 +12,10 @@ import {
   terminate,
   type Firestore,
 } from 'firebase/firestore'
-import {
-  connectFunctionsEmulator,
-  getFunctions,
-  type Functions,
-} from 'firebase/functions'
+import type { Functions } from 'firebase/functions'
 import type { FirebaseStorage } from 'firebase/storage'
-import {
-  authDomainFor,
-  emulatorHostFor,
-  EMULATORS,
-  firebaseConfig,
-  FUNCTIONS_REGION,
-} from './config'
+import { emulatorHostFor, EMULATORS } from './config'
+import { emulatorsEnabled, firebaseApp, functionsFor } from './core'
 
 export interface FirebaseServices {
   app: FirebaseApp
@@ -40,18 +26,12 @@ export interface FirebaseServices {
 
 let services: Promise<FirebaseServices> | null = null
 
-const emulatorsEnabled = () => import.meta.env.VITE_USE_EMULATORS === 'true'
-
 const initialize = (): FirebaseServices => {
   // An app that outlived this module (Vite hot reload) is reused: Firestore
-  // and the emulators can only be set up once per app
-  const existing = getApps()[0]
-  const app =
-    existing ??
-    initializeApp({
-      ...firebaseConfig,
-      authDomain: authDomainFor(window.location.hostname),
-    })
+  // and the emulators can only be set up once per app. App Check starts with
+  // a new app, before any request (specs/0008)
+  const { app, isNew } = firebaseApp()
+  const existing = !isNew
   const auth = getAuth(app)
   auth.languageCode = 'es'
   // Persistent cache: reads work and writes queue while a driver has no
@@ -63,7 +43,7 @@ const initialize = (): FirebaseServices => {
           tabManager: persistentMultipleTabManager(),
         }),
       })
-  const functions = getFunctions(app, FUNCTIONS_REGION)
+  const functions = functionsFor(app)
 
   if (!existing && emulatorsEnabled()) {
     const host = emulatorHostFor(window.location.hostname)
@@ -73,7 +53,6 @@ const initialize = (): FirebaseServices => {
     // The emulator does not run reCAPTCHA
     auth.settings.appVerificationDisabledForTesting = true
     connectFirestoreEmulator(db, host, EMULATORS.firestore)
-    connectFunctionsEmulator(functions, host, EMULATORS.functions)
   }
 
   return { app, auth, db, functions }
