@@ -90,7 +90,8 @@ Hallazgos adicionales resueltos en la fase:
 - **`react-list`** (usado por el calendario) perdía su listener de scroll al remontarse en
   desarrollo: parcheado con `patch-package` hasta reemplazar el calendario. **Resuelto
   (2026-10-01):** el calendario pasó al `StaticDateRangePicker` de MUI X Pro, con atajos de
-  periodo; se quitaron `react-date-range`, `react-list`, el parche y `patch-package`.
+  periodo; se quitaron `react-date-range`, `react-list`, el parche y `patch-package`. MUI y MUI
+  X quedan en la 7, la versión que cubre la licencia.
 - Tanques guardados con medidas en texto: se normalizan a números al leer y al escribir.
 - Sileo pone en mayúscula cada palabra del título y su descripción no llega a AA en el toast
   claro: corregido con dos reglas en `globalStyles`.
