@@ -50,8 +50,9 @@ export const EMULATORS = {
 } as const
 
 /**
- * reCAPTCHA v3 site key for App Check (backend specs/0008). Public by
- * design, like the web config; the secret key lives only in the Firebase
- * console. Empty: App Check is not started (it is only monitored for now).
+ * Fraud Defense (reCAPTCHA Enterprise) site key for App Check (backend
+ * specs/0008). Public by design, like the web config; Firebase checks the
+ * tokens through the project, with no secret key. Empty: App Check is not
+ * started.
  */
 export const RECAPTCHA_SITE_KEY: string = ''

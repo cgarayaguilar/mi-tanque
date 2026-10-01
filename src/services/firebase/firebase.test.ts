@@ -21,7 +21,10 @@ const sdk = vi.hoisted(() => ({
   getFunctions: vi.fn(() => ({ name: 'functions' })),
   connectFunctionsEmulator: vi.fn(),
   initializeAppCheck: vi.fn(),
-  ReCaptchaV3Provider: vi.fn(function (this: { key: string }, key: string) {
+  ReCaptchaEnterpriseProvider: vi.fn(function (
+    this: { key: string },
+    key: string
+  ) {
     this.key = key
   }),
 }))
@@ -56,7 +59,7 @@ vi.mock('firebase/firestore', () => ({
 }))
 vi.mock('firebase/app-check', () => ({
   initializeAppCheck: sdk.initializeAppCheck,
-  ReCaptchaV3Provider: sdk.ReCaptchaV3Provider,
+  ReCaptchaEnterpriseProvider: sdk.ReCaptchaEnterpriseProvider,
 }))
 vi.mock('firebase/functions', () => ({
   getFunctions: sdk.getFunctions,
@@ -174,7 +177,7 @@ test('reuses an app that already exists instead of setting it up again', async (
 })
 
 describe('App Check (specs/0008 RF-7, RF-8)', () => {
-  test('starts with reCAPTCHA v3 and token refresh, once, before the other services', async () => {
+  test('starts with Fraud Defense and token refresh, once, before the other services', async () => {
     config.siteKey = 'site-key'
     const { loadFirebase } = await load()
     await Promise.all([loadFirebase(), loadFirebase()])

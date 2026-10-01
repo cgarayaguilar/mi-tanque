@@ -2,7 +2,10 @@
 // Auth or Firestore here: the basic mode loads only this, and only when a
 // measurement needs its place.
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app'
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
+import {
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from 'firebase/app-check'
 import {
   connectFunctionsEmulator,
   getFunctions,
@@ -23,7 +26,7 @@ export const emulatorsEnabled = () =>
 let appCheckStarted = false
 
 /**
- * App Check with reCAPTCHA v3, before any other service sends a request
+ * App Check with Fraud Defense (reCAPTCHA Enterprise), before any other service sends a request
  * (RF-7). Not with the emulators, which do not check it (RF-8); with a
  * debug token in development against the real project.
  */
@@ -36,7 +39,7 @@ const startAppCheck = (app: FirebaseApp) => {
     ).FIREBASE_APPCHECK_DEBUG_TOKEN = true
   }
   initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   })
   appCheckStarted = true
