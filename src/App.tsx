@@ -7,6 +7,7 @@ import { Toaster } from 'sileo'
 import AppBar from 'components/AppBar'
 import Home from 'pages/Home'
 import { useColorModeStore } from 'store/colorMode'
+import { useSessionStore } from 'store/session'
 import { muiThemes } from 'theme/muiTheme'
 import { colorTokens, layout } from 'theme/tokens'
 
@@ -15,10 +16,21 @@ import { colorTokens, layout } from 'theme/tokens'
 const TankSearch = lazy(() => import('pages/TankSearch'))
 const AddTank = lazy(() => import('pages/AddTank'))
 const History = lazy(() => import('pages/History'))
+// Signed-in mode (specs/0002): their chunks carry the Firebase SDK
+const SignIn = lazy(() => import('pages/SignIn'))
+const Welcome = lazy(() => import('pages/Welcome'))
+const Account = lazy(() => import('pages/Account'))
 
 export default function App() {
   const mode = useColorModeStore(state => state.mode)
   const color = colorTokens[mode]
+  const sessionStatus = useSessionStore(state => state.status)
+  const startSession = useSessionStore(state => state.start)
+
+  // Restore a remembered session; without one the SDK is never loaded
+  useEffect(() => {
+    if (sessionStatus === 'loading') void startSession()
+  }, [sessionStatus, startSession])
 
   // Keep the mobile status bar (installed PWA) in sync with light/dark mode
   useEffect(() => {
@@ -55,6 +67,9 @@ export default function App() {
         <Route path="/tanques" component={TankSearch} />
         <Route path="/tanques/crear" component={AddTank} />
         <Route path="/history" component={History} />
+        <Route path="/entrar" component={SignIn} />
+        <Route path="/bienvenida" component={Welcome} />
+        <Route path="/cuenta" component={Account} />
       </Suspense>
       {/* Single toast outlet for mutation feedback (§8.14) */}
       <Toaster

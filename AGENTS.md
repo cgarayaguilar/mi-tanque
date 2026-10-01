@@ -71,6 +71,11 @@ en cada push y PR.
 - **Errores:** todo `catch` llama a `reportError(error, { operation, ...contexto })`
   (`src/utils/reportError.ts`, el canal único de §7.3) y avisa al usuario con Sileo. Nunca pongas
   ubicaciones ni datos personales en el contexto.
+- **Modo autenticado (specs/0002 del backend):** el estado de la cuenta vive en `store/session`. Solo
+  `services/session` importa el SDK de Firebase. El store lo carga con `import()` y solo las páginas
+  lazy (`/entrar`, `/bienvenida`, `/cuenta`) lo importan directo: así el modo básico nunca descarga
+  el SDK (verifícalo en el build: el chunk `index` no debe contener Firestore). Las pantallas del
+  modo autenticado van dentro de `SessionGate`.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests

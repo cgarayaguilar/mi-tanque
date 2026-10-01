@@ -58,6 +58,9 @@ const pwa = VitePWA({
   },
   workbox: {
     globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+    // Firebase Auth's sign-in handler is proxied to Firebase (vercel.json):
+    // it must reach the network, never the app shell
+    navigateFallbackDenylist: [/^\/__\//],
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

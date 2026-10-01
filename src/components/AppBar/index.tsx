@@ -7,8 +7,9 @@ import Typography from '@mui/material/Typography'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import LogoIcon from 'assets/logo.svg?react'
+import SessionControl from 'components/SessionControl'
 import { useColorModeStore } from 'store/colorMode'
-import { layout, radius } from 'theme/tokens'
+import { layout, radius, typeScale } from 'theme/tokens'
 
 /** top-nav (DESIGN.md): the logo goes home, the button switches light/dark. */
 export default function AppBar() {
@@ -38,24 +39,44 @@ export default function AppBar() {
         href="/"
         onClick={goHome}
         aria-label="Solo Camioneros, ir al inicio"
-        sx={{ gap: 2, borderRadius: `${String(radius.sm)}px` }}
+        sx={{
+          gap: 2,
+          minWidth: 0,
+          borderRadius: `${String(radius.sm)}px`,
+          // Phones: a smaller mark so the name stays on one line next to
+          // the theme and account buttons (down to 360px wide)
+          '& svg': { width: { xs: 52, sm: 70 }, height: 'auto', flexShrink: 0 },
+        }}
       >
         <LogoIcon aria-hidden="true" />
-        <Typography variant="h3" component="span">
+        <Typography
+          variant="h3"
+          component="span"
+          noWrap
+          sx={{
+            fontSize: {
+              xs: typeScale.titleSm.fontSize,
+              sm: typeScale.displaySm.fontSize,
+            },
+          }}
+        >
           Solo Camioneros
         </Typography>
       </ButtonBase>
 
-      <IconButton
-        size="large"
-        color="inherit"
-        aria-label={
-          mode === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'
-        }
-        onClick={toggle}
-      >
-        {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-      </IconButton>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <IconButton
+          size="large"
+          color="inherit"
+          aria-label={
+            mode === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'
+          }
+          onClick={toggle}
+        >
+          {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+        </IconButton>
+        <SessionControl />
+      </Box>
     </Box>
   )
 }

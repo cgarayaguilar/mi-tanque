@@ -1,0 +1,215 @@
+import type { Account, SessionUser } from 'services/session'
+
+const api = vi.hoisted(() => ({
+  subscribeToAuth: vi.fn(),
+  completeRedirectSignIn: vi.fn(() => Promise.resolve()),
+  readAccount: vi.fn(),
+  callAccount: vi.fn(() => Promise.resolve({})),
+  setActiveOrganization: vi.fn(() => Promise.resolve()),
+  hasPendingWrites: vi.fn(() => Promise.resolve(false)),
+  signOutAndClear: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('services/session', () => api)
+
+const ana: SessionUser = {
+  uid: 'ana',
+  displayName: 'Ana',
+  email: 'ana@example.com',
+  phoneNumber: null,
+}
+
+const readyAccount: Account = {
+  profile: { displayName: 'Ana', activeOrgId: 'org-a' },
+  memberships: [
+    { orgId: 'org-a', role: 'owner', orgName: 'Flota de Ana' },
+    { orgId: 'org-b', role: 'driver', orgName: 'Transportes B' },
+  ],
+  organization: { id: 'org-a', name: 'Flota de Ana', defaultCurrency: 'USD' },
+}
+
+// The store reads the session hint when it is created: import it per test
+const loadStore = async () => {
+  vi.resetModules()
+  const { useSessionStore } = await import('store/session')
+  return useSessionStore
+}
+
+/** Starts the store and returns the auth listener it registered. */
+const startWithListener = async () => {
+  let listener: ((user: SessionUser | null) => void) | undefined
+  api.subscribeToAuth.mockImplementation(
+    (onChange: (user: SessionUser | null) => void) => {
+      listener = onChange
+      return Promise.resolve(() => undefined)
+    }
+  )
+  const store = await loadStore()
+  await store.getState().start()
+  if (!listener) throw new Error('No auth listener')
+  return { store, emit: listener }
+}
+
+const settled = () => new Promise(resolve => setTimeout(resolve, 0))
+
+beforeEach(() => {
+  window.localStorage.clear()
+  api.readAccount.mockResolvedValue(readyAccount)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+test('without a remembered session it starts signed out and loads nothing', async () => {
+  const store = await loadStore()
+
+  expect(store.getState().status).toBe('signedOut')
+  expect(api.subscribeToAuth).not.toHaveBeenCalled()
+})
+
+test('a remembered session starts loading until the account arrives', async () => {
+  window.localStorage.setItem('sessionActive', 'true')
+  const store = await loadStore()
+
+  expect(store.getState().status).toBe('loading')
+})
+
+test('a signed-in user with an account is ready, with the active organization', async () => {
+  const { store, emit } = await startWithListener()
+
+  emit(ana)
+  await settled()
+
+  expect(store.getState()).toMatchObject({
+    status: 'ready',
+    user: ana,
+    organization: { id: 'org-a', name: 'Flota de Ana' },
+  })
+  expect(window.localStorage.getItem('sessionActive')).toBe('true')
+})
+
+test('a first sign-in goes to onboarding (specs/0002 RF-7)', async () => {
+  api.readAccount.mockResolvedValue({
+    profile: null,
+    memberships: [],
+    organization: null,
+  })
+  const { store, emit } = await startWithListener()
+
+  emit(ana)
+  await settled()
+
+  expect(store.getState().status).toBe('needsOnboarding')
+})
+
+test('completing onboarding calls bootstrap and becomes ready', async () => {
+  api.readAccount.mockResolvedValueOnce({
+    profile: null,
+    memberships: [],
+    organization: null,
+  })
+  const { store, emit } = await startWithListener()
+  emit(ana)
+  await settled()
+
+  await store
+    .getState()
+    .completeOnboarding({ orgName: 'Flota de Ana', currency: 'NIO' })
+
+  expect(api.callAccount).toHaveBeenCalledWith({
+    action: 'bootstrap',
+    orgName: 'Flota de Ana',
+    currency: 'NIO',
+  })
+  expect(store.getState().status).toBe('ready')
+})
+
+test('a failed account read shows the error state and can be retried', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  api.readAccount.mockRejectedValueOnce(new Error('unavailable'))
+  const { store, emit } = await startWithListener()
+
+  emit(ana)
+  await settled()
+  expect(store.getState().status).toBe('error')
+
+  await store.getState().refresh()
+  expect(store.getState().status).toBe('ready')
+})
+
+test('switching organization writes the active one and reloads', async () => {
+  const { store, emit } = await startWithListener()
+  emit(ana)
+  await settled()
+
+  await store.getState().switchOrganization('org-b')
+
+  expect(api.setActiveOrganization).toHaveBeenCalledWith('ana', 'org-b')
+  expect(api.readAccount).toHaveBeenCalledTimes(2)
+})
+
+test('it never switches to an organization the user does not belong to', async () => {
+  const { store, emit } = await startWithListener()
+  emit(ana)
+  await settled()
+
+  await store.getState().switchOrganization('org-z')
+
+  expect(api.setActiveOrganization).not.toHaveBeenCalled()
+})
+
+test('renaming the organization sends the active org id', async () => {
+  const { store, emit } = await startWithListener()
+  emit(ana)
+  await settled()
+
+  await store.getState().updateOrganization({ name: 'Transportes Ana' })
+
+  expect(api.callAccount).toHaveBeenCalledWith({
+    action: 'updateOrganization',
+    orgId: 'org-a',
+    name: 'Transportes Ana',
+  })
+})
+
+describe('signing out (specs/0002 RF-14)', () => {
+  test('asks first when changes are still waiting to upload', async () => {
+    api.hasPendingWrites.mockResolvedValueOnce(true)
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+
+    await expect(store.getState().signOut()).resolves.toBe('pendingWrites')
+    expect(api.signOutAndClear).not.toHaveBeenCalled()
+    expect(store.getState().status).toBe('ready')
+  })
+
+  test('clears the account data and forgets the session', async () => {
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+
+    await expect(
+      store.getState().signOut({ discardPending: true })
+    ).resolves.toBe('signedOut')
+
+    expect(api.signOutAndClear).toHaveBeenCalled()
+    expect(store.getState()).toMatchObject({
+      status: 'signedOut',
+      user: null,
+      organization: null,
+    })
+    expect(window.localStorage.getItem('sessionActive')).toBeNull()
+  })
+
+  test('a sign-out from another tab also returns to the basic mode', async () => {
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+
+    emit(null)
+
+    expect(store.getState().status).toBe('signedOut')
+    expect(window.localStorage.getItem('sessionActive')).toBeNull()
+  })
+})
