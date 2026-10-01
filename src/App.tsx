@@ -56,6 +56,9 @@ export default function App() {
             margin: '0 auto',
             color: color.body,
           },
+          // The text of components/RecaptchaNotice replaces Google's badge,
+          // which would cover the bottom navigation (specs/0008 RF-12)
+          '.grecaptcha-badge': { visibility: 'hidden' },
           // Sileo title-cases toast titles; Spanish uses sentence case (§9)
           '[data-sileo-viewport] [data-sileo-title]': {
             textTransform: 'none',

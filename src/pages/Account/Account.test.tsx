@@ -167,3 +167,11 @@ test('the app bar shows the account menu with a session (RF-6)', async () => {
     screen.getByRole('menuitem', { name: 'Cerrar sesión' })
   ).toBeInTheDocument()
 })
+
+test("shows Google's reCAPTCHA text (specs/0008 RF-12)", async () => {
+  renderAccount(account('owner'))
+  expect(await screen.findByText(/Protegido por reCAPTCHA/)).toBeInTheDocument()
+  expect(
+    screen.getByRole('link', { name: 'Política de privacidad' })
+  ).toHaveAttribute('href', 'https://policies.google.com/privacy')
+})

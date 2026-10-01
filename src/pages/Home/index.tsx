@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
 import ModeToggle, { type MeasureMode } from 'components/ModeToggle'
+import RecaptchaNotice from 'components/RecaptchaNotice'
 import FuelGauge from 'components/FuelGauge'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
@@ -185,6 +186,8 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
       </Box>
 
       <Results reading={reading} />
+      {/* The place of a measurement uses App Check (specs/0008 RF-12) */}
+      <RecaptchaNotice />
     </>
   )
 }

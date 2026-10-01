@@ -173,3 +173,11 @@ test('once signed in, a new user goes to the welcome screen', async () => {
     expect(window.location.pathname).toBe('/bienvenida')
   })
 })
+
+test("shows Google's reCAPTCHA text instead of its badge (specs/0008 RF-12)", async () => {
+  renderSignIn()
+  expect(await screen.findByText(/Protegido por reCAPTCHA/)).toBeInTheDocument()
+  expect(
+    screen.getByRole('link', { name: 'Términos del servicio' })
+  ).toHaveAttribute('href', 'https://policies.google.com/terms')
+})

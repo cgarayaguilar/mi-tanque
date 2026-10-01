@@ -35,6 +35,7 @@ import {
   PHONE_COUNTRIES,
   toE164,
 } from 'utils/phoneCountries'
+import RecaptchaNotice from 'components/RecaptchaNotice'
 import { pendingInvitation } from 'utils/pendingInvitation'
 import { reportError } from 'utils/reportError'
 
@@ -319,6 +320,7 @@ export default function SignIn() {
       >
         Seguir sin cuenta
       </Button>
+      <RecaptchaNotice />
     </Box>
   )
 }

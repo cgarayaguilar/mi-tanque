@@ -14,6 +14,7 @@ import OutlinedInput from '@mui/material/OutlinedInput'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import LogoutIcon from '@mui/icons-material/Logout'
+import RecaptchaNotice from 'components/RecaptchaNotice'
 import SelectField from 'components/SelectField'
 import SessionGate from 'components/SessionGate'
 import Stat from 'components/Stat'
@@ -323,6 +324,7 @@ function AccountScreen() {
         Cerrar sesión
       </Button>
       <DeleteAccountButton />
+      <RecaptchaNotice />
       {dialog}
     </Box>
   )
