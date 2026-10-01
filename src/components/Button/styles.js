@@ -52,16 +52,6 @@ const Primitive = css`
     transform: none;
   }
 
-  &:hover::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: rgba($color: #000000, $alpha: 0.2);
-  }
-
   //Aplicar estilos segun el tamaño
   ${({ size }) => size === 'small' && `${Small}`}
   ${({ size }) => size === 'medium' && `${Medium}`}
@@ -84,6 +74,6 @@ export const FilledButton = styled.button`
   ${Primitive}
 
   background-color: ${({ theme }) => theme.accent};
-  color: #fff;
+  color: ${({ theme }) => theme.onAccent};
   border: none;
 `

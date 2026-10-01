@@ -1,8 +1,9 @@
 import { defineConfig } from '@vite-pwa/assets-generator/config'
+import { colorTokens } from './src/theme/tokens.ts'
 
 // Source icon already has a full-bleed background and keeps the logo inside the
 // maskable safe zone, so no extra padding is needed.
-const background = '#142850'
+const background = colorTokens.dark.background
 
 export default defineConfig({
   headLinkOptions: { preset: '2023' },

@@ -6,6 +6,7 @@ const toLegacyTheme = tokens => ({
   background: tokens.background,
   card: tokens.surface,
   accent: tokens.accent,
+  onAccent: tokens.onAccent,
   primaryText: tokens.textPrimary,
   secondaryText: tokens.textSecondary,
   error: tokens.error,

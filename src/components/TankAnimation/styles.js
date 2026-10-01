@@ -41,7 +41,9 @@ export const Wrapper = styled.div`
 
 export const FuelLevel = styled.div`
   align-items: center;
-  color: ${({ theme }) => theme.textSecondary};
+  /* Colors the pump icon; theme.textSecondary did not exist, so it always
+     inherited the primary text color: keep that look explicitly */
+  color: ${({ theme }) => theme.primaryText};
   display: flex;
   flex-direction: column;
   margin-top: 20px;

@@ -1,9 +1,12 @@
+import { useTheme } from 'styled-components'
 import { Wrapper, Wave, FuelLevel } from './styles'
 
 import { FaGasPump as FuelIcon } from 'react-icons/fa'
 import Typography from 'components/Typography'
 
 export default function TankAnimation({ fuelHeight = 0, gallons = 0 }) {
+  const theme = useTheme()
+
   return (
     <Wrapper>
       <FuelLevel>
@@ -17,7 +20,7 @@ export default function TankAnimation({ fuelHeight = 0, gallons = 0 }) {
       </FuelLevel>
       <Wave
         fuellevel={`${fuelHeight}%`}
-        fill="#00A8CC"
+        fill={theme.accent}
         paused={false}
         options={{
           height: 5,

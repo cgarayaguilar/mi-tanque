@@ -367,6 +367,7 @@ Functions. Comparten el mismo proyecto Firebase y región.
     radios y sombras viven en el **theme central de MUI** y se documentan en **`DESIGN.md`** (§14).
     Usa `sx`/`styled`/variantes del theme y los tokens (`theme.palette.*`, `theme.spacing()`); nada
     de hex sueltos ni píxeles mágicos en el JSX. Define un solo `<ThemeProvider>` en la raíz.
+    _(ESLint rechaza los colores hex fuera de `src/theme/tokens.ts`.)_
 14. **Feedback obligatorio tras CADA mutación (Sileo).** Toda acción que escriba o mute datos
     (guardar una medición, crear un tanque, eliminar…) **DEBE** confirmar al usuario el resultado —
     éxito **o** fallo — usando **Sileo**. Una mutación silenciosa (sin feedback) se considera

@@ -95,9 +95,10 @@ en cada push y PR.
   calendario del historial en desarrollo: `StrictMode` remonta los componentes y `react-list` perdía
   su listener de scroll. Bórralo junto con `react-date-range` cuando se reemplace el calendario
   (fase 3).
-- **Tras instalar o quitar dependencias, reinicia `npm run dev`.** Si el servidor sigue encendido,
-  el optimizador de Vite puede servir dos copias de React y la app queda en blanco con "Invalid
-  hook call". Si pasa: para el servidor, borra `node_modules/.vite` y arráncalo de nuevo.
+- **Tras instalar o quitar dependencias, o renombrar archivos (p. ej. `.js` → `.ts`), reinicia
+  `npm run dev`.** Con el servidor encendido, Vite puede servir dos copias de React ("Invalid hook
+  call") o seguir pidiendo el archivo viejo (404), y la app queda en blanco. Si pasa: para el
+  servidor, borra `node_modules/.vite` y arráncalo de nuevo.
 - `typescript` está fijado en `~6.0` porque `typescript-eslint` todavía no soporta la 7.
 - Si `npm install` falla con `EACCES` en `~/.npm`, la caché global de npm del usuario tiene
   problemas de permisos: usa `--cache <directorio temporal>` en vez de cambiar el sistema del

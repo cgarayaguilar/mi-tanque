@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 import { VitePWA } from 'vite-plugin-pwa'
+import { colorTokens } from './src/theme/tokens.ts'
 
 const srcDir = fileURLToPath(new URL('./src', import.meta.url))
 
@@ -22,7 +23,8 @@ const absoluteImportDirs = [
   'utils',
 ]
 
-const themeColor = '#142850'
+// Manifest and splash colors: the default (dark) background from the design tokens
+const themeColor = colorTokens.dark.background
 
 const pwa = VitePWA({
   // Ask the user before activating a new version (see src/registerServiceWorker.js)

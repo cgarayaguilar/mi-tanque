@@ -79,8 +79,8 @@ componentes de interfaz.
 ⚠️ `caption2` usa peso 300, que **no se carga** desde Google Fonts: el navegador lo sintetiza. Al
 migrar, pasa a 400 o se añade el peso 300 a la carga de fuentes.
 
-⚠️ Hoy los links (`link`, `link2`) son encabezados (`h3`/`h4`) con `onClick`: no son navegables con
-teclado. Al migrar pasan a `<Link>`/`<Button>` de MUI (§8.11).
+Las variantes `link` y `link2` son solo visuales (texto en `accent`). Todo lo interactivo es un
+`<button>` o un `<a>` real, con foco visible (§8.11).
 
 ## Espaciado
 
@@ -143,21 +143,27 @@ equivalentes de significado:
 | Buscar              | `MdSearch`                        | `Search`                    |
 | Expandir / contraer | `IoIosArrowDown` / `IoIosArrowUp` | `ExpandMore` / `ExpandLess` |
 
-Todo icono interactivo lleva `aria-label`.
+Todo icono interactivo lleva `aria-label`; los decorativos, `aria-hidden`.
+
+## Foco
+
+Todo control muestra el foco del teclado: contorno de 2px en `accent` con 2px de separación
+(`src/styles/interactive.js` en el código heredado; los componentes de MUI usan su propio
+indicador).
 
 ## Componentes base
 
-| Componente             | Variantes y estados                                                                                                                                                                                                       | Notas                                                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Button**             | `filled` (fondo `accent`), `outlined` (borde `accent`), `link` (texto `accent`) · tamaños `small` 14/700, `medium` 16/700, `large` 20/500 · alto 48px · ancho completo · `active`: escala 0.95 · `hover`: velo oscuro 20% | `disabled`: opacidad 0.6, sin escala; muestra "Guardando…" mientras envía (§8.6)                                    |
-| **TextField**          | Etiqueta opcional, icono de búsqueda opcional · borde `textSecondary`, en foco `textPrimary` · fondo `surface`                                                                                                            | ⚠️ El área táctil del input (~35px) es menor que los 48px recomendados. Faltan error inline y texto de ayuda (§8.7) |
-| **Card**               | Fondo `surface`, radio 8px, padding 8–16px                                                                                                                                                                                | Tarjeta de tanque y de medición                                                                                     |
-| **AppBar**             | Logo + nombre a la izquierda, cambio de tema a la derecha                                                                                                                                                                 | Alto ~49px                                                                                                          |
-| **NavBar**             | Dos pestañas (Historial, Medición) con icono + texto · activa en `accent`                                                                                                                                                 | Fija al fondo de la pantalla                                                                                        |
-| **Stepper**            | Badge circular de 20px · completado `accent`, pendiente `textSecondary` · línea vertical de 1px                                                                                                                           | Formulario de medición en 3 pasos                                                                                   |
-| **Diagrama de tanque** | Cilindro con capacidad al centro y cotas de diámetro y longitud                                                                                                                                                           | SVG (`src/assets/tank.svg`)                                                                                         |
-| **Medidor**            | Círculo de 250px en `surface` con ola animada `accent` (`react-wavify`) que sube hasta el % de llenado                                                                                                                    | Muestra % y galones encima                                                                                          |
-| **Dialog** (MUI)       | Título + contenido + acciones (`Cancelar` texto, acción principal `contained`) · pantalla completa en `xs` · backdrop `overlay` · papel `surface` sin elevación                                                           | Todo modal de la app (§8.8). Hoy: selector de periodo del historial                                                 |
+| Componente             | Variantes y estados                                                                                                                                                                            | Notas                                                                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Button**             | `filled` (fondo `accent`), `outlined` (borde `accent`), `link` (texto `accent`) · tamaños `small` 14/700, `medium` 16/700, `large` 20/500 · alto 48px · ancho completo · `active`: escala 0.95 | `disabled`: opacidad 0.6, sin escala; muestra "Guardando…" mientras envía (§8.6)                                    |
+| **TextField**          | Etiqueta opcional, icono de búsqueda opcional · borde `textSecondary`, en foco `textPrimary` · fondo `surface`                                                                                 | ⚠️ El área táctil del input (~35px) es menor que los 48px recomendados. Faltan error inline y texto de ayuda (§8.7) |
+| **Card**               | Fondo `surface`, radio 8px, padding 8–16px                                                                                                                                                     | Tarjeta de tanque y de medición                                                                                     |
+| **AppBar**             | Logo + nombre a la izquierda, cambio de tema a la derecha                                                                                                                                      | Alto ~49px                                                                                                          |
+| **NavBar**             | Dos pestañas (Historial, Medición) con icono + texto · activa en `accent`                                                                                                                      | Fija al fondo de la pantalla                                                                                        |
+| **Stepper**            | Badge circular de 20px · completado `accent`, pendiente `textSecondary` · línea vertical de 1px                                                                                                | Formulario de medición en 3 pasos                                                                                   |
+| **Diagrama de tanque** | Cilindro con capacidad al centro y cotas de diámetro y longitud                                                                                                                                | SVG (`src/assets/tank.svg`)                                                                                         |
+| **Medidor**            | Círculo de 250px en `surface` con ola animada `accent` (`react-wavify`) que sube hasta el % de llenado                                                                                         | Muestra % y galones encima                                                                                          |
+| **Dialog** (MUI)       | Título + contenido + acciones (`Cancelar` texto, acción principal `contained`) · pantalla completa en `xs` · backdrop `overlay` · papel `surface` sin elevación                                | Todo modal de la app (§8.8). Hoy: selector de periodo del historial                                                 |
 
 ## Mapeo al theme de MUI
 
@@ -180,14 +186,13 @@ components: {
 },
 ```
 
-## Valores hardcodeados pendientes de eliminar (§8.13)
+## Colores fuera de los tokens (§8.13)
 
-| Archivo                                  | Valor                                                          | Token que lo sustituye |
-| ---------------------------------------- | -------------------------------------------------------------- | ---------------------- |
-| `src/components/AppBar/index.jsx`        | `#fff` / `#142850`                                             | `textPrimary`          |
-| `src/components/CardHistory/index.jsx`   | `#00A8CC`                                                      | `accent`               |
-| `src/components/TankAnimation/index.jsx` | `#00A8CC`                                                      | `accent`               |
-| `src/components/TankAnimation/styles.js` | `theme.textSecondary` (no existe: debería ser `secondaryText`) | `textSecondary`        |
+Ninguno en el código: ESLint rechaza cualquier color hex fuera de `src/theme/tokens.ts`. La
+configuración de Vite (manifest) y la del generador de iconos importan sus colores de los tokens.
+Solo quedan dos excepciones que no pueden leer los tokens: el SVG fuente del icono
+(`public/pwa-icon.svg`) y el `theme-color` inicial de `index.html`, que la app sincroniza al
+arrancar.
 
 ## Toasts (Sileo)
 

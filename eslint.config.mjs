@@ -14,6 +14,20 @@ const principleRules = {
   'no-console': ['error', { allow: ['error', 'warn'] }],
   // §7.1: never swallow an error with an empty catch
   'no-empty': ['error', { allowEmptyCatch: false }],
+  // §8.13: colors come from the design tokens, never as loose hex values
+  'no-restricted-syntax': [
+    'error',
+    {
+      selector: 'Literal[value=/^#[0-9a-fA-F]{3,8}$/]',
+      message:
+        'Use a design token (src/theme/tokens.ts), not a hex color (§8.13).',
+    },
+    {
+      selector: 'TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b/]',
+      message:
+        'Use a design token (src/theme/tokens.ts), not a hex color (§8.13).',
+    },
+  ],
   // §6.9: lodash only through named imports from lodash-es (tree-shaking)
   'no-restricted-imports': [
     'error',
@@ -91,6 +105,12 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
     },
+  },
+
+  // The design tokens are the one place where hex colors are defined
+  {
+    files: ['src/theme/tokens.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
 
   {

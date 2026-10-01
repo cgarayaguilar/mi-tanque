@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTheme } from 'styled-components'
 import TextGroup from 'components/TextGroup'
 import Typography from 'components/Typography'
 import {
@@ -16,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { es as esNI } from 'date-fns/locale'
 
 function CardHistory({ measurement, tankCapacity }) {
+  const theme = useTheme()
   const { date, inches, gallons, liters, location, fuelHeight } = measurement
 
   return (
@@ -45,7 +47,7 @@ function CardHistory({ measurement, tankCapacity }) {
         <Typography
           mr="5px"
           variant="caption"
-          color="#00A8CC"
+          color={theme.accent}
           value={`${Math.round(fuelHeight)}%`}
         />
         <div>
