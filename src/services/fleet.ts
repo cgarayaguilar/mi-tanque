@@ -8,6 +8,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -74,6 +75,16 @@ const tankSchema = z.object({
     id: nullableString,
   }),
   templateId: nullableString,
+  lastMeasurement: z.optional(
+    z.nullable(
+      z.object({
+        id: z.string(),
+        takenAt: z.instanceof(Timestamp),
+        gallons: z.number(),
+        fillPercent: z.number(),
+      })
+    )
+  ),
 })
 
 const readCollection = async <T>(
@@ -113,7 +124,10 @@ const parseWith =
 const toTank = (id: string, data: unknown): FleetTank | null => {
   const tank = parseWith(tankSchema, 'tanks')(id, data)
   if (!tank) return null
-  const { dimensions, equipment, ...rest } = tank
+  const { dimensions, equipment, lastMeasurement, ...rest } = tank
+  const last = lastMeasurement
+    ? { ...lastMeasurement, takenAt: lastMeasurement.takenAt.toDate() }
+    : null
   const normalizedEquipment =
     equipment.kind === 'none' || equipment.id === null
       ? ({ kind: 'none', id: null } as const)
@@ -125,6 +139,7 @@ const toTank = (id: string, data: unknown): FleetTank | null => {
       ...rest,
       shape: 'cylinder',
       equipment: normalizedEquipment,
+      lastMeasurement: last,
       dimensions: {
         diameterIn: dimensions.diameterIn,
         lengthIn: dimensions.lengthIn,
@@ -138,6 +153,7 @@ const toTank = (id: string, data: unknown): FleetTank | null => {
     ...rest,
     shape: rest.shape,
     equipment: normalizedEquipment,
+    lastMeasurement: last,
     dimensions: {
       heightIn: dimensions.heightIn,
       widthIn: dimensions.widthIn,

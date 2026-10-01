@@ -113,6 +113,7 @@ export default function TankEditor({
         orgId,
         archived: tank?.archived ?? false,
         photoPath: tank?.photoPath ?? null,
+        lastMeasurement: tank?.lastMeasurement ?? null,
         ...fields,
       },
       fields,

@@ -198,6 +198,7 @@ describe('tanks (RF-8)', () => {
       id: 't',
       orgId: 'o',
       name: 'T',
+      lastMeasurement: null,
       description: null,
       photoPath: null,
       archived: false,

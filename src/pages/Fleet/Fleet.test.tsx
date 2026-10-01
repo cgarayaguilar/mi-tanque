@@ -160,3 +160,24 @@ test('a viewer sees the fleet without "Agregar" (CA-9)', async () => {
   await screen.findByRole('button', { name: 'Camión Unidad 12' })
   expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
 })
+
+test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
+  api.readFleet.mockResolvedValue({
+    trucks: [truck()],
+    trailers: [],
+    tanks: [
+      tank({
+        lastMeasurement: {
+          id: 'm-1',
+          takenAt: new Date(Date.now() - 2 * 3_600_000 - 60_000),
+          gallons: 84.4,
+          fillPercent: 69.6,
+        },
+      }),
+    ],
+  })
+  renderAt('/flota/tanques')
+  expect(
+    await screen.findByRole('button', { name: 'Tanque Tanque izquierdo' })
+  ).toHaveTextContent('70 % · 84 gal · hace 2 h')
+})

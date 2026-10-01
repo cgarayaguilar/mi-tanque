@@ -107,10 +107,19 @@ export interface Trailer extends FleetItemBase, VehicleFields {
 export type TankEquipment =
   { kind: 'none'; id: null } | { kind: 'truck' | 'trailer'; id: string }
 
+/** Written only by the measurements trigger (backend specs/0004 RF-7). */
+export interface LastMeasurement {
+  id: string
+  takenAt: Date
+  gallons: number
+  fillPercent: number
+}
+
 export type FleetTank = FleetItemBase & {
   equipment: TankEquipment
   capacityGal: number
   templateId: string | null
+  lastMeasurement: LastMeasurement | null
 } & (
     | {
         shape: 'cylinder'

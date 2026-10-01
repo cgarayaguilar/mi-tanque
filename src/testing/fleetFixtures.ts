@@ -55,6 +55,7 @@ export const tank = (overrides: Partial<FleetTank> = {}): FleetTank =>
     archived: false,
     capacityGal: 135,
     templateId: null,
+    lastMeasurement: null,
     equipment: { kind: 'truck', id: 'truck-1' },
     shape: 'd_flat_side',
     orientation: 'horizontal',

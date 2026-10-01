@@ -29,7 +29,8 @@ import EmptyState from 'components/EmptyState'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
-import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
+import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
+import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { layout, radius, softShadow } from 'theme/tokens'
@@ -111,6 +112,10 @@ function FleetCard({
     </ButtonBase>
   )
 }
+
+// "70 % · 84 gal · hace 2 h" (backend specs/0004 RF-18)
+const lastMeasurementLine = (last: LastMeasurement) =>
+  `${formatNumber(Math.round(last.fillPercent))} % · ${formatNumber(Math.round(last.gallons))} gal · ${formatTimeAgo(last.takenAt)}`
 
 const matches = (
   query: string,
@@ -246,6 +251,8 @@ function FleetScreen() {
                 lines={[
                   `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
                   `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
+                  tank.lastMeasurement &&
+                    lastMeasurementLine(tank.lastMeasurement),
                 ]}
                 archived={tank.archived}
                 onClick={() => {
