@@ -39,7 +39,7 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 | Datos       | IndexedDB vía Dexie en `src/services` (**heredado**: modo básico; el modo autenticado usa Firestore filtrado por `orgId`) |
 | Formularios | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField`                                           |
 | Iconos      | `@mui/icons-material`                                                                                                     |
-| Números     | Se muestran con `formatNumber` (`utils/formatNumber`): coma decimal; se guardan con punto                                 |
+| Números     | Como en Centroamérica: punto decimal y coma de miles ("1,500.25"), con `formatNumber`; se leen con `parseDecimal`         |
 
 ## Comandos
 
@@ -95,8 +95,8 @@ en cada push y PR.
   procesa al entrar y al volver la conexión.
   Exportar a CSV (specs/0007): `components/ExportButton` solo importa tipos; el código vive en
   `services/exportCloud` (Firebase) y `services/exportLocal` (Dexie), cargados con `import()` al
-  tocar el botón. El formato (Excel en español, BOM, protección contra fórmulas) está en `utils/csv`;
-  las columnas, en `utils/exportColumns`.
+  tocar el botón. El formato (Excel de Centroamérica: coma entre columnas y punto decimal; BOM;
+  protección contra fórmulas) está en `utils/csv`; las columnas, en `utils/exportColumns`.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
