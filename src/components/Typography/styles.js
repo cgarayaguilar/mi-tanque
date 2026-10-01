@@ -9,13 +9,17 @@ const Primitive = css`
   margin-right: ${({ mr }) => mr ?? 0};
 `
 
-/** Gauge figure: display-md, the editorial serif at weight 300. */
-export const Display = styled.span`
+const figure = token => styled.span`
   ${Primitive}
-  ${typeStyle(typeScale.displayMd)}
+  ${typeStyle(token)}
   display: block;
   color: ${({ color, theme }) => color ?? theme.primaryText};
 `
+
+/** Data figures: Inter 600, tabular digits. */
+export const FigureLg = figure(typeScale.figureLg)
+export const Figure = figure(typeScale.figureMd)
+export const FigureSm = figure(typeScale.figureSm)
 
 /** App wordmark: display-sm. */
 export const Title = styled.h1`

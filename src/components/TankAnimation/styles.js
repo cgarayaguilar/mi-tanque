@@ -35,19 +35,37 @@ export const Wave = styled(Wave1)`
   }
 `
 
-// Atmospheric orb from the design system: decoration only, behind the gauge
+// Atmospheric orb from the design system: decoration only, behind the gauge.
+// A circle of its own whose gradient fades out inside it (closest-side), so
+// it never shows the edges of a rectangular box.
 export const Gauge = styled.div`
   position: relative;
+  isolation: isolate;
   display: flex;
   justify-content: center;
-  padding: ${px(space.lg)} 0;
-  background: radial-gradient(
-    circle at 50% 50%,
-    color-mix(in srgb, ${({ theme }) => theme.gradientSky} 45%, transparent) 0%,
-    color-mix(in srgb, ${({ theme }) => theme.gradientMint} 25%, transparent)
-      40%,
-    transparent 70%
-  );
+  padding: ${px(space.xl)} 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: ${px(layout.gaugeSize + 2 * space.xxl)};
+    max-width: 100%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, ${({ theme }) => theme.gradientSky} 55%, transparent)
+        55%,
+      color-mix(in srgb, ${({ theme }) => theme.gradientMint} 35%, transparent)
+        75%,
+      transparent 100%
+    );
+  }
 `
 
 export const Wrapper = styled.div`

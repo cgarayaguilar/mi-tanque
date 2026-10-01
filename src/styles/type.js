@@ -9,6 +9,7 @@ export const typeStyle = token => css`
   line-height: ${token.lineHeight};
   letter-spacing: ${token.letterSpacing}px;
   text-transform: ${token.textTransform ?? 'none'};
+  font-variant-numeric: ${token.fontVariantNumeric ?? 'normal'};
 `
 
 /** Number (px) -> CSS length. */

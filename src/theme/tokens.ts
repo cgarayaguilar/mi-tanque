@@ -98,6 +98,8 @@ export interface TypeStyle {
   lineHeight: number
   letterSpacing: number
   textTransform?: 'uppercase'
+  /** Equal-width digits so figures align and do not jump while they change. */
+  fontVariantNumeric?: 'tabular-nums'
 }
 
 export const typeScale = {
@@ -164,6 +166,32 @@ export const typeScale = {
     lineHeight: 1.4,
     letterSpacing: 0.96,
     textTransform: 'uppercase',
+  },
+  // Figures (data): Inter 600 with tabular digits. The display serif at 300 is
+  // for headings; numbers need weight to be read at a glance next to the tank.
+  figureLg: {
+    fontFamily: fontFamily.body,
+    fontSize: 32,
+    fontWeight: 600,
+    lineHeight: 1.1,
+    letterSpacing: -0.32,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  figureMd: {
+    fontFamily: fontFamily.body,
+    fontSize: 20,
+    fontWeight: 600,
+    lineHeight: 1.35,
+    letterSpacing: 0,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  figureSm: {
+    fontFamily: fontFamily.body,
+    fontSize: 16,
+    fontWeight: 600,
+    lineHeight: 1.5,
+    letterSpacing: 0,
+    fontVariantNumeric: 'tabular-nums',
   },
   button: {
     fontFamily: fontFamily.body,

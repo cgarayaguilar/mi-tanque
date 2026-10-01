@@ -15,7 +15,7 @@ export default function TankAnimation({ fuelHeight = 0, gallons = 0 }) {
         <FuelLevel>
           <FuelIcon size={20} aria-hidden="true" />
           <Typography variant="caption2" value={`${Math.round(fuelHeight)}%`} />
-          <Typography variant="display" value={`${gallons} gls`} />
+          <Typography variant="figureLg" value={`${gallons} gls`} />
         </FuelLevel>
         <Wave
           fuellevel={`${fuelHeight}%`}

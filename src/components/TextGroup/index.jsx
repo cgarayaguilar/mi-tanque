@@ -13,7 +13,7 @@ export default function TextGroup({
       <Typography value={`${label}`} variant="caption2" mb={px(space.xxs)} />
       <Typography
         value={`${value}`}
-        variant={`${size === 'small' ? 'title3' : 'title2'}`}
+        variant={size === 'small' ? 'figureSm' : 'figure'}
       />
       {caption && <Typography value={`${caption}`} variant="caption" />}
     </div>

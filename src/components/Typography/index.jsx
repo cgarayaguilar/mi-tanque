@@ -1,5 +1,7 @@
 import {
-  Display,
+  Figure,
+  FigureLg,
+  FigureSm,
   Title,
   Title2,
   Title3,
@@ -12,11 +14,25 @@ import {
 
 export default function Typography({ value, color, variant, mt, mb, ml, mr }) {
   switch (variant.toLowerCase()) {
-    case 'display':
+    case 'figurelg':
       return (
-        <Display mt={mt} ml={ml} mr={mr} mb={mb} color={color}>
+        <FigureLg mt={mt} ml={ml} mr={mr} mb={mb} color={color}>
           {value}
-        </Display>
+        </FigureLg>
+      )
+
+    case 'figure':
+      return (
+        <Figure mt={mt} ml={ml} mr={mr} mb={mb} color={color}>
+          {value}
+        </Figure>
+      )
+
+    case 'figuresm':
+      return (
+        <FigureSm mt={mt} ml={ml} mr={mr} mb={mb} color={color}>
+          {value}
+        </FigureSm>
       )
 
     case 'title':

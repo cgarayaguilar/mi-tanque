@@ -71,28 +71,34 @@ como gráfico cumple 3:1 sobre cualquier superficie. `success` como texto va sob
 
 ## Tipografía
 
-| Familia               | Uso                                                   |
-| --------------------- | ----------------------------------------------------- |
-| **Newsreader** 300    | Display: títulos de sección, nombre de la app, cifras |
-| **Inter** 400/500/600 | Todo lo demás                                         |
+| Familia               | Uso                                                        |
+| --------------------- | ---------------------------------------------------------- |
+| **Newsreader** 300    | Display: títulos de sección y de diálogo, nombre de la app |
+| **Inter** 400/500/600 | Todo lo demás                                              |
 
 **Adaptación — fuente display.** Waldenburg es de pago. El sustituto que propone el original, EB
 Garamond, no existe en peso 300 en Google Fonts; Newsreader sí, y es una serif editorial moderna.
 
-| Token              | Fuente     | Tamaño | Peso | Interlineado | Tracking | Uso en la app                                                           |
-| ------------------ | ---------- | ------ | ---- | ------------ | -------- | ----------------------------------------------------------------------- |
-| `displayMd`        | Newsreader | 32     | 300  | 1.13         | -0.32    | Galones del medidor                                                     |
-| `displaySm`        | Newsreader | 24     | 300  | 1.2          | 0        | Nombre de la app, títulos de sección y de diálogo, cifras de resultados |
-| `titleMd`          | Inter      | 20     | 500  | 1.35         | 0        | Títulos de componente (MUI `h6`)                                        |
-| `titleSm`          | Inter      | 18     | 500  | 1.44         | 0.18     | Títulos de tarjeta, cifras del resumen                                  |
-| `bodyMd`           | Inter      | 16     | 400  | 1.5          | 0.16     | Texto base, campos                                                      |
-| `bodyStrong`       | Inter      | 16     | 500  | 1.5          | 0.16     | Etiquetas de campo, capacidad en el diagrama                            |
-| `bodySm`           | Inter      | 15     | 400  | 1.47         | 0.15     | Mensajes y texto de apoyo                                               |
-| `caption`          | Inter      | 14     | 400  | 1.5          | 0        | Detalles de tarjeta, fechas, metadatos                                  |
-| `captionUppercase` | Inter      | 12     | 600  | 1.4          | 0.96     | Etiquetas de cifras ("GALONES"), badges, cotas                          |
-| `button`           | Inter      | 15     | 500  | 1            | 0        | Botones, pestañas, links                                                |
+| Token              | Fuente     | Tamaño | Peso | Interlineado | Tracking | Uso en la app                                     |
+| ------------------ | ---------- | ------ | ---- | ------------ | -------- | ------------------------------------------------- |
+| `displayMd`        | Newsreader | 32     | 300  | 1.13         | -0.32    | Títulos grandes (MUI `h1`/`h2`)                   |
+| `displaySm`        | Newsreader | 24     | 300  | 1.2          | 0        | Nombre de la app, títulos de sección y de diálogo |
+| `titleMd`          | Inter      | 20     | 500  | 1.35         | 0        | Títulos de componente (MUI `h6`)                  |
+| `titleSm`          | Inter      | 18     | 500  | 1.44         | 0.18     | Títulos de tarjeta                                |
+| `bodyMd`           | Inter      | 16     | 400  | 1.5          | 0.16     | Texto base, campos                                |
+| `bodyStrong`       | Inter      | 16     | 500  | 1.5          | 0.16     | Etiquetas de campo, capacidad en el diagrama      |
+| `bodySm`           | Inter      | 15     | 400  | 1.47         | 0.15     | Mensajes y texto de apoyo                         |
+| `caption`          | Inter      | 14     | 400  | 1.5          | 0        | Detalles de tarjeta, fechas, metadatos            |
+| `captionUppercase` | Inter      | 12     | 600  | 1.4          | 0.96     | Etiquetas de cifras ("GALONES"), badges, cotas    |
+| `button`           | Inter      | 15     | 500  | 1            | 0        | Botones, pestañas, links                          |
+| `figureLg`         | Inter      | 32     | 600  | 1.1          | -0.32    | Galones del medidor                               |
+| `figureMd`         | Inter      | 20     | 600  | 1.35         | 0        | Cifras de resultados                              |
+| `figureSm`         | Inter      | 16     | 600  | 1.5          | 0        | Cifras del resumen y de cada medición             |
 
-- El display nunca va en negrita: 300 es la firma del sistema.
+- El display nunca va en negrita: 300 es la firma del sistema, para títulos.
+- **Adaptación — cifras.** Los datos (pulgadas, galones, litros) usan Inter 600 con dígitos
+  tabulares (`font-variant-numeric: tabular-nums`): en serif 300 eran demasiado finos para leerse
+  de un vistazo junto al tanque, y los dígitos de igual ancho alinean las columnas.
 - El cuerpo nunca baja a 300.
 
 ## Espaciado, radios y elevación
@@ -116,24 +122,24 @@ tarjetas.
 
 ## Componentes
 
-| Componente                 | Especificación                                                                                                                                                                                                                                                                                                                                       |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Botón primario**         | Píldora `primary` / `onPrimary`, `button`, alto **40px** · hover y presión `primaryActive` · deshabilitado `surfaceStrong` / `disabled` · muestra "Guardando…" mientras envía (§8.6). **Adaptación:** las acciones principales de ancho completo ("Calcular", "Guardar") miden **48px** (`size="large"`) porque se usan con una mano junto al tanque |
-| **Botón de contorno**      | Píldora transparente, texto `ink`, borde 1px `controlBorder`                                                                                                                                                                                                                                                                                         |
-| **Botón de texto**         | Texto `ink` subrayado, sin fondo                                                                                                                                                                                                                                                                                                                     |
-| **Campo de texto**         | Fondo `surface`, texto `bodyMd` en `ink`, alto **44px**, radio `md`, borde 1px `controlBorder`; con foco el borde pasa a **2px `ink`** · etiqueta `bodyStrong` · placeholder `muted`                                                                                                                                                                 |
-| **Tarjeta de tanque**      | Botón con fondo `surface`, 1px `hairline`, radio `lg`, padding `sm`, sombra suave en hover · título `titleSm`, detalles `caption`, CTA como texto subrayado                                                                                                                                                                                          |
-| **Resumen de galones**     | `feature-card`: fondo `surface`, 1px `hairline`, radio `xl`, padding `lg` · etiquetas `captionUppercase`, cifras `titleSm`                                                                                                                                                                                                                           |
-| **Medición del historial** | Tarjeta compacta (`surface`, `hairline`, radio `lg`) · barra de llenado de 4px en `primary` sobre `surfaceStrong`                                                                                                                                                                                                                                    |
-| **Fila de tanque**         | `voice-row`: botón de ancho completo con divisor `hairline`, `aria-expanded`                                                                                                                                                                                                                                                                         |
-| **Barra de navegación**    | Píldora `surface` con 1px `hairline`; pestañas de 48px · activa: `surfaceStrong` + `ink`; inactiva: `muted`                                                                                                                                                                                                                                          |
-| **Stepper**                | Badge circular de 24px: completado `primary`/`onPrimary`, pendiente `surfaceStrong`/`muted` · línea 1px `hairline`                                                                                                                                                                                                                                   |
-| **Diagrama de tanque**     | Cilindro en `ink` (SVG `currentColor`), cotas y flechas en `muted`, números `captionUppercase`                                                                                                                                                                                                                                                       |
-| **Medidor**                | Círculo de 250px en `surfaceStrong` con 1px `hairline`; ola en `primary`; cifras en una pastilla `surface` (radio `xl`) encima de la ola para leerse a cualquier nivel; **orbe atmosférico** (`gradientSky` → `gradientMint`) detrás                                                                                                                 |
-| **Diálogo** (MUI)          | Papel `surface`, radio `xl`, 1px `hairline` · título `displaySm` · acciones: `Cancelar` (texto) + principal (píldora) · pantalla completa en teléfonos · único tipo de modal (§8.8)                                                                                                                                                                  |
-| **Calendario**             | Dentro del diálogo: sigue los tokens (`surface`, `ink`, `muted`, `disabled`); rango en píldora `primary` con números `onPrimary`                                                                                                                                                                                                                     |
-| **Toast** (Sileo)          | Único canal de avisos (§8.8). Tema `light` en modo claro y `dark` en modo oscuro · títulos en mayúscula inicial · descripción del toast claro con 8.6:1                                                                                                                                                                                              |
-| **Barra superior**         | `top-nav`: fondo `canvas`, 64px · logo (`currentColor`) + nombre en `displaySm` · botón de tema de MUI                                                                                                                                                                                                                                               |
+| Componente                 | Especificación                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Botón primario**         | Píldora `primary` / `onPrimary`, `button`, alto **40px** · hover y presión `primaryActive` · deshabilitado `surfaceStrong` / `disabled` · muestra "Guardando…" mientras envía (§8.6). **Adaptación:** las acciones principales de ancho completo ("Calcular", "Guardar") miden **48px** (`size="large"`) porque se usan con una mano junto al tanque  |
+| **Botón de contorno**      | Píldora transparente, texto `ink`, borde 1px `controlBorder`                                                                                                                                                                                                                                                                                          |
+| **Botón de texto**         | Texto `ink` subrayado, sin fondo                                                                                                                                                                                                                                                                                                                      |
+| **Campo de texto**         | Fondo `surface`, texto `bodyMd` en `ink`, alto **44px**, radio `md`, borde 1px `controlBorder`; con foco el borde pasa a **2px `ink`** · etiqueta `bodyStrong` · placeholder `muted`                                                                                                                                                                  |
+| **Tarjeta de tanque**      | Botón con fondo `surface`, 1px `hairline`, radio `lg`, padding `sm`, sombra suave en hover · título `titleSm`, detalles `caption`, CTA como texto subrayado                                                                                                                                                                                           |
+| **Resumen de galones**     | `feature-card`: fondo `surface`, 1px `hairline`, radio `xl`, padding `lg` · etiquetas `captionUppercase`, cifras `figureSm`                                                                                                                                                                                                                           |
+| **Medición del historial** | Tarjeta compacta (`surface`, `hairline`, radio `lg`) · barra de llenado de 4px en `primary` sobre `surfaceStrong`                                                                                                                                                                                                                                     |
+| **Fila de tanque**         | `voice-row`: botón de ancho completo con divisor `hairline`, `aria-expanded`                                                                                                                                                                                                                                                                          |
+| **Barra de navegación**    | Píldora `surface` con 1px `hairline`; pestañas de 48px · activa: `surfaceStrong` + `ink`; inactiva: `muted`                                                                                                                                                                                                                                           |
+| **Stepper**                | Badge circular de 24px: completado `primary`/`onPrimary`, pendiente `surfaceStrong`/`muted` · línea 1px `hairline`                                                                                                                                                                                                                                    |
+| **Diagrama de tanque**     | Cilindro en `ink` (SVG `currentColor`), cotas y flechas en `muted`, números `captionUppercase`                                                                                                                                                                                                                                                        |
+| **Medidor**                | Círculo de 250px en `surfaceStrong` con 1px `hairline`; ola en `primary`; cifras en una pastilla `surface` (radio `xl`) encima de la ola para leerse a cualquier nivel; galones en `figureLg` · **orbe atmosférico** detrás: un círculo propio cuyo degradado (`gradientSky` → `gradientMint`) se desvanece dentro de él (`closest-side`), sin bordes |
+| **Diálogo** (MUI)          | Papel `surface`, radio `xl`, 1px `hairline` · título `displaySm` · acciones: `Cancelar` (texto) + principal (píldora) · pantalla completa en teléfonos · único tipo de modal (§8.8)                                                                                                                                                                   |
+| **Calendario**             | Dentro del diálogo: sigue los tokens (`surface`, `ink`, `muted`, `disabled`); rango en píldora `primary` con números `onPrimary`                                                                                                                                                                                                                      |
+| **Toast** (Sileo)          | Único canal de avisos (§8.8). Tema `light` en modo claro y `dark` en modo oscuro · títulos en mayúscula inicial · descripción del toast claro con 8.6:1                                                                                                                                                                                               |
+| **Barra superior**         | `top-nav`: fondo `canvas`, 64px · logo (`currentColor`) + nombre en `displaySm` · botón de tema de MUI                                                                                                                                                                                                                                                |
 
 ### Estados de toast
 
