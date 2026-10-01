@@ -78,6 +78,11 @@ en cada push y PR.
   modo autenticado van dentro de `SessionGate`. La flota sigue el mismo patrón: `services/fleet`
   (estático solo en páginas lazy) y `store/fleet` (con `import()`); el SDK de Storage se carga aparte,
   solo al ver o subir una foto.
+  Las mediciones también (specs/0004): `services/cloudMeasurements` (páginas lazy
+  `Home/CloudMeasurement` e `History/CloudHistory`, y `store/cloudHistory` con `import()`) y
+  `services/importLocal` (solo con `import()` desde `hooks/useImportLocalData`). Medición e Historial
+  eligen el flujo según la sesión; el cálculo de la flota vive en `utils/measurementMath` y
+  `utils/tankVolume`.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
