@@ -2,6 +2,8 @@ import { useEffect, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import { useImportLocalData } from 'hooks/useImportLocalData'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -30,7 +32,7 @@ import { selectActiveRole, useSessionStore } from 'store/session'
 import { radius } from 'theme/tokens'
 import { authErrorMessage } from 'utils/authErrors'
 import { reportError } from 'utils/reportError'
-import { canEditOrganization, ROLE_LABELS } from 'utils/roles'
+import { canEditOrganization, canWriteFleet, ROLE_LABELS } from 'utils/roles'
 
 const failed = (operation: string, title: string) => (error: unknown) => {
   reportError(error, { operation })
@@ -259,6 +261,31 @@ function OrganizationSection() {
   )
 }
 
+function ImportSection() {
+  const role = useSessionStore(selectActiveRole)
+  const { importing, run } = useImportLocalData()
+  if (!canWriteFleet(role)) return null
+
+  return (
+    <Section id="import-title" title="Datos de este teléfono">
+      <Typography variant="body2" sx={{ mb: 4 }}>
+        Pasa a tu organización los tanques y las mediciones que guardaste sin
+        cuenta. Repetirlo no duplica nada y aquí no se borran.
+      </Typography>
+      <Button
+        variant="outlined"
+        fullWidth
+        startIcon={<CloudUploadIcon />}
+        loading={importing}
+        loadingPosition="start"
+        onClick={() => void run()}
+      >
+        Importar datos de este teléfono
+      </Button>
+    </Section>
+  )
+}
+
 function AccountScreen() {
   const { requestSignOut, signingOut, dialog } = useSignOut()
 
@@ -274,6 +301,7 @@ function AccountScreen() {
       <Stack spacing={4}>
         <ProfileSection />
         <OrganizationSection />
+        <ImportSection />
       </Stack>
       <Button
         variant="outlined"

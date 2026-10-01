@@ -73,3 +73,11 @@ export const readMeasurementsInPeriod = async ({
     .map(toMeasurement)
     .filter((measurement): measurement is Measurement => measurement !== null)
 }
+
+/** Every local measurement, for importing them to an organization. */
+export const readAllMeasurements = async (): Promise<Measurement[]> =>
+  (await db.measurements.toArray())
+    .map(toMeasurement)
+    .filter((measurement): measurement is Measurement => measurement !== null)
+
+export const countMeasurements = (): Promise<number> => db.measurements.count()
