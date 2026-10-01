@@ -1,8 +1,8 @@
-# PRINCIPIOS DE INGENIERÍA — Mi tanque
+# PRINCIPIOS DE INGENIERÍA — Solo Camioneros
 
 > **Versión local del proyecto.** Este archivo deriva del documento maestro global de principios de
-> ingeniería y está adaptado al dominio de **Mi tanque** (medición del nivel de combustible en
-> tanques cilíndricos horizontales). Cuando una regla global cambie, se cambia **primero en el
+> ingeniería y está adaptado al dominio de **Solo Camioneros** (medición del nivel de combustible y
+> rellenos en camiones, remolques y tanques de flotas). Cuando una regla global cambie, se cambia **primero en el
 > maestro** y después se trae aquí. Lo específico de este proyecto (§0, decisiones abiertas,
 > ejemplos del dominio) solo vive aquí.
 >
@@ -13,36 +13,37 @@
 >   cualquier asistente de IA genere código alineado desde el primer prompt.
 > - El estado de adopción y el plan de migración del código heredado están en
 >   [ADR 0001](docs/adr/0001-adopt-engineering-principles.md).
-> - El backend vivirá en un repo hermano con **su propia copia** de este archivo.
+> - El backend vive en el repo hermano `solocamioneros-backend`, con **su propia copia** de este
+>   archivo, los specs por fase (`specs/`), sus ADRs y las auditorías.
 
 ---
 
 ## §0. Stack del proyecto
 
-| Decisión                  | Por defecto                                | Este proyecto (objetivo)                                                                                                               | Estado actual del código                                                          |
-| ------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Frontend                  | React 19 + Vite + TypeScript               | React 19 + Vite + TypeScript                                                                                                           | ✅ React 19 + Vite 8 + TypeScript estricto (sin JavaScript en `src/`)             |
-| Estado global             | Zustand                                    | Zustand                                                                                                                                | ✅ Zustand (`selectedTank`, `tanks`, `history`, `colorMode`)                      |
-| Estilos / UI              | Material UI (MUI) + theme central          | MUI + theme derivado de `DESIGN.md`                                                                                                    | ✅ MUI con theme desde `src/theme/tokens.ts`                                      |
-| Design system             | `DESIGN.md`                                | `DESIGN.md`, basado en el sistema de ElevenLabs (`npx getdesign add elevenlabs`)                                                       | ✅ Aplicado a toda la app (claro por defecto + oscuro derivado)                   |
-| Toasts / feedback         | **Sileo**                                  | Sileo para **todo** aviso o notificación al usuario                                                                                    | ✅ Sileo en toda la app                                                           |
-| Modales                   | MUI `<Dialog>`                             | MUI `<Dialog>` para **todo** modal                                                                                                     | ✅ MUI `<Dialog>` (selector de periodo)                                           |
-| Formularios               | **React Hook Form** + **Zod**              | React Hook Form + Zod                                                                                                                  | React Hook Form + Zod en Medición y Agregar tanque                                |
-| Fechas                    | **date-fns**                               | date-fns                                                                                                                               | ✅ date-fns 2 (subir a la versión actual en la migración)                         |
-| Utilidades                | **lodash-es**                              | lodash-es                                                                                                                              | Se instala con su primer uso (ESLint ya bloquea `lodash` y el import por defecto) |
-| Backend                   | Firebase Cloud Functions v2 (Node.js + TS) | Cloud Functions v2 en repo hermano                                                                                                     | Por construir                                                                     |
-| Base de datos             | Cloud Firestore                            | Cloud Firestore                                                                                                                        | IndexedDB local (Dexie), sin sincronización                                       |
-| Autenticación             | Firebase Auth                              | Firebase Auth                                                                                                                          | Sin autenticación                                                                 |
-| Secretos                  | GCP Secret Manager (`defineSecret`)        | Secret Manager                                                                                                                         | ⚠️ API key de geocodeapi.io escrita en el bundle (`useMeasurement.js`)            |
-| Errores / monitoreo       | Sentry                                     | **Decisión abierta** (ver abajo)                                                                                                       | `console.error`                                                                   |
-| Tests                     | Vitest + Testing Library                   | Vitest + Testing Library (+ emulador de Firebase en backend)                                                                           | ✅ Vitest 5 + Testing Library + fake-indexeddb                                    |
-| Deploy                    | Vercel + `firebase deploy`                 | Vercel (proyecto `mi-tanque`) + `firebase deploy`                                                                                      | ✅ Vercel: push a `main` = producción; otras ramas = preview                      |
-| PWA                       | —                                          | Instalable y usable sin conexión                                                                                                       | ✅ vite-plugin-pwa (precache + aviso de nueva versión)                            |
-| TypeScript                | **Estricto, ambos repos**                  | **Estricto**                                                                                                                           | ✅ `tsconfig.json` estricto; JS heredado vía `allowJs` mientras se migra          |
-| Región Firebase           | us-central1                                | **Decisión abierta** (ver abajo)                                                                                                       | —                                                                                 |
-| Idioma del código         | English                                    | English                                                                                                                                | Comentarios heredados en español: se traducen al tocar cada archivo               |
-| Idioma de cara al usuario | Español                                    | Español                                                                                                                                | ✅                                                                                |
-| Quién hace deploy         | —                                          | El dueño autoriza cada deploy. El asistente solo hace push a `main` o `firebase deploy` con autorización explícita en la conversación. | ✅                                                                                |
+| Decisión                  | Por defecto                                | Este proyecto (objetivo)                                                                                                               | Estado actual del código                                                                |
+| ------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Frontend                  | React 19 + Vite + TypeScript               | React 19 + Vite + TypeScript                                                                                                           | ✅ React 19 + Vite 8 + TypeScript estricto (sin JavaScript en `src/`)                   |
+| Estado global             | Zustand                                    | Zustand                                                                                                                                | ✅ Zustand (`selectedTank`, `tanks`, `history`, `colorMode`)                            |
+| Estilos / UI              | Material UI (MUI) + theme central          | MUI + theme derivado de `DESIGN.md`                                                                                                    | ✅ MUI con theme desde `src/theme/tokens.ts`                                            |
+| Design system             | `DESIGN.md`                                | `DESIGN.md`, basado en el sistema de ElevenLabs (`npx getdesign add elevenlabs`)                                                       | ✅ Aplicado a toda la app (claro por defecto + oscuro derivado)                         |
+| Toasts / feedback         | **Sileo**                                  | Sileo para **todo** aviso o notificación al usuario                                                                                    | ✅ Sileo en toda la app                                                                 |
+| Modales                   | MUI `<Dialog>`                             | MUI `<Dialog>` para **todo** modal                                                                                                     | ✅ MUI `<Dialog>` (selector de periodo)                                                 |
+| Formularios               | **React Hook Form** + **Zod**              | React Hook Form + Zod                                                                                                                  | React Hook Form + Zod en Medición y Agregar tanque                                      |
+| Fechas                    | **date-fns**                               | date-fns                                                                                                                               | ✅ date-fns 2 (subir a la versión actual en la migración)                               |
+| Utilidades                | **lodash-es**                              | lodash-es                                                                                                                              | Se instala con su primer uso (ESLint ya bloquea `lodash` y el import por defecto)       |
+| Backend                   | Firebase Cloud Functions v2 (Node.js + TS) | Cloud Functions v2 en el repo hermano `solocamioneros-backend`                                                                         | Fase 0: repo, emuladores y reglas default-deny; sin funciones desplegadas               |
+| Base de datos             | Cloud Firestore                            | Cloud Firestore                                                                                                                        | IndexedDB (Dexie) en el modo básico; Firestore desde la fase 1 para el modo autenticado |
+| Autenticación             | Firebase Auth                              | Firebase Auth: Google y teléfono (SMS solo Centroamérica, México y EE. UU.)                                                            | Por construir (fase 1)                                                                  |
+| Secretos                  | GCP Secret Manager (`defineSecret`)        | Secret Manager                                                                                                                         | ⚠️ API key de geocodeapi.io escrita en el bundle (`useMeasurement.js`)                  |
+| Errores / monitoreo       | Sentry                                     | **Decisión abierta** (ver abajo)                                                                                                       | `console.error`                                                                         |
+| Tests                     | Vitest + Testing Library                   | Vitest + Testing Library (+ emulador de Firebase en backend)                                                                           | ✅ Vitest 5 + Testing Library + fake-indexeddb                                          |
+| Deploy                    | Vercel + `firebase deploy`                 | Vercel (proyecto `mi-tanque`, dominio solocamioneros.com) + `firebase deploy` (proyecto `mi-tanque-60015`)                             | ✅ Vercel: push a `main` = producción; otras ramas = preview                            |
+| PWA                       | —                                          | Instalable y usable sin conexión                                                                                                       | ✅ vite-plugin-pwa (precache + aviso de nueva versión)                                  |
+| TypeScript                | **Estricto, ambos repos**                  | **Estricto**                                                                                                                           | ✅ `tsconfig.json` estricto; JS heredado vía `allowJs` mientras se migra                |
+| Región Firebase           | us-central1                                | **us-central1** (Firestore y Functions)                                                                                                | ✅ Verificada en el proyecto `mi-tanque-60015`                                          |
+| Idioma del código         | English                                    | English                                                                                                                                | Comentarios heredados en español: se traducen al tocar cada archivo                     |
+| Idioma de cara al usuario | Español                                    | Español                                                                                                                                | ✅                                                                                      |
+| Quién hace deploy         | —                                          | El dueño autoriza cada deploy. El asistente solo hace push a `main` o `firebase deploy` con autorización explícita en la conversación. | ✅                                                                                      |
 
 **Arquitectura de repos:** front y backend son **superficies desplegables independientes**. El
 cliente llama al backend vía **callables** (`httpsCallable` ↔ `onCall`). El frontend **puede**
@@ -51,16 +52,14 @@ Functions. Comparten el mismo proyecto Firebase y región.
 
 ### Decisiones abiertas (se cierran con un ADR antes de construir lo que dependa de ellas)
 
-1. **Región de Firebase/Firestore.** La ubicación de Firestore **no se puede cambiar** después de
-   crear la base. Se decide al crear el proyecto Firebase, según dónde estén los usuarios y la
-   región de Vercel (hoy `iad1`).
-2. **Modelo de inquilino (`accountId`).** Qué es una "cuenta" en Mi tanque (¿una persona, un hogar,
-   un negocio con varios tanques y miembros?) y sus roles (§5.3). Define el modelo de datos de todo
-   el backend.
+1. ~~Región de Firebase/Firestore~~ → **us-central1** (ADR 0001 del backend).
+2. ~~Modelo de inquilino~~ → **organizaciones** (`orgId`) con roles `owner`/`supervisor`/`driver`/
+   `viewer`; un usuario puede pertenecer a varias (ADR 0002 del backend).
 3. **Monitoreo de errores** (Sentry u otro). Hasta decidirlo, los errores se registran con
    `console.error` con contexto y se informa al usuario (§7.2 a y c); la parte (b) queda pendiente.
-4. **Datos locales existentes.** Cómo migran a Firestore las mediciones que hoy viven en IndexedDB
-   en el teléfono de cada usuario (§2.8), sin perderlas.
+4. ~~Datos locales existentes~~ → al iniciar sesión se **ofrece importar** los datos del modo
+   básico (fase 3). Los del dominio viejo `mi-tanque.vercel.app` se dan por perdidos (ADR 0002 del
+   frontend).
 
 ---
 
@@ -93,8 +92,8 @@ Functions. Comparten el mismo proyecto Firebase y región.
 
 1. **Arquitectura plana multi-tenant.** Colecciones **root-level**, nunca subcolecciones anidadas
    (`accounts/{id}/tanks` ❌). Toda entidad de un inquilino (tanques, mediciones) lleva
-   **`accountId: string`** en su interfaz y en su payload. Toda query incluye
-   **`where('accountId', '==', activeAccountId)`** sin excepción — esto previene fuga de datos entre
+   **`orgId: string`** en su interfaz y en su payload. Toda query incluye
+   **`where('orgId', '==', activeOrgId)`** sin excepción — esto previene fuga de datos entre
    cuentas (BOLA).
 2. **Cero N+1.** Nunca consultes Firestore dentro de un `map`/`forEach`. Usa `where('id','in',[...])`
    (lotes de ≤30), lecturas por lote, o lee del store. Una pantalla no dispara docenas de
@@ -191,7 +190,7 @@ Functions. Comparten el mismo proyecto Firebase y región.
 ## §4. Idempotencia e integridad de datos
 
 > Una operación repetida (doble-click, reintento por red intermitente, reenvío) **no debe** producir
-> efecto doble. En Mi tanque, una medición duplicada falsea el consumo del periodo: esto no es
+> efecto doble. En Solo Camioneros, una medición duplicada falsea el consumo del periodo: esto no es
 > opcional.
 
 1. **ID determinista por intención (`intentId`/`idempotencyKey`).** Genera un UUID estable **al ABRIR
@@ -216,17 +215,17 @@ Functions. Comparten el mismo proyecto Firebase y región.
 ## §5. Seguridad
 
 1. **`firestore.rules` default-deny.** Niega por defecto; permite solo lo explícito. Centraliza la
-   autorización en un helper (ej. `getMemberRole(accountId)` que lee `members/{accountId}_{uid}.role`).
+   autorización en un helper (ej. `getMemberRole(orgId)` que lee `members/{orgId}_{uid}.role`).
 2. **Autorización en el servidor/reglas, no en la UI.** Ocultar/deshabilitar un botón es **UX**, no
    seguridad. El control real vive en `firestore.rules` y en los callables, y se verifica en cada
    operación.
 3. **RBAC explícito y reusado.** Roles propuestos: `owner` / `write` / `read` (se confirman con la
    decisión abierta 2 de §0). Defínelos en un solo lugar; expón el rol en el estado global y reúsalo
-   con un selector único (`canWrite(account)`), no copiando la condición por todos lados.
+   con un selector único (`canWrite(member)`), no copiando la condición por todos lados.
 4. **Nunca confíes en datos del cliente.** Valida y sanea **toda** entrada en reglas y/o callable:
    tipos, rangos, longitudes, formato. Valida ids (`^[a-zA-Z0-9_\-]+$`, longitud acotada). En
    `update`, verifica que no se pueda mover un doc entre cuentas
-   (`request.resource.data.accountId == resource.data.accountId`).
+   (`request.resource.data.orgId == resource.data.orgId`).
 5. **Los secretos jamás llegan al cliente ni al repo.** API keys de terceros, webhooks y credenciales
    viven **solo** en **Secret Manager** (`defineSecret` + binding por función). Nada de secretos en el
    bundle de React, en logs, ni commiteados. _(La config web de Firebase sí es pública — la seguridad
@@ -410,7 +409,7 @@ Si respondes "no" a cualquiera, **el componente no está terminado.**
 
 ## §9. Voz y tono / UX writing
 
-**Voz de Mi tanque:** cercana y práctica. **Tuteamos** al usuario ("Elige tu tanque", "Ingresa las
+**Voz de Solo Camioneros:** cercana y práctica. **Tuteamos** al usuario ("Elige tu tanque", "Ingresa las
 pulgadas"), en español neutro, sin regionalismos. Hablamos de _pulgadas_, _galones_ y _litros_,
 nunca de "volumen útil" ni términos de ingeniería. _(El texto heredado mezcla tú y usted; se unifica
 al migrar cada pantalla.)_
@@ -433,7 +432,7 @@ al migrar cada pantalla.)_
 1. **Stores por dominio** en `src/store/` (`auth`, `tanks`, `measurements`, etc.). Un store no es un
    cajón de sastre: agrupa estado y acciones de un mismo dominio.
 2. **Suscripciones en vivo en el store, no en componentes sueltos.** El store abre el `onSnapshot`
-   keyed por `activeAccountId`, expone `loading`/`error`, y **cancela** al cambiar de cuenta o
+   keyed por `activeOrgId`, expone `loading`/`error`, y **cancela** al cambiar de cuenta o
    desmontar. Los componentes leen del store.
 3. **Selectores siempre** (`useStore(s => s.x)`) para minimizar re-renders; `getState()` para
    lecturas puntuales no reactivas (ej. dentro de un handler).
@@ -534,7 +533,7 @@ al migrar cada pantalla.)_
 
 - [ ] Cumple los principios aplicables de §1–§14 (o la excepción está justificada por escrito).
 - [ ] TypeScript estricto, sin `any`, código completo; `tsc --noEmit` + lint + tests críticos en verde.
-- [ ] Lecturas Firestore acotadas y filtradas por `accountId`; sin N+1; multi-doc atómico
+- [ ] Lecturas Firestore acotadas y filtradas por `orgId`; sin N+1; multi-doc atómico
       (`writeBatch`/`runTransaction`).
 - [ ] Maneja los 5 estados de UI y previene doble-envío (si toca UI).
 - [ ] **Toda mutación da feedback al usuario vía Sileo** (éxito y fallo); ninguna escritura silenciosa.
@@ -554,5 +553,5 @@ al migrar cada pantalla.)_
 ---
 
 > **Recordatorio de ejecución (antes de dar por buena una operación que toca datos):** _"¿Está plana
-> y filtrada por `accountId`? ¿Es lo más barata posible en lecturas? ¿Es idempotente y segura?
+> y filtrada por `orgId`? ¿Es lo más barata posible en lecturas? ¿Es idempotente y segura?
 > ¿Validé en el servidor/reglas? ¿Falla con gracia y avisa?"_ Si todo es sí, procede.

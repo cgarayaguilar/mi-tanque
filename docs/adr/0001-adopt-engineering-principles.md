@@ -1,7 +1,7 @@
 # ADR 0001 — Adoptar los principios de ingeniería y migrar el frontend por fases
 
-- **Estado:** Aceptado. Fases 0 y 1 hechas. Por decisión del dueño (2026-09-30), el backend
-  (fase 2) se pospone: lo siguiente es la parte de la fase 3 que no depende de él.
+- **Estado:** Aceptado. Fases 0, 1 y 3 del frontend hechas (2026-10-01). El backend (fase 2) se
+  construye desde el 2026-10-01 en el repo `solocamioneros-backend`, con sus propias fases y specs.
 - **Fecha:** 2026-09-30
 
 ## Contexto
@@ -103,7 +103,7 @@ pasa a un esquema Zod con React Hook Form.
 
 ### Fase 2 — Backend base (repo hermano) — pospuesta
 
-1. Cerrar con ADRs las decisiones abiertas de §0: región, modelo de cuenta (`accountId`) y roles,
+1. Cerrar con ADRs las decisiones abiertas de §0: región, modelo de inquilino (organizaciones, `orgId`) y roles,
    monitoreo, migración de los datos locales.
 2. Proyecto Firebase, Auth, `firestore.rules` default-deny con tests en el emulador e índices
    versionados.
@@ -152,7 +152,7 @@ Eliminados: `useMeasurement`, `CardHistory`, `TankHistoryCollapse`, `DetailResul
 `TextField` y la dependencia `react-icons`.
 
 Cada pantalla pasa a TSX con theme de MUI (desde `DESIGN.md`), React Hook Form + Zod, Sileo, store de
-Zustand sobre Firestore filtrado por `accountId`, los 5 estados y la voz de §9.
+Zustand sobre Firestore filtrado por `orgId`, los 5 estados y la voz de §9.
 
 Al terminar la última pantalla: script de migración de IndexedDB a Firestore (§2.8) y retirada de
 Dexie y las excepciones que queden de esta decisión.

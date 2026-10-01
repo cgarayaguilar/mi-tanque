@@ -1,4 +1,4 @@
-# AGENTS.md — Mi tanque (frontend)
+# AGENTS.md — Solo Camioneros (frontend)
 
 Instrucciones para asistentes de IA. `CLAUDE.md` importa este archivo: edita solo este.
 
@@ -15,31 +15,38 @@ Instrucciones para asistentes de IA. `CLAUDE.md` importa este archivo: edita sol
 
 ## Qué es
 
-Una PWA para medir el nivel de combustible de tanques cilíndricos horizontales. El usuario elige un
+**Solo Camioneros**: una PWA para medir el nivel de combustible de tanques de camiones y flotas. El usuario elige un
 tanque, ingresa las pulgadas medidas y obtiene galones y litros. Cada medición se guarda con fecha y
 ubicación y se muestra en un historial. Se instala en el teléfono y funciona sin conexión.
 
-- Producción: https://mi-tanque.vercel.app (proyecto de Vercel `mi-tanque`). **Un push a `main`
+- Producción: https://solocamioneros.com (proyecto de Vercel `mi-tanque`; `mi-tanque.vercel.app`
+  redirige ahí). **Un push a `main`
   despliega a producción**; las demás ramas generan URLs de preview. Nunca hagas push a `main` sin
   la autorización explícita del dueño en la conversación.
-- El backend (Firebase Cloud Functions + Firestore) vivirá en un repo hermano; todavía no existe.
+- El backend (Firebase: Auth, Firestore, Storage y Cloud Functions, proyecto `mi-tanque-60015`,
+  región us-central1) vive en el repo hermano `../solocamioneros-backend`. Ahí están los **specs**
+  de cada fase (`specs/`), las ADRs del backend y las auditorías: lee el spec de la fase antes de
+  tocar código del modo autenticado. Se trabaja con Spec Driven Development (spec → plan →
+  implementación → auditoría) y el dueño aprueba cada spec.
 
 ## Stack
 
-| Área        | Qué usar                                                                                                       |
-| ----------- | -------------------------------------------------------------------------------------------------------------- |
-| Lenguaje    | TypeScript estricto (`.ts`/`.tsx`); no queda JavaScript en `src/`                                              |
-| UI          | MUI con el theme de `src/theme/muiTheme.ts` (derivado de `DESIGN.md`)                                          |
-| Estado      | Stores de Zustand por dominio, con selectores (`selectedTank`, `tanks`, `history`, `colorMode`)                |
-| Datos       | IndexedDB vía Dexie en `src/services` (**heredado**: pasa a Firestore filtrado por `accountId` con el backend) |
-| Formularios | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField`                                |
-| Iconos      | `@mui/icons-material`                                                                                          |
-| Números     | Se muestran con `formatNumber` (`utils/formatNumber`): coma decimal; se guardan con punto                      |
+| Área        | Qué usar                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Lenguaje    | TypeScript estricto (`.ts`/`.tsx`); no queda JavaScript en `src/`                                                         |
+| UI          | MUI con el theme de `src/theme/muiTheme.ts` (derivado de `DESIGN.md`)                                                     |
+| Estado      | Stores de Zustand por dominio, con selectores (`selectedTank`, `tanks`, `history`, `colorMode`)                           |
+| Datos       | IndexedDB vía Dexie en `src/services` (**heredado**: modo básico; el modo autenticado usa Firestore filtrado por `orgId`) |
+| Formularios | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField`                                           |
+| Iconos      | `@mui/icons-material`                                                                                                     |
+| Números     | Se muestran con `formatNumber` (`utils/formatNumber`): coma decimal; se guardan con punto                                 |
 
 ## Comandos
 
 ```bash
 npm run dev            # servidor de desarrollo en http://localhost:3000 (sin service worker)
+npm run dev:emulators  # igual, pero el modo autenticado usa los emuladores de Firebase
+                       # (arráncalos antes en ../solocamioneros-backend: npm run emulators)
 npm run build          # build de producción en build/
 npm run preview        # sirve el build (con service worker)
 npm test               # Vitest en modo watch; `npx vitest run` lo corre una vez
