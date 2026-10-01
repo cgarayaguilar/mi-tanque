@@ -35,11 +35,10 @@ Restricciones verificadas:
 3. **El código heredado se migra por fases.** Cada fase deja `main` en verde y desplegable. Una
    pantalla se migra entera, no a medias.
 4. **Excepciones temporales**, que desaparecen al terminar la fase 3:
-   - `allowJs` en `tsconfig.json`: el JS heredado compila sin chequeo de tipos.
-   - El JS heredado solo pasa las reglas clásicas de hooks. Las reglas del React Compiler aplican a
-     TypeScript.
+   - ~~`allowJs` en `tsconfig.json`~~ y ~~reglas clásicas de hooks para el JS heredado~~: retirados
+     el 2026-10-01, ya no queda JavaScript en `src/`.
    - `console.error`/`console.warn` permitidos hasta decidir el monitoreo (decisión abierta 3).
-   - styled-components y MUI conviven mientras dure la fase 3: el bundle crece temporalmente.
+   - ~~styled-components y MUI conviven~~: styled-components se retiró el 2026-10-01.
 
 ## Auditoría del código heredado (2026-09-30)
 
@@ -156,13 +155,17 @@ Cada pantalla pasa a TSX con theme de MUI (desde `DESIGN.md`), React Hook Form +
 Zustand sobre Firestore filtrado por `accountId`, los 5 estados y la voz de §9.
 
 Al terminar la última pantalla: script de migración de IndexedDB a Firestore (§2.8) y retirada de
-styled-components, Dexie, `allowJs` y las excepciones de esta decisión. `react-icons` ya se retiró
-(2026-10-01). Quedan en el stack heredado la barra superior (`AppBar`), el Context del modo de
-color, los estilos globales y el theme de styled-components.
+Dexie y las excepciones que queden de esta decisión.
+
+**Cierre del frontend ✅ (2026-10-01).** `AppBar` en TSX con MUI, modo de color en el store de
+Zustand `colorMode` (misma clave de `localStorage`), estilos globales con `CssBaseline` y
+`GlobalStyles`. Retirados el Context, styled-components, `react-icons`, `normalize.css`, los hooks
+`useLocalStorage`/`useWindowWidth` y `allowJs`: ya no queda JavaScript en `src/`. Del stack
+heredado solo queda Dexie, que se va con Firestore.
 
 ## Consecuencias
 
 - **A favor:** el código nuevo nace alineado; la CI impide regresiones; los bugs de integridad se
   corrigen antes de que el backend los multiplique.
-- **En contra:** durante la fase 3 conviven dos sistemas de estilos y dos de feedback, y el bundle
-  crece temporalmente. `allowJs` es una excepción explícita a §6.1 hasta el final de la fase 3.
+- **En contra:** durante la fase 3 convivieron dos sistemas de estilos y dos de feedback, y el
+  bundle creció temporalmente (resuelto al cerrar la fase 3 del frontend, 2026-10-01).

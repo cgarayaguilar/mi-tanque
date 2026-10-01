@@ -24,20 +24,17 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
   la autorización explícita del dueño en la conversación.
 - El backend (Firebase Cloud Functions + Firestore) vivirá en un repo hermano; todavía no existe.
 
-## Stack: heredado vs. objetivo
+## Stack
 
-| Área        | Heredado (no extender)                                                                     | Objetivo (todo código nuevo)                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Lenguaje    | JavaScript (`.js`/`.jsx`)                                                                  | TypeScript estricto (`.ts`/`.tsx`)                                                                             |
-| UI          | styled-components, theme en `src/store/initialState.js` (solo `AppBar` y estilos globales) | MUI con theme derivado de `DESIGN.md`                                                                          |
-| Estado      | Context + `useLocalStorage` (modo de color)                                                | Stores de Zustand por dominio, con selectores (`store/selectedTank`, `store/tanks`, `store/history`)           |
-| Datos       | IndexedDB vía Dexie (`src/services`)                                                       | Firestore, filtrado por `accountId`                                                                            |
-| Formularios | Validación manual                                                                          | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField` (ya: Medición, Agregar tanque) |
-| Iconos      | — (`react-icons` ya se retiró)                                                             | `@mui/icons-material`                                                                                          |
-
-No agregues código nuevo sobre el stack heredado. Si un cambio modifica de forma sustancial un
-archivo heredado, migra ese archivo (o su pantalla completa) al stack objetivo en el mismo cambio,
-como indica el ADR 0001.
+| Área        | Qué usar                                                                                                       |
+| ----------- | -------------------------------------------------------------------------------------------------------------- |
+| Lenguaje    | TypeScript estricto (`.ts`/`.tsx`); no queda JavaScript en `src/`                                              |
+| UI          | MUI con el theme de `src/theme/muiTheme.ts` (derivado de `DESIGN.md`)                                          |
+| Estado      | Stores de Zustand por dominio, con selectores (`selectedTank`, `tanks`, `history`, `colorMode`)                |
+| Datos       | IndexedDB vía Dexie en `src/services` (**heredado**: pasa a Firestore filtrado por `accountId` con el backend) |
+| Formularios | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField`                                |
+| Iconos      | `@mui/icons-material`                                                                                          |
+| Números     | Se muestran con `formatNumber` (`utils/formatNumber`): coma decimal; se guardan con punto                      |
 
 ## Comandos
 
@@ -70,19 +67,18 @@ en cada push y PR.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
-  `sileo` está simulado globalmente (`src/setupTests.js`): verifica las llamadas, no el DOM.
+  `sileo` está simulado globalmente (`src/setupTests.ts`): verifica las llamadas, no el DOM.
 - **Theme:** los tokens viven en `src/theme/tokens.ts` (reflejo de `DESIGN.md`). De ahí salen el
-  theme de MUI (`src/theme/muiTheme.ts`) y el de styled-components heredado
-  (`src/store/initialState.js`). Cambia un color en `DESIGN.md` y en `tokens.ts`, nunca en los
+  theme de MUI (`src/theme/muiTheme.ts`). Cambia un color en `DESIGN.md` y en `tokens.ts`, nunca en los
   componentes.
 - **Idioma:** código, identificadores, comentarios y logs en inglés; texto de cara al usuario en
   español, con la voz de `ENGINEERING_PRINCIPLES.md` §9 (tú, español neutro).
 - **Commits:** Conventional Commits, un cambio lógico por commit, en una rama (nunca directo en
   `main`). Los commits de formato masivo se registran en `.git-blame-ignore-revs`.
 - **Tests:** toda corrección de bug lleva su test de regresión. Los tests que tocan IndexedDB usan
-  `fake-indexeddb` (configurado en `src/setupTests.js`) y vacían las tablas en `beforeEach`.
-- **El cálculo de combustible** vive solo en `src/utils/calcFuelLevel.js` y
-  `src/utils/converts.js`, fijado por tests de caracterización. No lo dupliques.
+  `fake-indexeddb` (configurado en `src/setupTests.ts`) y vacían las tablas en `beforeEach`.
+- **El cálculo de combustible** vive solo en `src/utils/calcFuelLevel.ts` y
+  `src/utils/converts.ts`, fijado por tests de caracterización. No lo dupliques.
 
 ## Lo no obvio
 
