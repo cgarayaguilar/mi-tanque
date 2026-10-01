@@ -9,6 +9,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import HistoryIcon from '@mui/icons-material/History'
 import EmptyState from 'components/EmptyState'
+import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import NavBar from 'components/NavBar'
 import TankHistoryCard from 'components/TankHistoryCard'
 import { defaultPeriod, useHistoryStore } from 'store/history'
@@ -21,6 +22,8 @@ const DateModal = lazy(() => import('components/DateModal'))
 // With a session, the organization's history (backend specs/0004). Lazy: its
 // chunk brings the Firebase SDK
 const CloudHistory = lazy(() => import('./CloudHistory'))
+// Refuels on this phone (specs/0006), loaded when their tab opens
+const BasicRefuelHistory = lazy(() => import('./BasicRefuelHistory'))
 
 // Roughly a collapsed TankHistoryCard
 const CARD_HEIGHT = 248
@@ -33,6 +36,7 @@ function BasicHistory() {
   const load = useHistoryStore(state => state.load)
   const choosePeriod = useHistoryStore(state => state.choosePeriod)
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
+  const [tab, setTab] = useState<HistoryTab>('measurements')
 
   const period: Period = chosenPeriod ?? defaultPeriod()
   const periodText = formatPeriod(period)
@@ -110,7 +114,7 @@ function BasicHistory() {
           Historial
         </Typography>
         <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
-          Tus mediciones por tanque en el periodo que elijas.
+          Tus mediciones y rellenos en el periodo que elijas.
         </Typography>
 
         <Typography
@@ -131,7 +135,23 @@ function BasicHistory() {
           {periodText}
         </Button>
 
-        {renderHistories()}
+        <HistoryTabs tab={tab} onChange={setTab} />
+        {tab === 'measurements' ? (
+          renderHistories()
+        ) : (
+          <Suspense
+            fallback={
+              <Skeleton
+                variant="rounded"
+                height={CARD_HEIGHT}
+                aria-label="Cargando rellenos"
+                sx={{ borderRadius: `${String(radius.xl)}px` }}
+              />
+            }
+          >
+            <BasicRefuelHistory period={period} onChangePeriod={openPicker} />
+          </Suspense>
+        )}
       </Box>
 
       <NavBar />

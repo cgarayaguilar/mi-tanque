@@ -7,6 +7,7 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
+import ModeToggle, { type MeasureMode } from 'components/ModeToggle'
 import FuelGauge from 'components/FuelGauge'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
@@ -29,6 +30,8 @@ const NOT_MEASURED = '—'
 // With a session, the organization's tanks (backend specs/0004). Lazy: its
 // chunk brings the Firebase SDK, which the basic mode never downloads
 const CloudMeasurement = lazy(() => import('./CloudMeasurement'))
+// Refuels without an account (specs/0006): their own chunk
+const BasicRefuel = lazy(() => import('./BasicRefuel'))
 
 // Read by screen readers only: the gauge and figures speak for themselves
 const visuallyHidden = {
@@ -188,6 +191,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
 
 export default function Home() {
   const selectedTank = useSelectedTankStore(state => state.selectedTank)
+  const [mode, setMode] = useState<MeasureMode>('measure')
   const sessionStatus = useSessionStore(state => state.status)
   const [, navigate] = useLocation()
 
@@ -210,12 +214,22 @@ export default function Home() {
             {sessionStatus === 'ready' && <CloudMeasurement />}
           </Suspense>
         ) : selectedTank ? (
-          // A different tank is a new form (fresh values and intent)
-          <Measurement
-            key={selectedTank.id}
-            tank={selectedTank}
-            onChangeTank={chooseTank}
-          />
+          <>
+            <ModeToggle mode={mode} onChange={setMode} />
+            {mode === 'measure' ? (
+              // A different tank is a new form (fresh values and intent)
+              <Measurement
+                key={selectedTank.id}
+                tank={selectedTank}
+                onChangeTank={chooseTank}
+              />
+            ) : (
+              <Suspense fallback={null}>
+                <TankSummary tank={selectedTank} onChange={chooseTank} />
+                <BasicRefuel key={selectedTank.id} tank={selectedTank} />
+              </Suspense>
+            )}
+          </>
         ) : (
           <EmptyState
             icon={<LocalGasStationIcon />}
