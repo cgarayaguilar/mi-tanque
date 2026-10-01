@@ -83,6 +83,10 @@ en cada push y PR.
   `services/importLocal` (solo con `import()` desde `hooks/useImportLocalData`). Medición e Historial
   eligen el flujo según la sesión; el cálculo de la flota vive en `utils/measurementMath` y
   `utils/tankVolume`.
+  El equipo (specs/0005): `services/team` (solo en las páginas lazy `Account` e `Invitation`); los
+  permisos se reflejan en `utils/roles` (`canManageMember`, `invitableRolesFor`) y los decide el
+  callable `team`. Si las reglas rechazan una escritura por permisos, llama a
+  `recoverFromLostPermission(error)` de `store/session` antes del toast de error.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
