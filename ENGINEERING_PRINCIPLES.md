@@ -373,7 +373,8 @@ Functions. Comparten el mismo proyecto Firebase y región.
     **incompleta**. Patrón:
     ```tsx
     import { sileo, Toaster } from 'sileo'
-    // Un único <Toaster position="bottom-center" /> en la raíz, junto al <ThemeProvider>.
+    // Un único <Toaster position="bottom-center" /> en la raíz, junto al <ThemeProvider>;
+    // los errores salen arriba al centro (utils/toastPositions, aplicado al arrancar).
 
     // Éxito:
     sileo.success({ title: 'Medición guardada' })

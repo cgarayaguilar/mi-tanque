@@ -119,7 +119,7 @@ tarjetas.
   display) para caber en una línea junto a los botones de tema y de sesión, hasta 360px.
 - Rejilla de tanques: columnas automáticas de mínimo 150px (dos por fila en un teléfono).
 - Medidor de **200px**: Medición entera cabe en una pantalla de teléfono (812px).
-- Barra de navegación **fija abajo** en Medición, Historial y Flota (esta última solo con sesión, con tres pestañas); los toasts quedan por encima de ella.
+- Barra de navegación **fija abajo** en Medición, Historial y Flota (esta última solo con sesión, con tres pestañas); los toasts quedan por encima de ella, salvo los de error, que salen arriba al centro.
 
 ## Componentes
 
