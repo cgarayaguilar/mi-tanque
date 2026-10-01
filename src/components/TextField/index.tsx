@@ -22,6 +22,8 @@ export interface TextFieldProps {
   startAdornment?: ReactNode
   endAdornment?: ReactNode
   disabled?: boolean
+  /** Id of a <datalist> with suggestions (free text still allowed). */
+  list?: string
 }
 
 /**
@@ -42,6 +44,7 @@ export default function TextField({
   startAdornment,
   endAdornment,
   disabled = false,
+  list,
 }: TextFieldProps) {
   const { ref, ...field } = registration
   const helpId = `${id}-help`
@@ -71,6 +74,7 @@ export default function TextField({
             inputMode,
             autoComplete,
             maxLength,
+            list,
             'aria-describedby': help === undefined ? undefined : helpId,
           },
         }}

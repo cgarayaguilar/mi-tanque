@@ -31,7 +31,7 @@ export type MeasurementFormValues = z.infer<
   ReturnType<typeof measurementFormSchema>
 >
 
-const optionalOdometer = z.string().check(
+export const optionalOdometer = z.string().check(
   z.trim(),
   z.refine(value => value === '' || !Number.isNaN(parseDecimal(value)), {
     error: 'Escribe solo números, por ejemplo 120500',

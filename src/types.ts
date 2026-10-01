@@ -1,4 +1,5 @@
 // Canonical types for data that crosses UI <-> storage (ENGINEERING_PRINCIPLES.md §6.2).
+import type { Currency } from 'schemas/account'
 // They mirror what IndexedDB stores today and become the Firestore model in phase 3.
 
 export interface TankDimensions {
@@ -41,4 +42,37 @@ export interface Measurement extends Omit<NewMeasurement, 'intentId'> {
 export interface Period {
   start: Date
   end: Date
+}
+
+/**
+ * The amounts and levels of a refuel (backend specs/0006 RF-2, RF-3), the
+ * same with and without an account.
+ */
+export interface RefuelValues {
+  gallonsAdded: number
+  litersAdded: number
+  quantityUnit: 'gallon' | 'liter'
+  currency: Currency
+  priceUnit: 'gallon' | 'liter'
+  pricePerGallon: number
+  pricePerLiter: number
+  total: number
+  inchesBefore: number | null
+  inchesAfter: number | null
+  gallonsBefore: number | null
+  gallonsAfter: number | null
+  fillPercentBefore: number | null
+  fillPercentAfter: number | null
+  stationName: string | null
+}
+
+/** A refuel in the basic mode, on this phone (no place, photo or truck). */
+export interface NewLocalRefuel extends RefuelValues {
+  intentId: string
+  date: Date
+  tankId: number
+}
+
+export interface LocalRefuel extends NewLocalRefuel {
+  id: number
 }
