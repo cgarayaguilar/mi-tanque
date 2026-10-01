@@ -211,6 +211,8 @@ export const readHistoryPage = async (options: {
   end: Date
   equipmentId: string | null
   after: QueryDocumentSnapshot | null
+  /** Pages of the history; exporting reads bigger ones (specs/0007). */
+  pageSize?: number
 }): Promise<HistoryPage> => {
   const { db } = await loadFirebase()
   const constraints: QueryConstraint[] = [
@@ -222,7 +224,7 @@ export const readHistoryPage = async (options: {
     where('takenAt', '<=', Timestamp.fromDate(options.end)),
     orderBy('takenAt', 'desc'),
     ...(options.after ? [startAfter(options.after)] : []),
-    limit(HISTORY_PAGE_SIZE),
+    limit(options.pageSize ?? HISTORY_PAGE_SIZE),
   ]
   const snapshot = await getDocs(
     query(collection(db, 'measurements'), ...constraints)
@@ -232,6 +234,7 @@ export const readHistoryPage = async (options: {
     items: snapshot.docs
       .map(toMeasurement)
       .filter((item): item is CloudMeasurement => item !== null),
-    cursor: snapshot.size === HISTORY_PAGE_SIZE ? last : null,
+    cursor:
+      snapshot.size === (options.pageSize ?? HISTORY_PAGE_SIZE) ? last : null,
   }
 }

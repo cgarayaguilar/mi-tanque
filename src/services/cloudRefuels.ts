@@ -214,6 +214,8 @@ export const readRefuelsPage = async (options: {
   end: Date
   equipmentId: string | null
   after: QueryDocumentSnapshot | null
+  /** Pages of the history; exporting reads bigger ones (specs/0007). */
+  pageSize?: number
 }): Promise<RefuelsPage> => {
   const { db } = await loadFirebase()
   const constraints: QueryConstraint[] = [
@@ -225,7 +227,7 @@ export const readRefuelsPage = async (options: {
     where('takenAt', '<=', Timestamp.fromDate(options.end)),
     orderBy('takenAt', 'desc'),
     ...(options.after ? [startAfter(options.after)] : []),
-    limit(REFUELS_PAGE_SIZE),
+    limit(options.pageSize ?? REFUELS_PAGE_SIZE),
   ]
   const snapshot = await getDocs(
     query(collection(db, 'refuels'), ...constraints)
@@ -235,7 +237,8 @@ export const readRefuelsPage = async (options: {
     items: snapshot.docs
       .map(toRefuel)
       .filter((item): item is CloudRefuel => item !== null),
-    cursor: snapshot.size === REFUELS_PAGE_SIZE ? last : null,
+    cursor:
+      snapshot.size === (options.pageSize ?? REFUELS_PAGE_SIZE) ? last : null,
   }
 }
 
