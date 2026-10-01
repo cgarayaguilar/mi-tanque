@@ -2,8 +2,11 @@ import { calcFuelLevel } from 'utils/calcFuelLevel'
 
 // Characterization test: locks the gallons the app has always shown, rounded
 // like the UI does (toFixed(2)). Known values were checked in the app UI.
-const gallons = (tankDiameter, tankLength, fuelHeight) =>
-  calcFuelLevel({ tankDiameter, tankLength, fuelHeight }).toFixed(2)
+const gallons = (
+  tankDiameter: number,
+  tankLength: number,
+  fuelHeight: number
+): string => calcFuelLevel({ tankDiameter, tankLength, fuelHeight }).toFixed(2)
 
 test('an empty tank holds no fuel', () => {
   expect(gallons(25, 26, 0)).toMatchInlineSnapshot(`"0.00"`)

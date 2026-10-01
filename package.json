@@ -28,9 +28,11 @@
     "react-dom": "^19.3.0",
     "react-icons": "^4.2.0",
     "react-wavify": "^1.5.2",
+    "sileo": "0.1.5",
     "styled-components": "^5.2.1",
     "sweetalert2": "^10.15.5",
-    "wouter": "^2.7.3"
+    "wouter": "^2.7.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
