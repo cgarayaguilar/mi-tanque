@@ -87,6 +87,10 @@ test('saves the measurement with the city name of the current position', async (
   })
 
   const [saved] = await db.measurements.toArray()
-  expect(saved).toMatchObject({ tankId, inches: 12, location: 'Managua, Nicaragua' })
+  expect(saved).toMatchObject({
+    tankId,
+    inches: 12,
+    location: 'Managua, Nicaragua',
+  })
   expect(fetch.mock.calls[0][0]).toContain('point.lat=12.13&point.lon=-86.25')
 })

@@ -11,12 +11,12 @@ navegador (IndexedDB vía Dexie).
 
 ## Scripts
 
-| Comando           | Descripción                                               |
-| ----------------- | --------------------------------------------------------- |
-| `npm run dev`     | Servidor de desarrollo en http://localhost:3000           |
-| `npm run build`   | Build de producción en `build/`                           |
-| `npm run preview` | Sirve localmente el build de producción                   |
-| `npm test`        | Tests con Vitest (modo watch; `npx vitest run` una vez)   |
+| Comando           | Descripción                                             |
+| ----------------- | ------------------------------------------------------- |
+| `npm run dev`     | Servidor de desarrollo en http://localhost:3000         |
+| `npm run build`   | Build de producción en `build/`                         |
+| `npm run preview` | Sirve localmente el build de producción                 |
+| `npm test`        | Tests con Vitest (modo watch; `npx vitest run` una vez) |
 
 ## Imports absolutos
 

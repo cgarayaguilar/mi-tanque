@@ -24,7 +24,11 @@ const themeColor = '#142850'
 const pwa = VitePWA({
   // Ask the user before activating a new version (see src/registerServiceWorker.js)
   registerType: 'prompt',
-  includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'pwa-icon.svg'],
+  includeAssets: [
+    'favicon.ico',
+    'apple-touch-icon-180x180.png',
+    'pwa-icon.svg',
+  ],
   manifest: {
     name: 'Mi tanque',
     short_name: 'Mi tanque',

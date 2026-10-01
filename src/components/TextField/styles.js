@@ -26,7 +26,9 @@ export const TextFieldContainer = styled.fieldset`
   font-size: 1rem;
   margin: 0;
   position: relative;
-  transition: border-color 0.25s, background-color 0.25s;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s;
   width: 100%;
 
   &:focus-within {

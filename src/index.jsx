@@ -6,12 +6,12 @@ import AppProvider from 'store'
 import registerServiceWorker from './registerServiceWorker'
 
 ReactDOM.render(
-    <React.StrictMode>
-        <AppProvider>
-            <App />
-        </AppProvider>
-    </React.StrictMode>,
-    document.getElementById('root')
+  <React.StrictMode>
+    <AppProvider>
+      <App />
+    </AppProvider>
+  </React.StrictMode>,
+  document.getElementById('root')
 )
 
 registerServiceWorker()
