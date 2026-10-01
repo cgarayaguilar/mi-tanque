@@ -1,5 +1,6 @@
 import { FLEET_LIMITS } from 'schemas/fleet'
-import type { Measurement, Tank } from 'types'
+import { CURRENCIES } from 'schemas/account'
+import type { LocalRefuel, Measurement, RefuelValues, Tank } from 'types'
 import { TANK_TEMPLATES } from 'utils/tankTemplates'
 import { fullVolumeGallons, type TankGeometry } from 'utils/tankVolume'
 
@@ -28,10 +29,19 @@ export interface ImportMeasurement {
   legacyPlace: string | null
 }
 
+export interface ImportRefuel extends RefuelValues {
+  id: string
+  tankId: string
+  tankName: string
+  takenAt: Date
+}
+
 export interface ImportPlan {
   tanks: ImportTank[]
   measurements: ImportMeasurement[]
-  /** Local measurements the rules would reject (out of range, bad date). */
+  /** Refuels of the basic mode (backend specs/0006 RF-14). */
+  refuels: ImportRefuel[]
+  /** Local records the rules would reject (out of range, bad date). */
   skipped: number
 }
 
@@ -45,6 +55,18 @@ const CLOCK_SKEW_MS = 5 * 60 * 1000
 /** Deterministic: importing again writes the same documents (RF-17). */
 export const importId = (uid: string, localId: number) =>
   `import-${uid}-${String(localId)}`
+
+/** Refuels get their own prefix: local ids repeat across tables. */
+export const refuelImportId = (uid: string, localId: number) =>
+  `import-${uid}-r${String(localId)}`
+
+const STATION_MAX = 60
+const PRICE_PER_LITER_MAX = 1000
+const PRICE_PER_GALLON_MAX = 3786
+const TOTAL_MAX = 100_000_000
+
+const withinOrNull = (value: number | null, max: number) =>
+  value === null || (Number.isFinite(value) && value >= 0 && value <= max)
 
 const inRange = (value: number, { min, max }: { min: number; max: number }) =>
   Number.isFinite(value) && value >= min && value <= max
@@ -60,14 +82,46 @@ export const planImport = (
   uid: string,
   localTanks: readonly Tank[],
   localMeasurements: readonly Measurement[],
-  now = new Date()
+  now = new Date(),
+  localRefuels: readonly LocalRefuel[] = []
 ): ImportPlan => {
   const tanksById = new Map(
     localTanks.filter(validTank).map(tank => [tank.id, tank])
   )
   const used = new Map<number, ImportTank & { fullGallons: number }>()
   const measurements: ImportMeasurement[] = []
+  const refuels: ImportRefuel[] = []
   let skipped = 0
+
+  // Each local tank in use becomes one individual cylinder, once (RF-16)
+  const cloudTankFor = (tank: Tank) => {
+    const existing = used.get(tank.id)
+    if (existing) return existing
+    const geometry: TankGeometry = {
+      shape: 'cylinder',
+      orientation: 'horizontal',
+      dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
+    }
+    const template = TANK_TEMPLATES.find(
+      item =>
+        item.capacityGal === tank.capacity &&
+        item.diameterIn === tank.diameter &&
+        item.lengthIn === tank.length
+    )
+    const cloudTank = {
+      id: importId(uid, tank.id),
+      name: `Tanque de ${String(tank.capacity)} gal (importado)`,
+      capacityGal: tank.capacity,
+      diameterIn: tank.diameter,
+      lengthIn: tank.length,
+      templateId: template?.id ?? null,
+      fullGallons: fullVolumeGallons(geometry),
+    }
+    used.set(tank.id, cloudTank)
+    return cloudTank
+  }
+  const validDate = (date: Date) =>
+    date >= OLDEST && date.getTime() <= now.getTime() + CLOCK_SKEW_MS
 
   for (const local of localMeasurements) {
     const tank = tanksById.get(local.tankId)
@@ -81,37 +135,13 @@ export const planImport = (
       local.inches <= tank.diameter &&
       inRange(gallons, { min: 0, max: tank.capacity * 2 }) &&
       inRange(liters, { min: 0, max: tank.capacity * 2 * 3.785411784 }) &&
-      takenAt >= OLDEST &&
-      takenAt.getTime() <= now.getTime() + CLOCK_SKEW_MS
+      validDate(takenAt)
     if (!valid) {
       skipped += 1
       continue
     }
 
-    let cloudTank = used.get(tank.id)
-    if (!cloudTank) {
-      const geometry: TankGeometry = {
-        shape: 'cylinder',
-        orientation: 'horizontal',
-        dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
-      }
-      const template = TANK_TEMPLATES.find(
-        item =>
-          item.capacityGal === tank.capacity &&
-          item.diameterIn === tank.diameter &&
-          item.lengthIn === tank.length
-      )
-      cloudTank = {
-        id: importId(uid, tank.id),
-        name: `Tanque de ${String(tank.capacity)} gal (importado)`,
-        capacityGal: tank.capacity,
-        diameterIn: tank.diameter,
-        lengthIn: tank.length,
-        templateId: template?.id ?? null,
-        fullGallons: fullVolumeGallons(geometry),
-      }
-      used.set(tank.id, cloudTank)
-    }
+    const cloudTank = cloudTankFor(tank)
 
     const place = local.location.trim()
     measurements.push({
@@ -133,9 +163,58 @@ export const planImport = (
     })
   }
 
+  for (const local of localRefuels) {
+    const tank = tanksById.get(local.tankId)
+    const takenAt = new Date(local.date)
+    const maxGallons = (tank?.capacity ?? 0) * 2
+    const valid =
+      tank !== undefined &&
+      validDate(takenAt) &&
+      local.gallonsAdded > 0 &&
+      local.gallonsAdded <= maxGallons &&
+      local.litersAdded > 0 &&
+      local.litersAdded <= maxGallons * 3.785411784 &&
+      (CURRENCIES as readonly string[]).includes(local.currency) &&
+      local.pricePerLiter > 0 &&
+      local.pricePerLiter <= PRICE_PER_LITER_MAX &&
+      local.pricePerGallon > 0 &&
+      local.pricePerGallon <= PRICE_PER_GALLON_MAX &&
+      local.total >= 0 &&
+      local.total <= TOTAL_MAX &&
+      withinOrNull(local.inchesBefore, 600) &&
+      withinOrNull(local.inchesAfter, 600) &&
+      withinOrNull(local.gallonsBefore, maxGallons) &&
+      withinOrNull(local.gallonsAfter, maxGallons) &&
+      withinOrNull(local.fillPercentBefore, 100) &&
+      withinOrNull(local.fillPercentAfter, 100) &&
+      (local.stationName === null ||
+        (local.stationName.length >= 1 &&
+          local.stationName.length <= STATION_MAX))
+    if (!valid) {
+      skipped += 1
+      continue
+    }
+    const cloudTank = cloudTankFor(tank)
+    const {
+      id,
+      intentId: _intent,
+      date: _date,
+      tankId: _tank,
+      ...values
+    } = local
+    refuels.push({
+      ...values,
+      id: refuelImportId(uid, id),
+      tankId: cloudTank.id,
+      tankName: cloudTank.name,
+      takenAt,
+    })
+  }
+
   return {
     tanks: [...used.values()].map(({ fullGallons: _, ...tank }) => tank),
     measurements,
+    refuels,
     skipped,
   }
 }

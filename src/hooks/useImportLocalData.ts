@@ -30,6 +30,18 @@ export const importOfferAnswered = (orgId: string) => {
 const measurementsText = (count: number) =>
   count === 1 ? '1 medición' : `${String(count)} mediciones`
 
+const refuelsText = (count: number) =>
+  count === 1 ? '1 relleno' : `${String(count)} rellenos`
+
+/** "5 mediciones y 2 rellenos", leaving out what is zero. */
+export const recordsText = (measurements: number, refuels: number) =>
+  [
+    measurements > 0 && measurementsText(measurements),
+    refuels > 0 && refuelsText(refuels),
+  ]
+    .filter(Boolean)
+    .join(' y ')
+
 /** Imports this phone's basic-mode data into the active organization. */
 export const useImportLocalData = () => {
   const [importing, setImporting] = useState(false)
@@ -53,7 +65,7 @@ export const useImportLocalData = () => {
     setImporting(true)
     try {
       const { importLocalData } = await import('services/importLocal')
-      const { imported, skipped } = await importLocalData({
+      const { measurements, refuels, skipped } = await importLocalData({
         orgId,
         uid,
         userName: userName || 'Sin nombre',
@@ -61,15 +73,15 @@ export const useImportLocalData = () => {
       rememberImportOffer(orgId, 'done')
       sileo.success({
         title:
-          imported === 0
+          measurements + refuels === 0
             ? 'Ya estaba todo importado'
-            : `Importamos ${measurementsText(imported)}`,
+            : `Importamos ${recordsText(measurements, refuels)}`,
         description:
           skipped === 1
-            ? '1 medición no se pudo pasar porque sus datos están fuera de rango.'
+            ? '1 registro no se pudo pasar porque sus datos están fuera de rango.'
             : skipped > 1
-              ? `${String(skipped)} mediciones no se pudieron pasar porque sus datos están fuera de rango.`
-              : 'Las ves en Historial con su fecha original, y sus tanques en Flota.',
+              ? `${String(skipped)} registros no se pudieron pasar porque sus datos están fuera de rango.`
+              : 'Los ves en Historial con su fecha original, y sus tanques en Flota.',
       })
       void useFleetStore.getState().load(orgId)
       if (useCloudHistoryStore.getState().orgId === orgId) {

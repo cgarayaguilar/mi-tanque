@@ -1,4 +1,4 @@
-import type { Measurement, Tank } from 'types'
+import type { LocalRefuel, Measurement, Tank } from 'types'
 import { importId, planImport } from 'utils/importPlan'
 import { calcFuelLevel } from 'utils/calcFuelLevel'
 
@@ -118,4 +118,48 @@ test('what the rules would reject is skipped and counted, not sent', () => {
 test('a tank that is not a template keeps no template', () => {
   const plan = planImport('u', [localTank({ capacity: 80 })], [local()], NOW)
   expect(plan.tanks[0]?.templateId).toBeNull()
+})
+
+const localRefuel = (overrides: Partial<LocalRefuel> = {}): LocalRefuel => ({
+  id: 7,
+  intentId: 'i',
+  date: new Date(2026, 5, 3, 9, 0),
+  tankId: 3,
+  gallonsAdded: 13.21,
+  litersAdded: 50,
+  quantityUnit: 'liter',
+  currency: 'NIO',
+  priceUnit: 'liter',
+  pricePerGallon: 113.56,
+  pricePerLiter: 30,
+  total: 1500,
+  inchesBefore: null,
+  inchesAfter: null,
+  gallonsBefore: 20,
+  gallonsAfter: 33.21,
+  fillPercentBefore: 25,
+  fillPercentAfter: 41,
+  stationName: 'Puma Km 7',
+  ...overrides,
+})
+
+test('refuels go to the same imported tank, with their own ids (specs/0006 RF-14)', () => {
+  const plan = planImport('u', [localTank()], [], NOW, [
+    localRefuel(),
+    localRefuel({ id: 8, currency: 'EUR' as never }),
+    localRefuel({ id: 9, gallonsAdded: 0 }),
+  ])
+  expect(plan.tanks.map(t => t.id)).toEqual(['import-u-3'])
+  expect(plan.refuels).toEqual([
+    expect.objectContaining({
+      id: 'import-u-r7',
+      tankId: 'import-u-3',
+      tankName: 'Tanque de 75 gal (importado)',
+      takenAt: new Date(2026, 5, 3, 9, 0),
+      total: 1500,
+      stationName: 'Puma Km 7',
+    }),
+  ])
+  expect(plan.refuels[0]).not.toHaveProperty('intentId')
+  expect(plan.skipped).toBe(2)
 })

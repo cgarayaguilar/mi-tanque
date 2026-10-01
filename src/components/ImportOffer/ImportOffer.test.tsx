@@ -9,7 +9,9 @@ import type { Role } from 'utils/roles'
 import { accountWithRole, ORG_ID } from '../../testing/fleetFixtures'
 
 const importApi = vi.hoisted(() => ({
-  importLocalData: vi.fn(() => Promise.resolve({ imported: 2, skipped: 0 })),
+  importLocalData: vi.fn(() =>
+    Promise.resolve({ measurements: 2, refuels: 0, skipped: 0 })
+  ),
 }))
 vi.mock('services/importLocal', () => importApi)
 
@@ -70,7 +72,7 @@ afterEach(() => {
 
 const offer = () =>
   screen.findByRole('dialog', {
-    name: '¿Pasamos tus mediciones a Flota de Luis?',
+    name: '¿Pasamos tus datos a Flota de Luis?',
   })
 
 test('with local measurements, signing in offers to import them (CA-8)', async () => {
@@ -109,7 +111,11 @@ test('"Ahora no" does not ask again in that organization (CA-8)', async () => {
 
 test('Mi cuenta imports later too, and repeating says it was all there (CA-8)', async () => {
   window.localStorage.setItem(importOfferKey(ORG_ID), 'dismissed')
-  importApi.importLocalData.mockResolvedValueOnce({ imported: 0, skipped: 1 })
+  importApi.importLocalData.mockResolvedValueOnce({
+    measurements: 0,
+    refuels: 0,
+    skipped: 1,
+  })
   renderAccount()
 
   fireEvent.click(
@@ -121,7 +127,7 @@ test('Mi cuenta imports later too, and repeating says it was all there (CA-8)', 
     expect(sileo.success).toHaveBeenCalledWith({
       title: 'Ya estaba todo importado',
       description:
-        '1 medición no se pudo pasar porque sus datos están fuera de rango.',
+        '1 registro no se pudo pasar porque sus datos están fuera de rango.',
     })
   })
 })

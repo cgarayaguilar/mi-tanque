@@ -81,3 +81,12 @@ export const readAllMeasurements = async (): Promise<Measurement[]> =>
     .filter((measurement): measurement is Measurement => measurement !== null)
 
 export const countMeasurements = (): Promise<number> => db.measurements.count()
+
+/** What the basic mode has to import (backend specs/0004, specs/0006). */
+export const countLocalRecords = async () => {
+  const [measurements, refuels] = await Promise.all([
+    db.measurements.count(),
+    db.refuels.count(),
+  ])
+  return { measurements, refuels }
+}

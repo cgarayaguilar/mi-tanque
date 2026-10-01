@@ -12,9 +12,10 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { loadFirebase } from 'services/firebase'
+import { readAllLocalRefuels } from 'services/localRefuels'
 import { readAllMeasurements } from 'services/measurements'
 import { readTanks } from 'services/tanks'
-import { planImport, type ImportMeasurement } from 'utils/importPlan'
+import { planImport } from 'utils/importPlan'
 
 // Firestore allows 500 writes per batch; 450 leaves room (RF-17)
 const BATCH_SIZE = 450
@@ -23,8 +24,9 @@ const MAX_EXISTING = 10_000
 
 export interface ImportResult {
   /** Written now; already imported ones are not counted again. */
-  imported: number
-  /** Local measurements the organization would reject. */
+  measurements: number
+  refuels: number
+  /** Local records the organization would reject. */
   skipped: number
 }
 
@@ -36,12 +38,12 @@ const chunk = <T>(items: readonly T[], size: number): T[][] => {
   return chunks
 }
 
-const groupByTank = (measurements: readonly ImportMeasurement[]) => {
-  const groups = new Map<string, ImportMeasurement[]>()
-  for (const measurement of measurements) {
-    const group = groups.get(measurement.tankId) ?? []
-    group.push(measurement)
-    groups.set(measurement.tankId, group)
+const groupByTank = <T extends { tankId: string }>(records: readonly T[]) => {
+  const groups = new Map<string, T[]>()
+  for (const record of records) {
+    const group = groups.get(record.tankId) ?? []
+    group.push(record)
+    groups.set(record.tankId, group)
   }
   return [...groups.values()]
 }
@@ -60,36 +62,49 @@ export const importLocalData = async ({
   uid: string
   userName: string
 }): Promise<ImportResult> => {
-  const [{ db }, localTanks, localMeasurements] = await Promise.all([
-    loadFirebase(),
-    readTanks(),
-    readAllMeasurements(),
-  ])
-  const plan = planImport(uid, localTanks, localMeasurements)
+  const [{ db }, localTanks, localMeasurements, localRefuels] =
+    await Promise.all([
+      loadFirebase(),
+      readTanks(),
+      readAllMeasurements(),
+      readAllLocalRefuels(),
+    ])
+  const plan = planImport(
+    uid,
+    localTanks,
+    localMeasurements,
+    new Date(),
+    localRefuels
+  )
 
-  const [existingTanks, existingMeasurements] = await Promise.all([
+  const imported = (name: 'measurements' | 'refuels') =>
     getDocs(
       query(
-        collection(db, 'tanks'),
-        where('orgId', '==', orgId),
-        where('createdBy', '==', uid),
-        limit(MAX_EXISTING)
-      )
-    ),
-    getDocs(
-      query(
-        collection(db, 'measurements'),
+        collection(db, name),
         where('orgId', '==', orgId),
         where('userId', '==', uid),
         where('source', '==', 'import'),
         limit(MAX_EXISTING)
       )
-    ),
-  ])
+    )
+  const [existingTanks, existingMeasurements, existingRefuels] =
+    await Promise.all([
+      getDocs(
+        query(
+          collection(db, 'tanks'),
+          where('orgId', '==', orgId),
+          where('createdBy', '==', uid),
+          limit(MAX_EXISTING)
+        )
+      ),
+      imported('measurements'),
+      imported('refuels'),
+    ])
   const tankIds = new Set(existingTanks.docs.map(document => document.id))
   const measurementIds = new Set(
     existingMeasurements.docs.map(document => document.id)
   )
+  const refuelIds = new Set(existingRefuels.docs.map(document => document.id))
 
   // Tanks first: the measurement rules read the tank as it is before the batch
   const newTanks = plan.tanks.filter(tank => !tankIds.has(tank.id))
@@ -148,5 +163,38 @@ export const importLocalData = async ({
     }
   }
 
-  return { imported: newMeasurements.length, skipped: plan.skipped }
+  const newRefuels = plan.refuels.filter(refuel => !refuelIds.has(refuel.id))
+  for (const group of groupByTank(newRefuels)) {
+    for (const refuels of chunk(group, BATCH_SIZE)) {
+      const batch = writeBatch(db)
+      for (const { id, takenAt, ...refuel } of refuels) {
+        batch.set(doc(db, 'refuels', id), {
+          ...refuel,
+          orgId,
+          equipment: { kind: 'none', id: null, name: null },
+          userId: uid,
+          userName,
+          takenAt: Timestamp.fromDate(takenAt),
+          location: null,
+          place: null,
+          placeStatus: null,
+          truckGallonsBefore: null,
+          truckGallonsAfter: null,
+          invoicePhotoPath: null,
+          odometerKm: null,
+          source: 'import',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          updatedBy: uid,
+        })
+      }
+      await batch.commit()
+    }
+  }
+
+  return {
+    measurements: newMeasurements.length,
+    refuels: newRefuels.length,
+    skipped: plan.skipped,
+  }
 }

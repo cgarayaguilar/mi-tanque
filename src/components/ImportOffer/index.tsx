@@ -7,10 +7,11 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import {
   importOfferAnswered,
+  recordsText,
   rememberImportOffer,
   useImportLocalData,
 } from 'hooks/useImportLocalData'
-import { countMeasurements } from 'services/measurements'
+import { countLocalRecords } from 'services/measurements'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
@@ -24,17 +25,19 @@ export default function ImportOffer() {
   const orgName = useSessionStore(state => state.organization?.name ?? '')
   const role = useSessionStore(selectActiveRole)
   // Keyed by organization: switching never shows the previous one's offer
-  const [offer, setOffer] = useState<{ orgId: string; count: number } | null>(
-    null
-  )
+  const [offer, setOffer] = useState<{
+    orgId: string
+    measurements: number
+    refuels: number
+  } | null>(null)
   const { importing, run } = useImportLocalData()
 
   useEffect(() => {
     if (!orgId || !canWriteFleet(role) || importOfferAnswered(orgId)) return
     let active = true
-    countMeasurements()
+    countLocalRecords()
       .then(total => {
-        if (active) setOffer({ orgId, count: total })
+        if (active) setOffer({ orgId, ...total })
       })
       .catch((error: unknown) => {
         reportError(error, { operation: 'countLocalMeasurements' })
@@ -44,8 +47,10 @@ export default function ImportOffer() {
     }
   }, [orgId, role])
 
-  const count = offer?.orgId === orgId ? offer.count : 0
-  if (!orgId || count === 0) return null
+  const current = offer?.orgId === orgId ? offer : null
+  if (!orgId || !current || current.measurements + current.refuels === 0) {
+    return null
+  }
 
   const dismiss = () => {
     rememberImportOffer(orgId, 'dismissed')
@@ -60,14 +65,14 @@ export default function ImportOffer() {
       aria-describedby="import-offer-description"
     >
       <DialogTitle id="import-offer-title">
-        ¿Pasamos tus mediciones a {orgName}?
+        ¿Pasamos tus datos a {orgName}?
       </DialogTitle>
       <DialogContent>
         <DialogContentText id="import-offer-description">
           Este teléfono tiene{' '}
-          {count === 1 ? '1 medición' : `${String(count)} mediciones`} de cuando
-          usabas la app sin cuenta. Las importamos con sus tanques y aquí no se
-          borran. También puedes hacerlo después desde Mi cuenta.
+          {recordsText(current.measurements, current.refuels)} de cuando usabas
+          la app sin cuenta. Los importamos con sus tanques y aquí no se borran.
+          También puedes hacerlo después desde Mi cuenta.
         </DialogContentText>
       </DialogContent>
       <DialogActions>
