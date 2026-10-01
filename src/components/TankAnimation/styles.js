@@ -1,6 +1,6 @@
 import styled, { keyframes } from 'styled-components'
 import Wave1 from 'react-wavify'
-import { layout, radius, space } from 'theme/tokens'
+import { layout, space } from 'theme/tokens'
 import { px } from 'styles/type'
 
 const tankSize = px(layout.gaugeSize)
@@ -81,18 +81,19 @@ export const Wrapper = styled.div`
   align-items: flex-start;
 `
 
-// Readable over the wave at any fill level: a surface badge on top of it
+// Centered over the wave with no container: difference blending inverts the
+// white text against what is behind it (the light track or the ink wave, even
+// across the wave line), so it stays readable at every fill level and mode
 export const FuelLevel = styled.div`
   position: absolute;
-  top: ${px(space.xl)};
+  inset: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: ${px(space.xxs)};
-  padding: ${px(space.xs)} ${px(space.lg)};
-  background-color: ${({ theme }) => theme.card};
-  border: 1px solid ${({ theme }) => theme.hairline};
-  border-radius: ${px(radius.xl)};
-  color: ${({ theme }) => theme.secondaryText};
+  color: ${({ theme }) => theme.differenceInk};
+  mix-blend-mode: difference;
+  pointer-events: none;
 `

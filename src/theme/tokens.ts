@@ -30,6 +30,9 @@ export interface ColorTokens {
   error: string
   success: string
   overlay: string
+  /** White for mix-blend-mode: difference, which inverts it against whatever is
+   * behind (near-black on light, white on ink): text over the gauge wave. */
+  differenceInk: string
   /** Atmospheric orbs only: never fills, text or component backgrounds. */
   gradientMint: string
   gradientSky: string
@@ -56,6 +59,7 @@ export const colorTokens: Record<ColorMode, ColorTokens> = {
     error: '#b91c1c',
     success: '#15803d',
     overlay: 'rgba(12, 10, 9, 0.4)',
+    differenceInk: '#ffffff',
     gradientMint: '#a7e5d3',
     gradientSky: '#a8c8e8',
     gradientLavender: '#c8b8e0',
@@ -76,6 +80,7 @@ export const colorTokens: Record<ColorMode, ColorTokens> = {
     error: '#f87171',
     success: '#4ade80',
     overlay: 'rgba(0, 0, 0, 0.6)',
+    differenceInk: '#ffffff',
     gradientMint: '#a7e5d3',
     gradientSky: '#a8c8e8',
     gradientLavender: '#c8b8e0',
@@ -169,14 +174,6 @@ export const typeScale = {
   },
   // Figures (data): Inter 600 with tabular digits. The display serif at 300 is
   // for headings; numbers need weight to be read at a glance next to the tank.
-  figureLg: {
-    fontFamily: fontFamily.body,
-    fontSize: 32,
-    fontWeight: 600,
-    lineHeight: 1.1,
-    letterSpacing: -0.32,
-    fontVariantNumeric: 'tabular-nums',
-  },
   figureMd: {
     fontFamily: fontFamily.body,
     fontSize: 20,

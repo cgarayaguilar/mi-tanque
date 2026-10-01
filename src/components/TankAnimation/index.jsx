@@ -13,9 +13,17 @@ export default function TankAnimation({ fuelHeight = 0, gallons = 0 }) {
     <Gauge>
       <Wrapper>
         <FuelLevel>
-          <FuelIcon size={20} aria-hidden="true" />
-          <Typography variant="caption2" value={`${Math.round(fuelHeight)}%`} />
-          <Typography variant="figureLg" value={`${gallons} gls`} />
+          <FuelIcon size={16} aria-hidden="true" />
+          <Typography
+            variant="caption2"
+            color="inherit"
+            value={`${Math.round(fuelHeight)}%`}
+          />
+          <Typography
+            variant="figure"
+            color="inherit"
+            value={`${gallons} gls`}
+          />
         </FuelLevel>
         <Wave
           fuellevel={`${fuelHeight}%`}

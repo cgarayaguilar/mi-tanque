@@ -17,7 +17,6 @@ const figure = token => styled.span`
 `
 
 /** Data figures: Inter 600, tabular digits. */
-export const FigureLg = figure(typeScale.figureLg)
 export const Figure = figure(typeScale.figureMd)
 export const FigureSm = figure(typeScale.figureSm)
 

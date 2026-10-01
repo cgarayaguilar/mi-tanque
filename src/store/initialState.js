@@ -17,6 +17,7 @@ const toLegacyTheme = tokens => ({
   secondaryText: tokens.muted,
   disabledText: tokens.disabled,
   error: tokens.error,
+  differenceInk: tokens.differenceInk,
   success: tokens.success,
   gradientMint: tokens.gradientMint,
   gradientSky: tokens.gradientSky,
