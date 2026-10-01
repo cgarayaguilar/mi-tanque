@@ -26,14 +26,14 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 
 ## Stack: heredado vs. objetivo
 
-| Área        | Heredado (no extender)                                  | Objetivo (todo código nuevo)                                                 |
-| ----------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Lenguaje    | JavaScript (`.js`/`.jsx`)                               | TypeScript estricto (`.ts`/`.tsx`)                                           |
-| UI          | styled-components, theme en `src/store/initialState.js` | MUI con theme derivado de `DESIGN.md`                                        |
-| Estado      | Context + `useLocalStorage` (Tanques, Historial)        | Stores de Zustand por dominio, con selectores (ya: `store/selectedTank`)     |
-| Datos       | IndexedDB vía Dexie (`src/services`)                    | Firestore, filtrado por `accountId`                                          |
-| Formularios | `FormData` + validación manual (Agregar tanque)         | React Hook Form + Zod (`zodResolver`), errores junto al campo (ya: Medición) |
-| Iconos      | `react-icons`                                           | `@mui/icons-material`                                                        |
+| Área        | Heredado (no extender)                                  | Objetivo (todo código nuevo)                                                                                   |
+| ----------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Lenguaje    | JavaScript (`.js`/`.jsx`)                               | TypeScript estricto (`.ts`/`.tsx`)                                                                             |
+| UI          | styled-components, theme en `src/store/initialState.js` | MUI con theme derivado de `DESIGN.md`                                                                          |
+| Estado      | Context + `useLocalStorage` (Historial)                 | Stores de Zustand por dominio, con selectores (ya: `store/selectedTank`, `store/tanks`)                        |
+| Datos       | IndexedDB vía Dexie (`src/services`)                    | Firestore, filtrado por `accountId`                                                                            |
+| Formularios | Validación manual                                       | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField` (ya: Medición, Agregar tanque) |
+| Iconos      | `react-icons`                                           | `@mui/icons-material`                                                                                          |
 
 No agregues código nuevo sobre el stack heredado. Si un cambio modifica de forma sustancial un
 archivo heredado, migra ese archivo (o su pantalla completa) al stack objetivo en el mismo cambio,

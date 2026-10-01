@@ -142,15 +142,18 @@ tarjetas.
 | **Barra superior**         | `top-nav`: fondo `canvas`, 64px · logo (`currentColor`) + nombre en `displaySm` · botón de tema de MUI                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Estado vacío**           | `EmptyState`: icono en un círculo `surfaceStrong`, título `displaySm`, texto `bodyMd` (máx. 36ch), botón primario · para pantallas sin datos o con un paso previo pendiente (§8.2, §8.4)                                                                                                                                                                                                                                                                                                                                                                                 |
 | **Cifra con etiqueta**     | `Stat`: etiqueta `captionUppercase` en `muted`, valor `figureMd` (o `figureSm`), nota opcional `caption` · "—" cuando aún no hay dato                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Campo numérico**         | `NumberField`: campo de texto con `inputMode="decimal"` (acepta "12,5" y "12.5"), etiqueta visible, unidad corta al final (`gal.`, `pulg.`) en `muted` y una línea debajo que muestra la pista o el error (§8.7)                                                                                                                                                                                                                                                                                                                                                         |
+| **Carga de lista**         | `Skeleton` redondeado de MUI con la altura de la tarjeta (radio `lg`), en `surfaceStrong` · la lista lleva `aria-busy`                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Búsqueda**               | Campo de texto `type="search"` con icono de lupa en `muted` al inicio · contador de resultados `caption` en `muted` con `role="status"`                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### Estados de toast
 
-| Estado    | Uso                                                                      |
-| --------- | ------------------------------------------------------------------------ |
-| `success` | Una mutación salió bien; la app quedó lista sin conexión                 |
-| `error`   | Una operación falló (guardar, cargar)                                    |
-| `warning` | Un dato ingresado no es válido o ya existe                               |
-| `action`  | Aviso que requiere una acción, con botón (nueva versión); no expira solo |
+| Estado    | Uso                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------- |
+| `success` | Una mutación salió bien; la app quedó lista sin conexión                                             |
+| `error`   | Una operación falló (guardar, cargar)                                                                |
+| `warning` | Algo salió a medias y conviene saberlo (los errores de un campo van junto al campo)                  |
+| `action`  | Aviso con botón, siempre expandido: nueva versión (no expira solo), tanque repetido ("Usarlo", 10 s) |
 
 ## Foco, movimiento e iconos
 
