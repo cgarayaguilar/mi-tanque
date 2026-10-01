@@ -28,6 +28,9 @@ export default function Home() {
   const { saveMeasurement, getNameOfCity } = useMeasurement()
   //Estado que guarda los resultados de la medicion
   const [results, seResults] = useState(initialValues)
+  // One id per measurement: retries of the same save reuse it, so it can never
+  // be stored twice (§4.1). A new one is created after each successful save.
+  const [intentId, setIntentId] = useState(() => crypto.randomUUID())
 
   const resetValues = () => seResults(initialValues)
 
@@ -45,7 +48,8 @@ export default function Home() {
         ? await getNameOfCity(position)
         : 'Sin ubicación'
 
-      await saveMeasurement({ ..._results, date, location, tankId })
+      await saveMeasurement({ ..._results, date, location, tankId, intentId })
+      setIntentId(crypto.randomUUID())
       sileo.success({ title: 'Medición guardada' })
     } catch (error) {
       reportError(error, { operation: 'createMeasurement', tankId })

@@ -81,3 +81,17 @@ test('reports a failed save and keeps the user on the form', async () => {
     expect.any(Error)
   )
 })
+
+// Regression: "Guardar" stayed enabled while saving, so a double tap could
+// create the same tank twice
+test('a double tap on Guardar creates the tank once', async () => {
+  await fillAndSubmit({ capacity: '80', diameter: '22', length: '50' })
+  const busyButton = screen.getByRole('button', { name: 'Guardando…' })
+  expect(busyButton).toBeDisabled()
+  fireEvent.click(busyButton)
+
+  await waitFor(() => expect(sileo.success).toHaveBeenCalledTimes(1))
+  await settle()
+
+  expect(await db.tanks.count()).toBe(1)
+})

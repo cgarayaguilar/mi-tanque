@@ -1,4 +1,4 @@
-import { useContext, useRef } from 'react'
+import { useContext, useRef, useState } from 'react'
 import CardOfTank from 'components/CardOfTank'
 import Typography from 'components/Typography'
 import TextField from 'components/TextField'
@@ -16,13 +16,18 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
 
   const [_, setLocation] = useLocation()
   const form = useRef(null)
+  const [isSaving, setIsSaving] = useState(false)
+  // Blocks a second submit before React re-renders the disabled button (§8.6)
+  const savingRef = useRef(false)
 
   const selectTank = () => {
     setLocation('/tanques')
   }
 
-  const handleSubmit = event => {
+  const handleSubmit = async event => {
     event.preventDefault()
+    if (savingRef.current) return
+
     const formData = new FormData(form.current)
     const inches = Number(formData.get('inches'))
 
@@ -60,7 +65,14 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
       fuelHeight: fuelHeight.toFixed(2),
     }
 
-    onCalcFuelLevel(results)
+    savingRef.current = true
+    setIsSaving(true)
+    try {
+      await onCalcFuelLevel(results)
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -97,8 +109,14 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
         <BadgeContainer>
           <Badge completed={false}>3</Badge>
         </BadgeContainer>
-        <Button variant="filled" size="large" type="submit">
-          Calcular
+        <Button
+          variant="filled"
+          size="large"
+          type="submit"
+          disabled={isSaving}
+          aria-busy={isSaving}
+        >
+          {isSaving ? 'Guardando…' : 'Calcular'}
         </Button>
       </Step>
     </StepContainer>

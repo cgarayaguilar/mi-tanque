@@ -44,6 +44,12 @@ const Primitive = css`
     transform: scale(0.95);
   }
 
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+  }
+
   &:hover::before {
     content: '';
     position: absolute;

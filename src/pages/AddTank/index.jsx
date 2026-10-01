@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import useTanks from 'hooks/useTanks'
@@ -26,10 +26,14 @@ export default function AddTank() {
   const [capacity, setCapacity] = useState('')
   const [diameter, setDiameter] = useState('')
   const [length, setLength] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  // Blocks a second submit before React re-renders the disabled button (§8.6)
+  const savingRef = useRef(false)
 
   //Funcion que se ejecuta cuando se hace submit para guardar un nuevo tanque
   const handleSubmit = async event => {
     event.preventDefault()
+    if (savingRef.current) return
 
     //Validaciones
     if (capacity < 10 || capacity > 250)
@@ -39,6 +43,8 @@ export default function AddTank() {
     if (length < 10 || length > 150)
       return validationAlert('Ingresa una longitud valida para tu tanque')
 
+    savingRef.current = true
+    setIsSaving(true)
     try {
       const exists = await doesThisTankExist({ capacity, diameter, length })
 
@@ -67,6 +73,9 @@ export default function AddTank() {
         title: 'No pudimos guardar el tanque',
         description: 'Reintenta en un momento.',
       })
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
     }
   }
 
@@ -119,8 +128,10 @@ export default function AddTank() {
           size="large"
           type="submit"
           form="formTank"
+          disabled={isSaving}
+          aria-busy={isSaving}
         >
-          Guardar
+          {isSaving ? 'Guardando…' : 'Guardar'}
         </Button>
         <Button variant="outline" size="large" onClick={cancel}>
           Cancelar

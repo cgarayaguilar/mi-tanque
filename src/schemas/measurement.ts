@@ -12,4 +12,5 @@ export const newMeasurementSchema = z.object({
   date: z.date(),
   location: z.string().min(1),
   tankId: z.number().int().positive(),
+  intentId: z.uuid(),
 })

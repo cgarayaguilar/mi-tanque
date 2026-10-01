@@ -27,8 +27,12 @@ export interface NewMeasurement extends FuelReading {
   date: Date
   location: string
   tankId: number
+  /** Generated when the measurement form opens; makes saving idempotent (§4.1). */
+  intentId: string
 }
 
-export interface Measurement extends NewMeasurement {
+export interface Measurement extends Omit<NewMeasurement, 'intentId'> {
   id: number
+  /** Missing on measurements saved before idempotency keys existed. */
+  intentId?: string
 }

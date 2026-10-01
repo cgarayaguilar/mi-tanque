@@ -10,8 +10,9 @@ export interface StoredTank {
   length: number | string
 }
 
-export interface StoredMeasurement extends NewMeasurement {
+export interface StoredMeasurement extends Omit<NewMeasurement, 'intentId'> {
   id?: number
+  intentId?: string
 }
 
 class MyTankDatabase extends Dexie {
@@ -23,6 +24,12 @@ class MyTankDatabase extends Dexie {
     this.version(2).stores({
       tanks: '++id, capacity, diameter, length',
       measurements: '++id,date, inches, gallons, liters, location, tankId',
+    })
+    // Unique index: a measurement intent can only be stored once (§4.2).
+    // Older records have no intentId and are simply left out of the index.
+    this.version(3).stores({
+      measurements:
+        '++id, date, inches, gallons, liters, location, tankId, &intentId',
     })
   }
 }

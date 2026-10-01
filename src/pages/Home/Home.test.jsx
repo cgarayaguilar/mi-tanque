@@ -130,3 +130,18 @@ test('tells the user when the measurement could not be saved', async () => {
   expect(sileo.success).not.toHaveBeenCalled()
   expect(await db.measurements.count()).toBe(0)
 })
+
+// Regression: "Calcular" stayed enabled while saving, so a double tap stored
+// the same measurement twice
+test('a double tap on Calcular saves the measurement once', async () => {
+  await selectTankAndCalculate('12')
+  const busyButton = screen.getByRole('button', { name: 'Guardando…' })
+  expect(busyButton).toBeDisabled()
+  fireEvent.click(busyButton)
+
+  await waitFor(() => expect(sileo.success).toHaveBeenCalledTimes(1))
+  await settle()
+
+  expect(await db.measurements.count()).toBe(1)
+  expect(screen.getByRole('button', { name: 'Calcular' })).toBeEnabled()
+})
