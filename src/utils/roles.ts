@@ -39,3 +39,22 @@ export const invitableRolesFor = (
 /** The roles `actor` may give someone (only owners make owners). */
 export const assignableRolesFor = (actor: Role | null | undefined): Role[] =>
   ROLES.filter(role => canManageMember(actor, role))
+
+const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Who edits or deletes a measurement or refuel (backend specs/0004 RF-14,
+ * specs/0006 RF-11): the author within 24 hours, owner and supervisor
+ * always. Same rule as firestore.rules.
+ */
+export const canChangeReading = (
+  reading: { userId: string; createdAt: Date | null },
+  role: Role | null | undefined,
+  uid: string | undefined,
+  now = Date.now()
+) =>
+  role === 'owner' ||
+  role === 'supervisor' ||
+  (canWriteFleet(role) &&
+    reading.userId === uid &&
+    now - (reading.createdAt?.getTime() ?? now) < EDIT_WINDOW_MS)

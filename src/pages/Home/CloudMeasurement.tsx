@@ -14,6 +14,8 @@ import Typography from '@mui/material/Typography'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
+import ModeToggle, { type MeasureMode } from 'components/ModeToggle'
+import CloudRefuel from 'pages/Home/CloudRefuel'
 import FuelGauge from 'components/FuelGauge'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
@@ -239,6 +241,7 @@ export default function CloudMeasurement() {
   const [, navigate] = useLocation()
   const [chosenEquipment, setChosenEquipment] = useState<string | null>(null)
   const [chosenTank, setChosenTank] = useState<string | null>(null)
+  const [mode, setMode] = useState<MeasureMode>('measure')
 
   useEffect(() => {
     if (orgId) void load(orgId)
@@ -295,11 +298,11 @@ export default function CloudMeasurement() {
     (tanksOfEquipment.length === 1 ? tanksOfEquipment[0] : undefined) ??
     null
 
-  const save = useSaveCloudMeasurement(item =>
+  const equipmentNameOf = (item: FleetTank) =>
     item.equipment.kind === 'none'
       ? null
       : (nameOf.get(equipmentKey(item)) ?? null)
-  )
+  const save = useSaveCloudMeasurement(equipmentNameOf)
 
   if (status === 'error' && activeTanks.length === 0) {
     return (
@@ -351,6 +354,7 @@ export default function CloudMeasurement() {
 
   return (
     <>
+      <ModeToggle mode={mode} onChange={setMode} />
       <Stack spacing={3}>
         <FormControl fullWidth>
           <FormLabel htmlFor="measureEquipment">Equipo</FormLabel>
@@ -418,17 +422,31 @@ export default function CloudMeasurement() {
               </Typography>
             </Box>
           </Box>
-          {/* A different tank is a new form: fresh values and limits */}
-          <MeasureForm
-            key={tank.id}
-            tank={tank}
-            truck={truck}
-            canSave={canWriteFleet(role)}
-            save={save}
-            onSaved={() => {
-              rememberTank(orgId, tank.id)
-            }}
-          />
+          {mode === 'measure' ? (
+            // A different tank is a new form: fresh values and limits
+            <MeasureForm
+              key={tank.id}
+              tank={tank}
+              truck={truck}
+              canSave={canWriteFleet(role)}
+              save={save}
+              onSaved={() => {
+                rememberTank(orgId, tank.id)
+              }}
+            />
+          ) : (
+            <CloudRefuel
+              key={tank.id}
+              tank={tank}
+              tanks={activeTanks}
+              truck={
+                tank.equipment.kind === 'truck'
+                  ? (trucks.find(item => item.id === tank.equipment.id) ?? null)
+                  : null
+              }
+              equipmentName={equipmentNameOf}
+            />
+          )}
         </>
       )}
     </>

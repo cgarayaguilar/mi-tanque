@@ -95,6 +95,16 @@ const EMPTY: SessionData = {
 
 let started: Promise<void> | null = null
 
+// Invoice photos saved without signal go up when there is one (specs/0006
+// RF-6). import(): the queue's upload brings the Firebase SDK
+const uploadPendingInvoices = (uid: string) => {
+  import('services/invoiceQueue')
+    .then(queue => queue.processInvoiceQueue(uid))
+    .catch((error: unknown) => {
+      reportError(error, { operation: 'processInvoiceQueue' })
+    })
+}
+
 export const useSessionStore = create<SessionState>()((set, get) => {
   const loadAccount = async (user: SessionUser) => {
     set({ status: 'loading', user })
@@ -108,6 +118,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
         ...data,
         status: data.profile && data.organization ? 'ready' : 'needsOnboarding',
       })
+      if (data.profile && data.organization) uploadPendingInvoices(user.uid)
       if (needsContactSync) {
         // Once per older account; nothing to tell the user if it fails
         api.callAccount({ action: 'syncContact' }).catch((error: unknown) => {
@@ -128,6 +139,10 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       started ??= (async () => {
         try {
           const api = await sessionApi()
+          window.addEventListener('online', () => {
+            const { status, user } = get()
+            if (status === 'ready' && user) uploadPendingInvoices(user.uid)
+          })
           await api.subscribeToAuth(user => {
             setHint(user !== null)
             if (user) void loadAccount(user)

@@ -28,6 +28,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlaceIcon from '@mui/icons-material/Place'
 import ConfirmDialog from 'components/ConfirmDialog'
 import EmptyState from 'components/EmptyState'
+import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
+import CloudRefuelHistory from 'pages/History/CloudRefuelHistory'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
@@ -56,24 +58,12 @@ import { formatNumber } from 'utils/formatNumber'
 import { maxInchesFor, rangeTruckFor, readingFor } from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
-import { canWriteFleet, type Role } from 'utils/roles'
+import { canChangeReading } from 'utils/roles'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
-const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000
-
 /** Same rule as firestore.rules (backend specs/0004 RF-14). */
-export const canChange = (
-  measurement: CloudMeasurement,
-  role: Role | null,
-  uid: string | undefined,
-  now = Date.now()
-) =>
-  role === 'owner' ||
-  role === 'supervisor' ||
-  (canWriteFleet(role) &&
-    measurement.userId === uid &&
-    now - (measurement.createdAt?.getTime() ?? now) < EDIT_WINDOW_MS)
+export const canChange = canChangeReading
 
 const placeText = (measurement: CloudMeasurement) => {
   if (measurement.place) {
@@ -526,6 +516,7 @@ export default function CloudHistory() {
   const history = useCloudHistoryStore()
   const { trucks, trailers, load: loadFleet } = useFleetStore()
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
+  const [tab, setTab] = useState<HistoryTab>('measurements')
   const [editing, setEditing] = useState<CloudMeasurement | null>(null)
   const [deleting, setDeleting] = useState<CloudMeasurement | null>(null)
   const { load } = history
@@ -656,7 +647,7 @@ export default function CloudHistory() {
           Historial
         </Typography>
         <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
-          Las mediciones de tu organización por tanque.
+          Las mediciones y los rellenos de tu organización.
         </Typography>
 
         <Typography
@@ -695,7 +686,18 @@ export default function CloudHistory() {
           />
         </Box>
 
-        {renderGroups()}
+        <HistoryTabs tab={tab} onChange={setTab} />
+        {tab === 'measurements' ? (
+          renderGroups()
+        ) : (
+          <CloudRefuelHistory
+            period={period}
+            equipmentId={history.equipmentId}
+            onChangePeriod={() => {
+              setPickerIsOpen(true)
+            }}
+          />
+        )}
       </Box>
       <NavBar />
 
