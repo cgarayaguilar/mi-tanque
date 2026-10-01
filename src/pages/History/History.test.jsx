@@ -39,7 +39,11 @@ afterEach(() => {
 test('shows the empty message without errors when there are no measurements', async () => {
   renderHistory()
 
-  // The empty message is also the initial state, so let the IndexedDB query settle first
+  // The page is lazy-loaded; the empty message is also its initial state,
+  // so let the IndexedDB query settle before checking it stays
+  expect(
+    await screen.findByText(/No se encontraron mediciones/)
+  ).toBeInTheDocument()
   await settle()
 
   expect(screen.getByText(/No se encontraron mediciones/)).toBeInTheDocument()

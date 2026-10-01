@@ -1,9 +1,6 @@
-import { useContext, useEffect } from 'react'
+import { lazy, Suspense, useContext, useEffect } from 'react'
 import { Route } from 'wouter'
 import Home from 'pages/Home'
-import History from 'pages/History'
-import TankSearch from 'pages/TankSearch'
-import AddTank from 'pages/AddTank'
 import { ThemeProvider } from 'styled-components'
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles'
 import { muiThemes } from 'theme/muiTheme'
@@ -12,6 +9,12 @@ import { AppContext } from 'store'
 
 import { GlobalStyle } from 'styles/globalStyles'
 import AppBar from 'components/AppBar'
+
+// Home is the landing screen; the rest load on first visit. The
+// service worker precaches every chunk, so they still open offline.
+const TankSearch = lazy(() => import('pages/TankSearch'))
+const AddTank = lazy(() => import('pages/AddTank'))
+const History = lazy(() => import('pages/History'))
 
 function App() {
   const { theme, isDarkModeActive } = useContext(AppContext)
@@ -28,10 +31,12 @@ function App() {
       <ThemeProvider theme={theme}>
         <GlobalStyle />
         <AppBar />
-        <Route path="/" default component={Home} />
-        <Route path="/tanques" default component={TankSearch} />
-        <Route path="/tanques/crear" default component={AddTank} />
-        <Route path="/history" component={History} />
+        <Suspense fallback={null}>
+          <Route path="/" component={Home} />
+          <Route path="/tanques" component={TankSearch} />
+          <Route path="/tanques/crear" component={AddTank} />
+          <Route path="/history" component={History} />
+        </Suspense>
       </ThemeProvider>
       {/* Single toast outlet for mutation feedback (§8.14) */}
       <Toaster
