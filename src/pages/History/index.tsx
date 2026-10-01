@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useSessionStore } from 'store/session'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
@@ -17,12 +18,15 @@ import { formatPeriod } from 'utils/formatDate'
 
 // The calendar is heavy: it loads the first time the picker opens
 const DateModal = lazy(() => import('components/DateModal'))
+// With a session, the organization's history (backend specs/0004). Lazy: its
+// chunk brings the Firebase SDK
+const CloudHistory = lazy(() => import('./CloudHistory'))
 
 // Roughly a collapsed TankHistoryCard
 const CARD_HEIGHT = 248
 const PLACEHOLDER_CARDS = 2
 
-export default function History() {
+function BasicHistory() {
   const chosenPeriod = useHistoryStore(state => state.chosenPeriod)
   const status = useHistoryStore(state => state.status)
   const histories = useHistoryStore(state => state.histories)
@@ -147,4 +151,16 @@ export default function History() {
       )}
     </Box>
   )
+}
+
+export default function History() {
+  const sessionStatus = useSessionStore(state => state.status)
+  if (sessionStatus === 'ready' || sessionStatus === 'loading') {
+    return (
+      <Suspense fallback={null}>
+        {sessionStatus === 'ready' && <CloudHistory />}
+      </Suspense>
+    )
+  }
+  return <BasicHistory />
 }

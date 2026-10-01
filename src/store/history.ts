@@ -15,7 +15,7 @@ export const defaultPeriod = (now = new Date()): Period => ({
 })
 
 /** Whole days, so the last day includes its final hours. */
-const toWholeDays = ({ start, end }: Period): Period => ({
+export const toWholeDays = ({ start, end }: Period): Period => ({
   start: startOfDay(start),
   end: endOfDay(end),
 })
