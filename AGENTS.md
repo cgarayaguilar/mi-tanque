@@ -87,6 +87,12 @@ en cada push y PR.
   permisos se reflejan en `utils/roles` (`canManageMember`, `invitableRolesFor`) y los decide el
   callable `team`. Si las reglas rechazan una escritura por permisos, llama a
   `recoverFromLostPermission(error)` de `store/session` antes del toast de error.
+  Los rellenos (specs/0006) existen en los dos modos: sin cuenta en Dexie (`services/localRefuels`,
+  tabla `refuels` de la versión 4) y con cuenta en `services/cloudRefuels` (estático solo en páginas
+  lazy; `store/cloudRefuels` con `import()`). El formulario (`components/RefuelForm`) y la lista
+  (`components/RefuelList`) son los mismos; los cálculos viven solo en `utils/refuelMath`. Las fotos
+  de factura sin señal esperan en la tabla `pendingInvoices` (`services/invoiceQueue`), que la sesión
+  procesa al entrar y al volver la conexión.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
