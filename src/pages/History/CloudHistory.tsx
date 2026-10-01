@@ -28,6 +28,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlaceIcon from '@mui/icons-material/Place'
 import ConfirmDialog from 'components/ConfirmDialog'
 import EmptyState from 'components/EmptyState'
+import ExportButton from 'components/ExportButton'
 import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import CloudRefuelHistory from 'pages/History/CloudRefuelHistory'
 import NavBar from 'components/NavBar'
@@ -511,6 +512,7 @@ function EditDialog({
 /** History with a session (backend specs/0004 RF-10–RF-14). */
 export default function CloudHistory() {
   const orgId = useSessionStore(state => state.organization?.id ?? '')
+  const orgName = useSessionStore(state => state.organization?.name ?? '')
   const uid = useSessionStore(state => state.user?.uid)
   const role = useSessionStore(selectActiveRole)
   const history = useCloudHistoryStore()
@@ -657,18 +659,35 @@ export default function CloudHistory() {
         >
           Periodo
         </Typography>
-        <Button
-          variant="outlined"
-          fullWidth
-          startIcon={<CalendarMonthIcon />}
-          onClick={() => {
-            setPickerIsOpen(true)
-          }}
-          aria-label={`Periodo: ${periodText}. Cambiar`}
-          sx={{ justifyContent: 'flex-start', mb: 4 }}
-        >
-          {periodText}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<CalendarMonthIcon />}
+            onClick={() => {
+              setPickerIsOpen(true)
+            }}
+            aria-label={`Periodo: ${periodText}. Cambiar`}
+            sx={{ justifyContent: 'flex-start' }}
+          >
+            {periodText}
+          </Button>
+          <ExportButton
+            kind={tab}
+            run={() =>
+              // import(): the CSV code loads only when exporting (specs/0007)
+              import('services/exportCloud').then(({ exportCloudHistory }) =>
+                exportCloudHistory({
+                  kind: tab,
+                  period,
+                  orgId,
+                  orgName,
+                  equipmentId: history.equipmentId,
+                })
+              )
+            }
+          />
+        </Box>
         <Box sx={{ mb: 6 }}>
           <SelectField
             id="historyEquipment"

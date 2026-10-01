@@ -143,3 +143,21 @@ test('a refuel is corrected and deleted on this phone (RF-11)', async () => {
   })
   expect(sileo.success).toHaveBeenCalledWith({ title: 'Relleno borrado' })
 })
+
+test('Exportar downloads the tab being viewed (specs/0007 RF-1)', async () => {
+  const tankId = await db.tanks.add({ capacity: 50, diameter: 25, length: 26 })
+  await db.refuels.add(refuel(tankId))
+  const createObjectURL = vi.fn(() => 'blob:csv')
+  Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() })
+  await openRefuels()
+  await screen.findByRole('region', { name: 'Resumen del periodo' })
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Exportar rellenos del periodo' })
+  )
+  await waitFor(() => {
+    expect(sileo.success).toHaveBeenCalledWith({
+      title: 'Exportamos 1 relleno',
+    })
+  })
+  expect(createObjectURL).toHaveBeenCalledTimes(1)
+})

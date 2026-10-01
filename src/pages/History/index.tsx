@@ -9,6 +9,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import HistoryIcon from '@mui/icons-material/History'
 import EmptyState from 'components/EmptyState'
+import ExportButton from 'components/ExportButton'
 import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import NavBar from 'components/NavBar'
 import TankHistoryCard from 'components/TankHistoryCard'
@@ -124,16 +125,27 @@ function BasicHistory() {
         >
           Periodo
         </Typography>
-        <Button
-          variant="outlined"
-          fullWidth
-          startIcon={<CalendarMonthIcon />}
-          onClick={openPicker}
-          aria-label={`Periodo: ${periodText}. Cambiar`}
-          sx={{ justifyContent: 'flex-start', mb: 6 }}
-        >
-          {periodText}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, mb: 6 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<CalendarMonthIcon />}
+            onClick={openPicker}
+            aria-label={`Periodo: ${periodText}. Cambiar`}
+            sx={{ justifyContent: 'flex-start' }}
+          >
+            {periodText}
+          </Button>
+          <ExportButton
+            kind={tab}
+            run={() =>
+              // import(): the CSV code loads only when exporting (specs/0007)
+              import('services/exportLocal').then(({ exportLocalHistory }) =>
+                exportLocalHistory({ kind: tab, period })
+              )
+            }
+          />
+        </Box>
 
         <HistoryTabs tab={tab} onChange={setTab} />
         {tab === 'measurements' ? (
