@@ -1,24 +1,15 @@
 import { create } from 'zustand'
-import { endOfDay, startOfDay, subDays } from 'date-fns'
 import { readMeasurementsInPeriod } from 'services/measurements'
 import { readTanks } from 'services/tanks'
 import type { Period } from 'types'
 import { groupByTank, type TankHistory } from 'utils/measurementHistory'
+import { defaultPeriod, toWholeDays } from 'utils/period'
 import { reportError } from 'utils/reportError'
 
 export type HistoryStatus = 'idle' | 'loading' | 'ready' | 'error'
 
-/** The last week, through the end of today. */
-export const defaultPeriod = (now = new Date()): Period => ({
-  start: startOfDay(subDays(now, 7)),
-  end: endOfDay(now),
-})
-
-/** Whole days, so the last day includes its final hours. */
-export const toWholeDays = ({ start, end }: Period): Period => ({
-  start: startOfDay(start),
-  end: endOfDay(end),
-})
+// Re-exported: callers kept importing them from here (specs/0004)
+export { defaultPeriod, toWholeDays } from 'utils/period'
 
 interface HistoryState {
   /** null until the user picks one: the default week then follows today. */

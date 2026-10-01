@@ -4,7 +4,7 @@ import type {
   CloudMeasurement,
   MeasurementEdit,
 } from 'services/cloudMeasurements'
-import { defaultPeriod, toWholeDays } from 'store/history'
+import { defaultPeriod, toWholeDays } from 'utils/period'
 import { useSessionStore } from 'store/session'
 import type { Period } from 'types'
 import { reportError } from 'utils/reportError'
