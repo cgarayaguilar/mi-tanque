@@ -52,9 +52,9 @@ test("exports this phone's measurements, newest first, without account columns (
   expect(files.downloads[0]?.name).toMatch(
     /^solo-camioneros-mediciones-\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.csv$/
   )
-  expect(rows[1]).toContain(';;Tanque de 50 gal;;12;26,22;99,25;')
-  expect(rows[1]?.endsWith(';')).toBe(true)
-  expect(rows[2]?.endsWith(';León, Nicaragua')).toBe(true)
+  expect(rows[1]).toContain(',,Tanque de 50 gal,,12,26.22,99.25,')
+  expect(rows[1]?.endsWith(',')).toBe(true)
+  expect(rows[2]?.endsWith(',"León, Nicaragua"')).toBe(true)
 })
 
 test('exports the refuels saved without an account', async () => {
@@ -82,8 +82,8 @@ test('exports the refuels saved without an account', async () => {
   await exportLocalHistory({ kind: 'refuels', period })
   const row = files.downloads[0]?.csv.split('\r\n')[1]
   expect(row).toContain(
-    ";;Tanque de 50 gal;;13,21;50;NIO;113,56;30;1500;'=cmd;"
+    ",,Tanque de 50 gal,,13.21,50,NIO,113.56,30,1500,'=cmd,"
   )
   // Not applicable without an account: empty, not "no"
-  expect(row?.endsWith(';')).toBe(true)
+  expect(row?.endsWith(',')).toBe(true)
 })

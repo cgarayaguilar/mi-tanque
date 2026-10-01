@@ -1,5 +1,6 @@
-// CSV for Excel in Spanish (backend specs/0007 RF-2, RF-3): semicolons,
-// decimal comma, UTF-8 with BOM and CRLF. Pure: no download here.
+// CSV for Excel with Central American settings (backend specs/0007 RF-2,
+// RF-3): commas between columns, decimal dot, UTF-8 with BOM and CRLF. Pure:
+// no download here.
 
 export type CsvCell = string | number | null | undefined
 
@@ -9,14 +10,14 @@ export interface CsvColumn<T> {
 }
 
 const BOM = '﻿'
-const SEPARATOR = ';'
-const NEEDS_QUOTES = /[;"\r\n]/
+const SEPARATOR = ','
+const NEEDS_QUOTES = /[,"\r\n]/
 // Excel runs a cell that starts with these as a formula (CSV injection)
 const FORMULA_START = /^[=+\-@\t\r]/
 
-/** A number as Excel in Spanish reads it: decimal comma, no grouping. */
+/** A number Excel reads as a number: decimal dot, no thousands commas. */
 const formatNumber = (value: number) =>
-  Number.isFinite(value) ? String(value).replace('.', ',') : ''
+  Number.isFinite(value) ? String(value) : ''
 
 const formatText = (value: string) => {
   const safe = FORMULA_START.test(value) ? `'${value}` : value
