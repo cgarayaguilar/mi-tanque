@@ -5,8 +5,9 @@ import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { LITERS_PER_GALLON, type VolumeUnit } from 'utils/refuelMath'
 
-// The refuel form (backend specs/0006 RF-2). Decimals are typed with a comma
-// or a dot; messages show under each field (§8.7).
+// The refuel form (backend specs/0006 RF-2). Numbers are typed as in Central
+// America ("1,500.50"; utils/parseDecimal); messages show under each field
+// (§8.7).
 
 export const STATION_MAX = 60
 /** Per liter or per gallon, in the unit written (RF-2). */
@@ -20,7 +21,7 @@ const requiredDecimal = (missing: string) =>
     z.trim(),
     z.refine(value => value !== '', { error: missing, abort: true }),
     z.refine(isNumber, {
-      error: 'Escribe solo números, por ejemplo 12,5',
+      error: 'Escribe solo números, por ejemplo 12.5',
       abort: true,
     }),
     z.refine(value => parseDecimal(value) > 0, {
@@ -32,7 +33,7 @@ const optionalDecimal = (max: number, tooBig: string) =>
   z.string().check(
     z.trim(),
     z.refine(value => value === '' || isNumber(value), {
-      error: 'Escribe solo números, por ejemplo 12,5',
+      error: 'Escribe solo números, por ejemplo 12.5',
       abort: true,
     }),
     z.refine(

@@ -87,12 +87,11 @@ export default function TankEditor({
   const applyTemplate = (templateId: string) => {
     const template = TANK_TEMPLATES.find(item => item.id === templateId)
     if (!template) return
-    const show = (value: number) => String(value).replace('.', ',')
     setValue('shape', 'cylinder')
     setValue('orientation', 'horizontal')
-    setValue('diameter', show(template.diameterIn))
-    setValue('length', show(template.lengthIn))
-    setValue('capacity', show(template.capacityGal))
+    setValue('diameter', formatNumber(template.diameterIn))
+    setValue('length', formatNumber(template.lengthIn))
+    setValue('capacity', formatNumber(template.capacityGal))
   }
 
   const onSubmit = (formValues: TankFormValues) => {

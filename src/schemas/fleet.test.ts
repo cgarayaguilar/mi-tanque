@@ -39,7 +39,7 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
     expect(truckToForm(truck)).toMatchObject({
       distanceUnit: 'mi',
       efficiency: '6',
-      odometer: '100000',
+      odometer: '100,000',
     })
   })
 
@@ -77,11 +77,11 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
   test.each([
     [{ name: '' }, 'name', 'Escribe el nombre o número de unidad'],
     [{ year: '19' }, 'year', 'Escribe un año de 4 números, por ejemplo 2019'],
-    [{ efficiency: '80' }, 'efficiency', 'Debe estar entre 0,5 y 50 por galón'],
+    [{ efficiency: '80' }, 'efficiency', 'Debe estar entre 0.5 y 50 por galón'],
     [
       { efficiency: 'mucho' },
       'efficiency',
-      'Escribe solo números, por ejemplo 12,5',
+      'Escribe solo números, por ejemplo 12.5',
     ],
     [{ colorSwatch: 'other' }, 'colorOther', 'Escribe el color'],
   ])('explains %j next to %s', (values, path, message) => {
@@ -193,7 +193,7 @@ describe('tanks (RF-8)', () => {
     })
   })
 
-  test('a stored tank goes back to the form with commas', () => {
+  test('a stored tank goes back to the form as the app shows numbers', () => {
     const tank: FleetTank = {
       id: 't',
       orgId: 'o',
@@ -210,9 +210,9 @@ describe('tanks (RF-8)', () => {
       dimensions: { diameterIn: 24.5, lengthIn: 41 },
     }
     expect(tankToForm(tank)).toMatchObject({
-      diameter: '24,5',
+      diameter: '24.5',
       length: '41',
-      capacity: '75,5',
+      capacity: '75.5',
       equipment: 'none',
     })
   })

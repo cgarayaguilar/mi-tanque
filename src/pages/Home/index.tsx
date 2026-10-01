@@ -167,7 +167,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
           id="inches"
           label="Pulgadas de combustible"
           unit="pulg."
-          placeholder="Ej. 12,5"
+          placeholder="Ej. 12.5"
           hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque.`}
           error={errors.inches?.message}
           registration={register('inches')}

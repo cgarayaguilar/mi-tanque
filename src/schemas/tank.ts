@@ -42,7 +42,7 @@ const formDimension = (dimension: Dimension) => {
       abort: true,
     }),
     z.refine(value => !Number.isNaN(parseDecimal(value)), {
-      error: 'Escribe solo números, por ejemplo 24,5',
+      error: 'Escribe solo números, por ejemplo 24.5',
       abort: true,
     }),
     z.refine(

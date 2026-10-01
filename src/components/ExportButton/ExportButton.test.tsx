@@ -47,7 +47,7 @@ test('one, none and too many read naturally', async () => {
   click(() => Promise.resolve({ count: 5000, truncated: true }), 'measurements')
   await waitFor(() => {
     expect(sileo.warning).toHaveBeenCalledWith({
-      title: 'Exportamos las 5000 mediciones más recientes',
+      title: 'Exportamos las 5,000 mediciones más recientes',
       description: 'Acorta el periodo para exportar el resto.',
     })
   })

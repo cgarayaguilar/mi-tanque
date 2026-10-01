@@ -97,7 +97,7 @@ test('a decimal search matches with a comma or a dot', async () => {
   // Shown the way it was typed
   expect(
     screen.getByRole('button', {
-      name: 'Seleccionar: tanque de 80 galones, 24,5 por 50 pulgadas',
+      name: 'Seleccionar: tanque de 80 galones, 24.5 por 50 pulgadas',
     })
   ).toBeInTheDocument()
 })

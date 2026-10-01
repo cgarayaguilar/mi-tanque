@@ -61,10 +61,10 @@ test('computes live and saves the refuel on this phone (CA-1, CA-2)', async () =
   type('Moneda', 'NIO')
   type('Gasolinera (opcional)', 'Puma Km 7')
 
-  expect(screen.getByText('13,21 gal')).toBeInTheDocument()
-  expect(screen.getByText('NIO 1500,00')).toBeInTheDocument()
+  expect(screen.getByText('13.21 gal')).toBeInTheDocument()
+  expect(screen.getByText('NIO 1,500.00')).toBeInTheDocument()
   expect(
-    await screen.findByText(/"antes" es la última lectura \(20,00 gal\)/)
+    await screen.findByText(/"antes" es la última lectura \(20.00 gal\)/)
   ).toBeInTheDocument()
 
   fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))
@@ -86,7 +86,7 @@ test('computes live and saves the refuel on this phone (CA-1, CA-2)', async () =
   })
   expect(sileo.success).toHaveBeenCalledWith({ title: 'Relleno guardado' })
   expect(
-    await screen.findByText(/Antes 20,00 gal .* → Después 33,21 gal/)
+    await screen.findByText(/Antes 20.00 gal .* → Después 33.21 gal/)
   ).toBeInTheDocument()
 })
 
@@ -97,7 +97,7 @@ test('the invoice total can be corrected, and inches give the levels (RF-2, RF-3
   type('Precio', '30')
   type('Moneda', 'NIO')
   fireEvent.click(screen.getByRole('button', { name: 'Corregir total' }))
-  type('Total de la factura', '1499,50')
+  type('Total de la factura', '1,499.50')
   type('Antes', '5')
   type('Después', '15')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))

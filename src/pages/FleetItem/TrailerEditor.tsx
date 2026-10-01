@@ -129,7 +129,7 @@ export default function TrailerEditor({
               id="reeferConsumption"
               label="Consumo del equipo de frío"
               unit="gal/h"
-              placeholder="Ej. 0,8"
+              placeholder="Ej. 0.8"
               hint="Galones por hora del termo."
               error={errors.reeferConsumption?.message}
               registration={register('reeferConsumption')}

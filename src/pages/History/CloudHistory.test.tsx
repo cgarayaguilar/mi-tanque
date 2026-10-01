@@ -112,9 +112,9 @@ test('measurements are grouped by tank with author, city, estimate and odometer 
   fireEvent.click(within(first).getByRole('button', { name: 'Ver 1 medición' }))
   const row = within(first).getByRole('listitem')
   expect(row).toHaveTextContent('Luis')
-  expect(row).toHaveTextContent('70,50 gal')
+  expect(row).toHaveTextContent('70.50 gal')
   expect(row).toHaveTextContent('~670 km (416 mi)')
-  expect(row).toHaveTextContent('odómetro 120500 km')
+  expect(row).toHaveTextContent('odómetro 120,500 km')
   expect(row).toHaveTextContent('Managua, Nicaragua')
 
   const second = screen.getByRole('article', { name: 'Tanque de 50' })
@@ -130,9 +130,9 @@ test('measurements are grouped by tank with author, city, estimate and odometer 
 test('the summary compares the first and last measurement of the period', async () => {
   renderHistory()
   const card = await screen.findByRole('article', { name: 'Tanque izquierdo' })
-  expect(card).toHaveTextContent('Al inicio70,50galones')
-  expect(card).toHaveTextContent('Al final60,00galones')
-  expect(card).toHaveTextContent('Diferencia10,50gal. menos')
+  expect(card).toHaveTextContent('Al inicio70.50galones')
+  expect(card).toHaveTextContent('Al final60.00galones')
+  expect(card).toHaveTextContent('Diferencia10.50gal. menos')
 })
 
 test('a pending place and an imported place read as such', async () => {

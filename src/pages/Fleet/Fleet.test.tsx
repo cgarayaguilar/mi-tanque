@@ -73,7 +73,7 @@ test('trucks show their plate, figures and tanks', async () => {
 
   const card = await screen.findByRole('button', { name: 'Camión Unidad 12' })
   expect(card).toHaveTextContent('Freightliner Cascadia 2019 · M 123-456')
-  expect(card).toHaveTextContent('1 tanque · 9,5 km/gal · 120000 km')
+  expect(card).toHaveTextContent('1 tanque · 9.5 km/gal · 120,000 km')
 })
 
 test('trailers show the truck they are hitched to; tanks their shape and equipment', async () => {

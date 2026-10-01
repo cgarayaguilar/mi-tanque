@@ -481,7 +481,7 @@ function EditDialog({
             id="editInches"
             label="Pulgadas de combustible"
             unit="pulg."
-            placeholder="Ej. 12,5"
+            placeholder="Ej. 12.5"
             hint={tank ? `Entre 0 y ${formatNumber(maxInchesFor(tank))}.` : ''}
             error={errors.inches?.message}
             registration={register('inches')}

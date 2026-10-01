@@ -37,7 +37,7 @@ test('the form explains each field with a single message', () => {
     ['capacity', 'Ingresa la capacidad'],
   ])
   expect(formMessages({ diameter: 'veinte' })).toEqual([
-    ['diameter', 'Escribe solo números, por ejemplo 24,5'],
+    ['diameter', 'Escribe solo números, por ejemplo 24.5'],
   ])
   expect(formMessages({ length: '9' })).toEqual([
     ['length', 'Debe estar entre 10 y 150 pulgadas'],

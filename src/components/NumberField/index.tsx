@@ -14,8 +14,8 @@ interface NumberFieldProps {
 }
 
 /**
- * Decimal input with its unit. Text, not type="number", so "12,5" works on
- * every keyboard.
+ * Decimal input with its unit. Text, not type="number", so "1,500.5" and
+ * keyboards that offer only a comma both work (utils/parseDecimal).
  */
 export default function NumberField({ unit, ...props }: NumberFieldProps) {
   return <TextField {...props} inputMode="decimal" endAdornment={unit} />

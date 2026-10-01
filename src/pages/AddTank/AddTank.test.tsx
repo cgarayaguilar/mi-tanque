@@ -122,7 +122,7 @@ test('explains invalid dimensions next to each field and saves nothing', async (
   ).toBeInTheDocument()
   expect(screen.getByText('Ingresa el diámetro')).toBeInTheDocument()
   expect(
-    screen.getByText('Escribe solo números, por ejemplo 24,5')
+    screen.getByText('Escribe solo números, por ejemplo 24.5')
   ).toBeInTheDocument()
   expect(screen.getByLabelText('Capacidad')).toHaveAttribute(
     'aria-invalid',

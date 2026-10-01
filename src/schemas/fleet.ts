@@ -1,6 +1,7 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
 import type { TankOrientation, TankShape } from 'utils/tankVolume'
+import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 
 // Same lists and limits as solocamioneros-backend/firestore.rules (specs/0003)
@@ -152,12 +153,12 @@ const optionalText = (max: number) =>
       z.maxLength(max, { error: `Usa ${String(max)} caracteres como máximo` })
     )
 
-/** "" means not given; otherwise a decimal ("12,5" or "12.5") in range. */
+/** "" means not given; otherwise a decimal ("12.5", "1,500") in range. */
 const optionalDecimal = (min: number, max: number, unit: string) =>
   z.string().check(
     z.trim(),
     z.refine(value => value === '' || !Number.isNaN(parseDecimal(value)), {
-      error: 'Escribe solo números, por ejemplo 12,5',
+      error: 'Escribe solo números, por ejemplo 12.5',
       abort: true,
     }),
     z.refine(
@@ -165,7 +166,7 @@ const optionalDecimal = (min: number, max: number, unit: string) =>
         value === '' ||
         (parseDecimal(value) >= min && parseDecimal(value) <= max),
       {
-        error: `Debe estar entre ${String(min).replace('.', ',')} y ${String(max).replace('.', ',')} ${unit}`,
+        error: `Debe estar entre ${formatNumber(min)} y ${formatNumber(max)} ${unit}`,
       }
     )
   )
@@ -343,7 +344,7 @@ const textOrNull = (value: string) => value.trim() || null
 const decimalOrNull = (value: string) =>
   value.trim() === '' ? null : parseDecimal(value)
 const show = (value: number | null) =>
-  value === null ? '' : String(Math.round(value * 100) / 100).replace('.', ',')
+  value === null ? '' : formatNumber(value)
 
 const colorFrom = (swatch: string, other: string): VehicleColor | null => {
   if (swatch === '') return null

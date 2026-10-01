@@ -152,7 +152,7 @@ export default function TruckEditor({
             id="efficiency"
             label="Rendimiento"
             unit={`${unit}/gal`}
-            placeholder="Ej. 6,5"
+            placeholder="Ej. 6.5"
             hint="Para estimar cuánto puedes recorrer con el combustible."
             error={errors.efficiency?.message}
             registration={register('efficiency')}
