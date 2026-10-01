@@ -97,6 +97,11 @@ en cada push y PR.
   `services/exportCloud` (Firebase) y `services/exportLocal` (Dexie), cargados con `import()` al
   tocar el botón. El formato (Excel en español, BOM, protección contra fórmulas) está en `utils/csv`;
   las columnas, en `utils/exportColumns`.
+- **App Check y el lugar sin cuenta (specs/0008):** `services/firebase/core` crea la app con App
+  Check (reCAPTCHA v3, clave del sitio en `config.ts`; no con los emuladores) y las funciones, sin Auth
+  ni Firestore. El modo sin cuenta lo carga solo con `import('services/placeLookup')` al medir con
+  ubicación: la ciudad la da la función `geocode` del backend; no hay claves de terceros en el
+  cliente. El texto de `components/RecaptchaNotice` reemplaza al sello oculto de reCAPTCHA.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
