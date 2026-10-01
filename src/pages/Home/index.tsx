@@ -4,11 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import FormControl from '@mui/material/FormControl'
-import FormHelperText from '@mui/material/FormHelperText'
-import FormLabel from '@mui/material/FormLabel'
-import InputAdornment from '@mui/material/InputAdornment'
-import OutlinedInput from '@mui/material/OutlinedInput'
 import Step from '@mui/material/Step'
 import StepContent from '@mui/material/StepContent'
 import StepLabel from '@mui/material/StepLabel'
@@ -18,6 +13,7 @@ import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
 import FuelGauge from 'components/FuelGauge'
 import NavBar from 'components/NavBar'
+import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
 import TankCard from 'components/TankCard'
 import { useSaveMeasurement } from 'hooks/useSaveMeasurement'
@@ -73,7 +69,6 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
     resolver: zodResolver(measurementFormSchema(tank.diameter)),
     defaultValues: { inches: '' },
   })
-  const { ref: inchesRef, ...inchesField } = register('inches')
 
   const onSubmit = async ({ inches }: MeasurementFormValues) => {
     const next = calculateReading(tank, parseDecimal(inches))
@@ -105,29 +100,15 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
           <Step expanded>
             <StepLabel>Mide el combustible</StepLabel>
             <StepContent>
-              <FormControl fullWidth error={errors.inches !== undefined}>
-                <FormLabel htmlFor="inches">Pulgadas de combustible</FormLabel>
-                <OutlinedInput
-                  id="inches"
-                  placeholder="Ej. 12,5"
-                  inputRef={inchesRef}
-                  {...inchesField}
-                  endAdornment={
-                    <InputAdornment position="end">pulg.</InputAdornment>
-                  }
-                  slotProps={{
-                    input: {
-                      inputMode: 'decimal',
-                      autoComplete: 'off',
-                      'aria-describedby': 'inches-help',
-                    },
-                  }}
-                />
-                <FormHelperText id="inches-help">
-                  {errors.inches?.message ??
-                    `Entre 0 y ${String(tank.diameter)}, el diámetro de tu tanque.`}
-                </FormHelperText>
-              </FormControl>
+              <NumberField
+                id="inches"
+                label="Pulgadas de combustible"
+                unit="pulg."
+                placeholder="Ej. 12,5"
+                hint={`Entre 0 y ${String(tank.diameter)}, el diámetro de tu tanque.`}
+                error={errors.inches?.message}
+                registration={register('inches')}
+              />
             </StepContent>
           </Step>
           <Step expanded>

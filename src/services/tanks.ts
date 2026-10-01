@@ -13,12 +13,39 @@ const toTank = (stored: StoredTank): Tank => {
   }
 }
 
-/** Saves a tank and returns it normalized. Rejects on invalid dimensions or storage errors. */
+/** Domain error (§7.6): the user already has a tank with these dimensions. */
+export class TankAlreadyExistsError extends Error {
+  readonly existing: Tank
+
+  constructor(existing: Tank) {
+    super('A tank with these dimensions already exists')
+    this.name = 'TankAlreadyExistsError'
+    this.existing = existing
+  }
+}
+
+const sameDimensions = (a: TankDimensions, b: TankDimensions) =>
+  a.capacity === b.capacity &&
+  a.diameter === b.diameter &&
+  a.length === b.length
+
+/**
+ * Saves a tank and returns it normalized. The duplicate check and the insert
+ * run in one read-write transaction, so two saves cannot both pass the check
+ * (§2.6). Rejects with TankAlreadyExistsError, invalid data or storage errors.
+ */
 export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
   const valid = tankDimensionsSchema.parse(dimensions)
-  const id = await db.tanks.add(valid)
 
-  return { id, ...valid }
+  return db.transaction('rw', db.tanks, async () => {
+    const existing = (await db.tanks.toArray())
+      .map(toTank)
+      .find(tank => sameDimensions(tank, valid))
+    if (existing) throw new TankAlreadyExistsError(existing)
+
+    const id = await db.tanks.add(valid)
+    return { id, ...valid }
+  })
 }
 
 export const readTanks = async (): Promise<Tank[]> =>

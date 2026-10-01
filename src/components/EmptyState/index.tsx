@@ -9,6 +9,8 @@ interface EmptyStateProps {
   title: string
   description: string
   action: { label: string; onClick: () => void }
+  /** h1 when the state is the whole screen; h2 inside a page with its own title. */
+  headingLevel?: 'h1' | 'h2'
 }
 
 /** Empty or onboarding state (§8.2): muted icon, clear message, primary CTA. */
@@ -17,6 +19,7 @@ export default function EmptyState({
   title,
   description,
   action,
+  headingLevel = 'h1',
 }: EmptyStateProps) {
   return (
     <Stack
@@ -35,7 +38,7 @@ export default function EmptyState({
       >
         {icon}
       </Stack>
-      <Typography variant="h3" component="h1">
+      <Typography variant="h3" component={headingLevel}>
         {title}
       </Typography>
       <Typography variant="body1" sx={{ maxWidth: '36ch' }}>

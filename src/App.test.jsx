@@ -12,5 +12,7 @@ test('renders the app bar and the tank list', async () => {
   )
 
   expect(screen.getByText('Mi tanque')).toBeInTheDocument()
-  expect(await screen.findByText('Seleccione su tanque')).toBeInTheDocument()
+  expect(
+    await screen.findByRole('heading', { name: 'Elige tu tanque' })
+  ).toBeInTheDocument()
 })

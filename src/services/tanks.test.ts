@@ -1,5 +1,5 @@
 import { db } from 'services/db'
-import { createTank, readTanks } from 'services/tanks'
+import { createTank, readTanks, TankAlreadyExistsError } from 'services/tanks'
 
 beforeEach(async () => {
   await db.tanks.clear()
@@ -21,6 +21,46 @@ test('createTank rejects dimensions outside the form limits', async () => {
     createTank({ capacity: 5, diameter: 22, length: 50 })
   ).rejects.toThrow()
   expect(await db.tanks.count()).toBe(0)
+})
+
+test('createTank rejects a duplicate and points to the existing tank', async () => {
+  // Stored as strings by an older version: still the same tank
+  const id = await db.tanks.add({
+    capacity: '80',
+    diameter: '22',
+    length: '50',
+  })
+
+  const error: unknown = await createTank({
+    capacity: 80,
+    diameter: 22,
+    length: 50,
+  }).catch((reason: unknown) => reason)
+
+  expect(error).toBeInstanceOf(TankAlreadyExistsError)
+  expect((error as TankAlreadyExistsError).existing).toEqual({
+    id,
+    capacity: 80,
+    diameter: 22,
+    length: 50,
+  })
+  expect(await db.tanks.count()).toBe(1)
+})
+
+// The check and the insert share one transaction (§2.6)
+test('concurrent saves of the same tank store it once', async () => {
+  const dimensions = { capacity: 80, diameter: 22, length: 50 }
+
+  const results = await Promise.allSettled([
+    createTank(dimensions),
+    createTank(dimensions),
+  ])
+
+  expect(results.map(result => result.status).sort()).toEqual([
+    'fulfilled',
+    'rejected',
+  ])
+  expect(await db.tanks.count()).toBe(1)
 })
 
 test('readTanks normalizes tanks stored with string dimensions', async () => {

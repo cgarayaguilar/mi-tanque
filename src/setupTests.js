@@ -16,6 +16,7 @@ vi.mock('sileo', () => ({
     warning: vi.fn(),
     action: vi.fn(),
     promise: vi.fn(),
+    dismiss: vi.fn(),
   },
   Toaster: () => null,
 }))
