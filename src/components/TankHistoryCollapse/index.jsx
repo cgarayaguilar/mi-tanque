@@ -1,5 +1,5 @@
 import CardHistory from 'components/CardHistory'
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import Tank from 'components/Tank'
 import Typography from 'components/Typography'
 import { IoIosArrowDown as ArrowDownIcon } from 'react-icons/io'
@@ -9,6 +9,7 @@ import { Wrapper, Header, List } from './styles'
 function TankHistoryCollapse({ tank, measurements }) {
   const [collapseIsactive, setCollapseIsactive] = useState(false)
   const { capacity, length, diameter } = tank
+  const listId = useId()
 
   //Contraer o expandir el collapse
   const toggleCollapse = () =>
@@ -16,7 +17,12 @@ function TankHistoryCollapse({ tank, measurements }) {
 
   return (
     <Wrapper>
-      <Header>
+      <Header
+        type="button"
+        onClick={toggleCollapse}
+        aria-expanded={collapseIsactive}
+        aria-controls={collapseIsactive ? listId : undefined}
+      >
         <Tank capacity={capacity} diameter={diameter} length={length} />
         <div>
           <Typography variant="title3" value={`Tanque ${capacity} gls`} />
@@ -28,13 +34,13 @@ function TankHistoryCollapse({ tank, measurements }) {
           />
         </div>
         {collapseIsactive ? (
-          <ArrowUpIcon size={24} onClick={toggleCollapse} />
+          <ArrowUpIcon size={24} aria-hidden="true" />
         ) : (
-          <ArrowDownIcon size={24} onClick={toggleCollapse} />
+          <ArrowDownIcon size={24} aria-hidden="true" />
         )}
       </Header>
       {collapseIsactive && (
-        <List>
+        <List id={listId}>
           {measurements &&
             measurements.length > 0 &&
             measurements.map(measurement => (

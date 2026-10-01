@@ -113,3 +113,20 @@ test('includes measurements taken in the last hour of the period', async () => {
 
   expect(await screen.findByText('Tanque 75 gls')).toBeInTheDocument()
 })
+
+test('each tank history is a disclosure button', async () => {
+  const tankId = await db.tanks.add({ capacity: 75, diameter: 24, length: 41 })
+  await db.measurements.add(measurement({ tankId, gallons: 40 }))
+
+  renderHistory()
+
+  const toggle = await screen.findByRole('button', { name: /Tanque 75 gls/ })
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+  fireEvent.click(toggle)
+
+  expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  expect(
+    document.getElementById(toggle.getAttribute('aria-controls'))
+  ).not.toBeNull()
+})

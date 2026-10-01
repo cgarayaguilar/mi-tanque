@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { focusRing, resetInteractive } from 'styles/interactive'
 
 export const Header = styled.header`
   display: flex;
@@ -7,8 +8,9 @@ export const Header = styled.header`
   padding: 8px 16px;
 `
 
-export const Logo = styled.div`
-  cursor: pointer;
+export const Logo = styled.a`
+  ${resetInteractive}
+  ${focusRing}
   display: flex;
   align-items: center;
 `

@@ -1,6 +1,6 @@
+import { useId } from 'react'
 import { MdSearch as SearchIcon } from 'react-icons/md'
 import { Wrapper, TextFieldContainer, Label } from './styles'
-import randomKey from 'utils/randomKey'
 
 export default function TextField({
   label = null,
@@ -14,7 +14,7 @@ export default function TextField({
   onClick = () => {},
   ...rest
 }) {
-  const key = randomKey()
+  const key = useId()
 
   return (
     <Wrapper mt={mt} ml={ml} mr={mr} mb={mb} onClick={onClick}>

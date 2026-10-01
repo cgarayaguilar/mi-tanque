@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components'
+import { focusRing } from 'styles/interactive'
 
 const Small = css`
   font-weight: 700;
@@ -32,7 +33,6 @@ const Primitive = css`
   align-items: center;
   width: 100%;
   border: none;
-  outline: none;
   padding: 8px;
   height: 48px;
   cursor: pointer;
@@ -43,6 +43,8 @@ const Primitive = css`
   &:active {
     transform: scale(0.95);
   }
+
+  ${focusRing}
 
   &:disabled {
     cursor: not-allowed;

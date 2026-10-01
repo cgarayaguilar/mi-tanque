@@ -1,6 +1,9 @@
 import styled from 'styled-components'
+import { focusRing, resetInteractive } from 'styles/interactive'
 
-export const Card = styled.div`
+export const Card = styled.button`
+  ${resetInteractive}
+  ${focusRing}
   width: 100%;
   background: ${({ theme }) => theme.card};
   border-radius: 8px;

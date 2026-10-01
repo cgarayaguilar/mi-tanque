@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components'
+import { focusRing } from 'styles/interactive'
 
 const ActiveStyles = css`
   //background-color: rgba(0, 168, 204, 0.38);
@@ -25,7 +26,7 @@ export const NavItem = styled.button`
   display: flex;
   flex-direction: column;
   font-size: 14px;
-  outline: none;
+  ${focusRing}
   padding: 4px 8px;
   text-align: center;
   background-color: transparent;

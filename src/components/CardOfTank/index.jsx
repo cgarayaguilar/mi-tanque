@@ -21,7 +21,11 @@ export default function CardOfTank({
   }, [windowWidth])
 
   return (
-    <Card onClick={onClick}>
+    <Card
+      type="button"
+      onClick={onClick}
+      aria-label={`${ctaText}: tanque de ${capacity} galones, ${diameter} por ${length} pulgadas`}
+    >
       <Tank capacity={capacity} diameter={diameter} length={length} />
 
       <div>
