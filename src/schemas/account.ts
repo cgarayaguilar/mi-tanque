@@ -98,6 +98,8 @@ export const welcomeFormSchema = z.object({
 export type WelcomeFormValues = z.infer<typeof welcomeFormSchema>
 
 export const profileFormSchema = z.object({ displayName: personNameSchema })
+/** Joining with a profile already: the name is not asked (specs/0005 RF-4). */
+export const joinFormSchema = z.object({ displayName: z.string() })
 export type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 export const organizationFormSchema = z.object({

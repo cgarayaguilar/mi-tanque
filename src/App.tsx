@@ -22,6 +22,8 @@ const Welcome = lazy(() => import('pages/Welcome'))
 const Account = lazy(() => import('pages/Account'))
 const Fleet = lazy(() => import('pages/Fleet'))
 const FleetItem = lazy(() => import('pages/FleetItem'))
+// An invitation link (specs/0005)
+const Invitation = lazy(() => import('pages/Invitation'))
 // Offers the basic mode's data once per organization (specs/0004 RF-15)
 const ImportOffer = lazy(() => import('components/ImportOffer'))
 
@@ -77,6 +79,7 @@ export default function App() {
         <Route path="/flota" component={Fleet} />
         <Route path="/flota/:section" component={Fleet} />
         <Route path="/flota/:section/:id" component={FleetItem} />
+        <Route path="/invitacion/:token" component={Invitation} />
       </Suspense>
       {/* Its own boundary: loading its chunk must not blank the page */}
       {sessionStatus === 'ready' && (

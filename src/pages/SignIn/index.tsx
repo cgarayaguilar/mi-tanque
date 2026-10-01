@@ -35,6 +35,7 @@ import {
   PHONE_COUNTRIES,
   toE164,
 } from 'utils/phoneCountries'
+import { pendingInvitation } from 'utils/pendingInvitation'
 import { reportError } from 'utils/reportError'
 
 const RESEND_AFTER_SECONDS = 60
@@ -180,6 +181,12 @@ export default function SignIn() {
 
   // Signed in (here or in another tab): go where the account needs to be
   useEffect(() => {
+    // Back to the invitation that sent the person here (specs/0005 RF-4)
+    const invitation = pendingInvitation()
+    if (invitation && (status === 'ready' || status === 'needsOnboarding')) {
+      navigate(`/invitacion/${invitation}`, { replace: true })
+      return
+    }
     if (status === 'ready') navigate('/', { replace: true })
     if (status === 'needsOnboarding') navigate('/bienvenida', { replace: true })
   }, [status, navigate])

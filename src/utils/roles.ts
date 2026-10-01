@@ -16,3 +16,26 @@ export const canEditOrganization = (role: Role | null | undefined) =>
 /** Owner, supervisor and driver manage the fleet; Lectura only reads (specs/0003). */
 export const canWriteFleet = (role: Role | null | undefined) =>
   role === 'owner' || role === 'supervisor' || role === 'driver'
+
+// Who manages whom (backend specs/0005); the `team` callable decides, the UI
+// only hides what the role cannot do. Same rules as functions/src/team/policy.ts
+const MANAGED_BY_SUPERVISOR: readonly Role[] = ['driver', 'viewer']
+
+/** Roles an invitation can carry: never owner. */
+export const INVITABLE_ROLES = ['supervisor', 'driver', 'viewer'] as const
+export type InvitableRole = (typeof INVITABLE_ROLES)[number]
+
+/** Whether `actor` may change the role of, remove or revoke for `target`. */
+export const canManageMember = (actor: Role | null | undefined, target: Role) =>
+  actor === 'owner' ||
+  (actor === 'supervisor' && MANAGED_BY_SUPERVISOR.includes(target))
+
+/** The roles `actor` may invite with. */
+export const invitableRolesFor = (
+  actor: Role | null | undefined
+): InvitableRole[] =>
+  INVITABLE_ROLES.filter(role => canManageMember(actor, role))
+
+/** The roles `actor` may give someone (only owners make owners). */
+export const assignableRolesFor = (actor: Role | null | undefined): Role[] =>
+  ROLES.filter(role => canManageMember(actor, role))
