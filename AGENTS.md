@@ -93,6 +93,10 @@ en cada push y PR.
   (`components/RefuelList`) son los mismos; los cálculos viven solo en `utils/refuelMath`. Las fotos
   de factura sin señal esperan en la tabla `pendingInvoices` (`services/invoiceQueue`), que la sesión
   procesa al entrar y al volver la conexión.
+  Exportar a CSV (specs/0007): `components/ExportButton` solo importa tipos; el código vive en
+  `services/exportCloud` (Firebase) y `services/exportLocal` (Dexie), cargados con `import()` al
+  tocar el botón. El formato (Excel en español, BOM, protección contra fórmulas) está en `utils/csv`;
+  las columnas, en `utils/exportColumns`.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
