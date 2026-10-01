@@ -1,5 +1,8 @@
 import { db } from 'services/db'
-import { createMeasurement } from 'services/measurements'
+import {
+  createMeasurement,
+  readMeasurementsInPeriod,
+} from 'services/measurements'
 import type { NewMeasurement } from 'types'
 
 const valid: NewMeasurement = {
@@ -61,4 +64,43 @@ test('measurements saved before intent ids existed still coexist', async () => {
   await createMeasurement(valid)
 
   expect(await db.measurements.count()).toBe(3)
+})
+
+test('readMeasurementsInPeriod returns the period oldest first, both days included', async () => {
+  const at = (day: number, hour: number) => new Date(2026, 8, day, hour)
+  const { intentId: _omitted, ...base } = valid
+  await db.measurements.bulkAdd([
+    { ...base, date: at(30, 23) },
+    { ...base, date: at(23, 0) },
+    { ...base, date: at(22, 23) },
+  ])
+
+  const measurements = await readMeasurementsInPeriod({
+    start: at(23, 0),
+    end: new Date(2026, 8, 30, 23, 59, 59, 999),
+  })
+
+  expect(measurements.map(({ date }) => date)).toEqual([at(23, 0), at(30, 23)])
+})
+
+test('readMeasurementsInPeriod normalizes amounts stored as numbers', async () => {
+  const { intentId: _omitted, fuelHeight: _missing, ...base } = valid
+  await db.measurements.add({
+    ...base,
+    gallons: 26.2,
+    liters: 99.25,
+    tankId: '1',
+  })
+
+  const [measurement] = await readMeasurementsInPeriod({
+    start: new Date('2026-09-30T00:00:00Z'),
+    end: new Date('2026-09-30T23:59:59Z'),
+  })
+
+  expect(measurement).toMatchObject({
+    gallons: '26.20',
+    liters: '99.25',
+    fuelHeight: '',
+    tankId: 1,
+  })
 })

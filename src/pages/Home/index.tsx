@@ -169,7 +169,7 @@ export default function Home() {
         )}
       </Box>
       <Box sx={{ px: 4, pb: 4 }}>
-        <NavBar activeTab={2} />
+        <NavBar />
       </Box>
     </Box>
   )

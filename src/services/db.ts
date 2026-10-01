@@ -10,9 +10,19 @@ export interface StoredTank {
   length: number | string
 }
 
-export interface StoredMeasurement extends Omit<NewMeasurement, 'intentId'> {
+// Older versions stored numbers where the app now writes strings (and the
+// other way round); readers normalize them (services/measurements.ts).
+export interface StoredMeasurement extends Omit<
+  NewMeasurement,
+  'intentId' | 'inches' | 'gallons' | 'liters' | 'fuelHeight' | 'tankId'
+> {
   id?: number
   intentId?: string
+  inches: number | string
+  gallons: number | string
+  liters: number | string
+  fuelHeight?: number | string
+  tankId: number | string
 }
 
 class MyTankDatabase extends Dexie {

@@ -36,3 +36,9 @@ export interface Measurement extends Omit<NewMeasurement, 'intentId'> {
   /** Missing on measurements saved before idempotency keys existed. */
   intentId?: string
 }
+
+/** A range of whole days: from the start of `start` to the end of `end`. */
+export interface Period {
+  start: Date
+  end: Date
+}

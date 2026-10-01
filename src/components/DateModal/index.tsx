@@ -101,6 +101,7 @@ export default function DateModal({
           ranges={[range]}
           onChange={handleChange}
           locale={es}
+          dateDisplayFormat="d MMM yyyy"
           rangeColors={[theme.palette.primary.main]}
           color={theme.palette.primary.main}
           showMonthArrow={false}

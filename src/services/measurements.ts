@@ -1,6 +1,6 @@
-import { db } from 'services/db'
+import { db, type StoredMeasurement } from 'services/db'
 import { newMeasurementSchema } from 'schemas/measurement'
-import type { Measurement, NewMeasurement } from 'types'
+import type { Measurement, NewMeasurement, Period } from 'types'
 
 /**
  * Saves a measurement once per intentId and returns its id. Saving the same
@@ -22,19 +22,43 @@ export const createMeasurement = async (
   })
 }
 
-export const readMeasurementsByDateRanges = async ({
-  startDate,
-  endDate,
-}: {
-  startDate: Date
-  endDate: Date
-}): Promise<Measurement[]> => {
-  const measurements = await db.measurements
+// Older versions stored amounts as numbers; the app shows and computes them
+// as 2-decimal strings, so readers normalize them (§6.4)
+const toFixedAmount = (value: unknown) => {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount.toFixed(2) : null
+}
+
+const toMeasurement = (stored: StoredMeasurement): Measurement | null => {
+  const gallons = toFixedAmount(stored.gallons)
+  const liters = toFixedAmount(stored.liters)
+  if (stored.id === undefined || gallons === null || liters === null)
+    return null
+
+  return {
+    ...stored,
+    id: stored.id,
+    inches: Number(stored.inches),
+    gallons,
+    liters,
+    // Derived from inches when missing; the history recomputes it then
+    fuelHeight: toFixedAmount(stored.fuelHeight) ?? '',
+    tankId: Number(stored.tankId),
+  }
+}
+
+/** Measurements taken within the period, oldest first. */
+export const readMeasurementsInPeriod = async ({
+  start,
+  end,
+}: Period): Promise<Measurement[]> => {
+  // The date index returns them in chronological order
+  const stored = await db.measurements
     .where('date')
-    .between(startDate, endDate)
+    .between(start, end, true, true)
     .toArray()
 
-  return measurements.filter(
-    (measurement): measurement is Measurement => measurement.id !== undefined
-  )
+  return stored
+    .map(toMeasurement)
+    .filter((measurement): measurement is Measurement => measurement !== null)
 }
