@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["vitest/globals"],
+
+    // Legacy JS keeps compiling while it is migrated; new code is TypeScript (ADR 0001)
+    "allowJs": true,
+    "checkJs": false,
+
+    // ENGINEERING_PRINCIPLES.md §6.1
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Absolute imports from src/ (mirrored in vite.config.mjs)
+    "paths": {
+      "assets/*": ["./src/assets/*"],
+      "components/*": ["./src/components/*"],
+      "hooks/*": ["./src/hooks/*"],
+      "pages/*": ["./src/pages/*"],
+      "services/*": ["./src/services/*"],
+      "store": ["./src/store"],
+      "store/*": ["./src/store/*"],
+      "styles/*": ["./src/styles/*"],
+      "utils/*": ["./src/utils/*"]
+    }
+  },
+  "include": ["src"]
+}

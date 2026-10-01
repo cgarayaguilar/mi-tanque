@@ -1,0 +1,7 @@
+build
+dist
+dev-dist
+coverage
+package-lock.json
+# Vendored third-party stylesheet
+src/styles/normalize.css
