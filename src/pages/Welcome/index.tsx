@@ -29,11 +29,15 @@ const suggestedOrgName = (name: string | undefined) => {
 
 function WelcomeForm() {
   const user = useSessionStore(state => state.user)
+  // Someone who left (or was removed from) their last organization keeps
+  // their profile: only the organization is asked again (specs/0005)
+  const profileName = useSessionStore(state => state.profile?.displayName)
   const completeOnboarding = useSessionStore(state => state.completeOnboarding)
   const [, navigate] = useLocation()
   const online = useOnlineStatus()
   // Google brings a name; a phone sign-in does not (specs/0002 RF-7)
-  const asksName = !user?.displayName
+  const knownName = user?.displayName ?? profileName
+  const asksName = !knownName
   const {
     register,
     handleSubmit,
@@ -44,7 +48,7 @@ function WelcomeForm() {
     resolver: zodResolver(welcomeFormSchema),
     defaultValues: {
       ...(asksName && { displayName: '' }),
-      orgName: suggestedOrgName(user?.displayName ?? undefined),
+      orgName: suggestedOrgName(knownName ?? undefined),
       currency: currencyForPhone(user?.phoneNumber ?? null) ?? 'USD',
     },
   })
@@ -64,11 +68,9 @@ function WelcomeForm() {
 
   const onSubmit = async (values: WelcomeFormValues) => {
     try {
+      const displayName = asksName ? values.displayName : profileName
       await completeOnboarding({
-        ...(asksName &&
-          values.displayName !== undefined && {
-            displayName: values.displayName,
-          }),
+        ...(displayName !== undefined && { displayName }),
         orgName: values.orgName,
         currency: values.currency,
       })

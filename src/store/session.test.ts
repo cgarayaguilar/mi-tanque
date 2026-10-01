@@ -25,6 +25,7 @@ const readyAccount: Account = {
     { orgId: 'org-b', role: 'driver', orgName: 'Transportes B' },
   ],
   organization: { id: 'org-a', name: 'Flota de Ana', defaultCurrency: 'USD' },
+  needsContactSync: false,
 }
 
 // The store reads the session hint when it is created: import it per test
@@ -211,5 +212,91 @@ describe('signing out (specs/0002 RF-14)', () => {
 
     expect(store.getState().status).toBe('signedOut')
     expect(window.localStorage.getItem('sessionActive')).toBeNull()
+  })
+})
+
+describe('specs/0005', () => {
+  test('a profile left without organizations goes to onboarding to create one', async () => {
+    api.readAccount.mockResolvedValue({
+      profile: { displayName: 'Ana', activeOrgId: null },
+      memberships: [],
+      organization: null,
+      needsContactSync: false,
+    })
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    expect(store.getState().status).toBe('needsOnboarding')
+  })
+
+  test('an older membership without contact is synced once, in the background (RF-15)', async () => {
+    api.readAccount.mockResolvedValue({
+      ...readyAccount,
+      needsContactSync: true,
+    })
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    expect(store.getState().status).toBe('ready')
+    expect(api.callAccount).toHaveBeenCalledWith({ action: 'syncContact' })
+    expect(store.getState()).not.toHaveProperty('needsContactSync')
+  })
+
+  test('a write refused by the rules reloads the account and warns (RF-12)', async () => {
+    const { sileo } = await import('sileo')
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    api.readAccount.mockClear()
+    const { recoverFromLostPermission } = await import('store/session')
+
+    expect(recoverFromLostPermission(new Error('offline'))).toBe(false)
+    expect(
+      recoverFromLostPermission({ code: 'permission-denied', message: '' })
+    ).toBe(true)
+    await settled()
+    expect(api.readAccount).toHaveBeenCalledWith('ana')
+    expect(sileo.warning).toHaveBeenCalledWith({
+      title: 'Tus permisos cambiaron',
+      description: 'Actualizamos tu cuenta. Revisa tu rol en Mi cuenta.',
+    })
+    expect(store.getState().status).toBe('ready')
+  })
+
+  test('creating an organization calls the callable and reloads', async () => {
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    api.readAccount.mockClear()
+    await store
+      .getState()
+      .createOrganization({ name: 'Transportes Ana', currency: 'MXN' })
+    expect(api.callAccount).toHaveBeenCalledWith({
+      action: 'createOrganization',
+      name: 'Transportes Ana',
+      currency: 'MXN',
+    })
+    expect(api.readAccount).toHaveBeenCalled()
+  })
+
+  test('deleting the account signs out and forgets the session', async () => {
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    await store.getState().deleteAccount()
+    expect(api.callAccount).toHaveBeenCalledWith({ action: 'deleteAccount' })
+    expect(api.signOutAndClear).toHaveBeenCalled()
+    expect(store.getState().status).toBe('signedOut')
+    expect(window.localStorage.getItem('sessionActive')).toBeNull()
+  })
+
+  test('a failed deletion keeps the session', async () => {
+    api.callAccount.mockRejectedValueOnce(new Error('must-transfer'))
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    await expect(store.getState().deleteAccount()).rejects.toThrow()
+    expect(api.signOutAndClear).not.toHaveBeenCalled()
+    expect(store.getState().status).toBe('ready')
   })
 })

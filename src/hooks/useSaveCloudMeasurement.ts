@@ -6,7 +6,7 @@ import {
   type MeasurementEquipment,
 } from 'services/cloudMeasurements'
 import type { FleetTank } from 'schemas/fleet'
-import { useSessionStore } from 'store/session'
+import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
@@ -58,6 +58,7 @@ export const useSaveCloudMeasurement = (
       odometerKm,
     }).catch((error: unknown) => {
       reportError(error, { operation: 'createCloudMeasurement' })
+      if (recoverFromLostPermission(error)) return
       sileo.error({
         title: 'No pudimos guardar la medición',
         description: 'Revisa los datos y vuelve a intentarlo.',

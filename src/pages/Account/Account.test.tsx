@@ -21,7 +21,16 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('services/session', () => api)
 
+// Mi cuenta → Equipo reads the team (specs/0005); not under test here
+vi.mock('services/team', () => ({
+  readTeam: vi.fn(() => Promise.resolve([])),
+  readPendingInvitations: vi.fn(() => Promise.resolve([])),
+  readOwnershipBlocks: vi.fn(() => Promise.resolve([])),
+  callTeam: vi.fn(() => Promise.resolve({ ok: true })),
+}))
+
 const account = (role: Role, extraOrgs = 0): AccountData => ({
+  needsContactSync: false,
   profile: { displayName: 'Ana', activeOrgId: 'org-a' },
   memberships: [
     { orgId: 'org-a', role, orgName: 'Flota de Ana' },

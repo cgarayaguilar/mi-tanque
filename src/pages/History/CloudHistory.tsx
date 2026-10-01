@@ -45,7 +45,11 @@ import {
 } from 'services/cloudMeasurements'
 import { periodOf, useCloudHistoryStore } from 'store/cloudHistory'
 import { useFleetStore } from 'store/fleet'
-import { selectActiveRole, useSessionStore } from 'store/session'
+import {
+  recoverFromLostPermission,
+  selectActiveRole,
+  useSessionStore,
+} from 'store/session'
 import { colorTokens, layout, radius, typeScale } from 'theme/tokens'
 import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
 import { formatNumber } from 'utils/formatNumber'
@@ -434,6 +438,7 @@ function EditDialog({
     updateCloudMeasurement(measurement.id, uid, edit).catch(
       (error: unknown) => {
         reportError(error, { operation: 'updateCloudMeasurement' })
+        if (recoverFromLostPermission(error)) return
         sileo.error({
           title: 'No pudimos guardar el cambio',
           description: 'Revisa los datos y vuelve a intentarlo.',
@@ -554,6 +559,7 @@ export default function CloudHistory() {
     setDeleting(null)
     deleteCloudMeasurement(id).catch((error: unknown) => {
       reportError(error, { operation: 'deleteCloudMeasurement' })
+      if (recoverFromLostPermission(error)) return
       sileo.error({
         title: 'No pudimos borrar la medición',
         description: 'Vuelve a intentarlo.',

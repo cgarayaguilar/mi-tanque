@@ -13,7 +13,7 @@ import ConfirmDialog from 'components/ConfirmDialog'
 import PhotoField from 'components/PhotoField'
 import { photoUrl, uploadFleetPhoto } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
-import { useSessionStore } from 'store/session'
+import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import type { FleetSection } from 'utils/fleetSections'
 import { reportError } from 'utils/reportError'
 
@@ -63,6 +63,7 @@ export default function EditorLayout({
         operation: 'archiveFleetItem',
         collection: section.collection,
       })
+      if (recoverFromLostPermission(error)) return
       sileo.error({
         title: `No pudimos ${archived ? 'archivar' : 'restaurar'} el ${section.one}`,
         description: 'Revisa tu conexión y vuelve a intentarlo.',

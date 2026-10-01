@@ -64,7 +64,9 @@ export const tank = (overrides: Partial<FleetTank> = {}): FleetTank =>
     ...overrides,
   }) as FleetTank
 
-export const accountWithRole = (role: Role): Account => ({
+export const accountWithRole = (
+  role: Role
+): Omit<Account, 'needsContactSync'> => ({
   profile: { displayName: 'Luis', activeOrgId: ORG_ID },
   memberships: [{ orgId: ORG_ID, role, orgName: 'Flota de Luis' }],
   organization: { id: ORG_ID, name: 'Flota de Luis', defaultCurrency: 'NIO' },

@@ -29,6 +29,7 @@ const signedInWith = (user: {
   useSessionStore.setState({
     status: 'needsOnboarding',
     user: { uid: 'u1', email: null, ...user },
+    profile: null,
     start: () => Promise.resolve(),
   })
   window.history.pushState({}, '', '/bienvenida')
@@ -125,5 +126,38 @@ test('without a session it sends the user to sign in', async () => {
 
   await waitFor(() => {
     expect(window.location.pathname).toBe('/entrar')
+  })
+})
+
+test('someone left without organizations only names a new one (specs/0005)', async () => {
+  useSessionStore.setState({
+    status: 'needsOnboarding',
+    user: {
+      uid: 'u1',
+      email: null,
+      displayName: null,
+      phoneNumber: '+50588887777',
+    },
+    profile: { displayName: 'Pedro Gómez', activeOrgId: null },
+    start: () => Promise.resolve(),
+  })
+  window.history.pushState({}, '', '/bienvenida')
+  render(<App />)
+  expect(
+    await screen.findByLabelText('Nombre de tu organización')
+  ).toBeInTheDocument()
+  expect(screen.queryByLabelText('¿Cómo te llamas?')).toBeNull()
+  expect(screen.getByLabelText('Nombre de tu organización')).toHaveValue(
+    'Flota de Pedro'
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Empezar' }))
+  await waitFor(() => {
+    expect(api.callAccount).toHaveBeenCalledWith({
+      action: 'bootstrap',
+      displayName: 'Pedro Gómez',
+      orgName: 'Flota de Pedro',
+      currency: 'NIO',
+    })
   })
 })

@@ -113,7 +113,8 @@ export const sendPhoneCode = async (
 // Storage boundary (§6.4): documents written by the `account` callable
 const profileSchema = z.object({
   displayName: z.string(),
-  activeOrgId: z.string(),
+  // null after leaving or being removed from the last one (specs/0005)
+  activeOrgId: z.nullable(z.string()),
 })
 const membershipSchema = z.object({
   orgId: z.string(),
@@ -133,7 +134,10 @@ export interface Account {
   /** null: first sign-in, the welcome screen creates it. */
   profile: Profile | null
   memberships: Membership[]
+  /** null with a profile: no organization left, the welcome creates one. */
   organization: Organization | null
+  /** Memberships from before specs/0005 lack the contact (RF-15). */
+  needsContactSync: boolean
 }
 
 // A person belongs to a handful of organizations; bounded anyway (§2.3)
@@ -152,15 +156,32 @@ export const readAccount = async (uid: string): Promise<Account> => {
     ),
   ])
   if (!profileSnapshot.exists()) {
-    return { profile: null, memberships: [], organization: null }
+    return {
+      profile: null,
+      memberships: [],
+      organization: null,
+      needsContactSync: false,
+    }
   }
 
-  const profile = profileSchema.parse(profileSnapshot.data())
+  const stored = profileSchema.parse(profileSnapshot.data())
   const memberships = membershipsSnapshot.docs
     .map(snapshot => membershipSchema.parse(snapshot.data()))
     .sort((a, b) => a.orgName.localeCompare(b.orgName, 'es'))
+  const needsContactSync = membershipsSnapshot.docs.some(
+    snapshot => !('phoneNumber' in snapshot.data())
+  )
+  // The active org may be gone (removed, left): fall back to another one
+  const activeOrgId = memberships.some(m => m.orgId === stored.activeOrgId)
+    ? stored.activeOrgId
+    : (memberships[0]?.orgId ?? null)
+  const profile = { ...stored, activeOrgId }
+  if (activeOrgId === null) {
+    return { profile, memberships, organization: null, needsContactSync }
+  }
+
   const organizationSnapshot = await getDoc(
-    doc(db, 'organizations', profile.activeOrgId)
+    doc(db, 'organizations', activeOrgId)
   )
   const organization = organizationSnapshot.exists()
     ? {
@@ -169,7 +190,7 @@ export const readAccount = async (uid: string): Promise<Account> => {
       }
     : null
 
-  return { profile, memberships, organization }
+  return { profile, memberships, organization, needsContactSync }
 }
 
 export type AccountRequest =
@@ -187,8 +208,11 @@ export type AccountRequest =
       name?: string
       defaultCurrency?: Currency
     }
+  | { action: 'createOrganization'; name: string; currency: Currency }
+  | { action: 'deleteAccount' }
+  | { action: 'syncContact' }
 
-/** The backend `account` callable (specs/0002). Needs a connection. */
+/** The backend `account` callable (specs/0002, 0005). Needs a connection. */
 export const callAccount = async (
   request: AccountRequest
 ): Promise<unknown> => {

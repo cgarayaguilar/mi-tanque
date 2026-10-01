@@ -25,6 +25,10 @@ const measurementsApi = vi.hoisted(() => ({
 }))
 vi.mock('services/cloudMeasurements', () => measurementsApi)
 
+// Reloading the account after a refused write (specs/0005 RF-12)
+const sessionApi = vi.hoisted(() => ({ readAccount: vi.fn() }))
+vi.mock('services/session', () => sessionApi)
+
 const signIn = (role: Role = 'driver') => {
   useSessionStore.setState({
     status: 'ready',
@@ -300,4 +304,29 @@ test('without tanks it invites to add one', async () => {
   expect(
     screen.getByRole('button', { name: 'Agregar tanque' })
   ).toBeInTheDocument()
+})
+
+test('a save refused because the role changed reloads the account instead of blaming the data (specs/0005 RF-12)', async () => {
+  measurementsApi.createCloudMeasurement.mockRejectedValueOnce({
+    code: 'permission-denied',
+  })
+  sessionApi.readAccount.mockResolvedValue({
+    ...accountWithRole('viewer'),
+    needsContactSync: false,
+  })
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'none' },
+  })
+  measure('10')
+  await waitFor(() => {
+    expect(sileo.warning).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Tus permisos cambiaron' })
+    )
+  })
+  expect(sileo.error).not.toHaveBeenCalled()
+  await waitFor(() => {
+    expect(sessionApi.readAccount).toHaveBeenCalledWith('luis')
+  })
 })

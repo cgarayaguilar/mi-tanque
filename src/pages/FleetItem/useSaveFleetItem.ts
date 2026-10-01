@@ -7,6 +7,7 @@ import {
 } from 'services/fleet'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
+import { recoverFromLostPermission } from 'store/session'
 import type { FleetSection } from 'utils/fleetSections'
 import { reportError } from 'utils/reportError'
 
@@ -34,6 +35,7 @@ export const useSaveFleetItem = (section: FleetSection) => {
 
     save(collection, item, write).catch((error: unknown) => {
       reportError(error, { operation: 'saveFleetItem', collection })
+      if (recoverFromLostPermission(error)) return
       sileo.error({
         title: `No pudimos guardar el ${section.one} ${item.name}`,
         description: 'Revisa los datos y vuelve a intentarlo.',

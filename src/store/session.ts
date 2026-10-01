@@ -6,7 +6,9 @@ import type {
   Profile,
   SessionUser,
 } from 'services/session'
+import { sileo } from 'sileo'
 import { reportError } from 'utils/reportError'
+import { isPermissionDenied } from 'utils/teamErrors'
 
 // import(): the SDK stays out of the basic mode's bundle (specs/0000 RNF-1)
 const sessionApi = () => import('services/session')
@@ -62,6 +64,13 @@ interface SessionState extends SessionData {
     currency: Currency
   }) => Promise<void>
   switchOrganization: (orgId: string) => Promise<void>
+  /** Creates one more organization and makes it the active one (specs/0005). */
+  createOrganization: (input: {
+    name: string
+    currency: Currency
+  }) => Promise<void>
+  /** Deletes the account on the server, then signs out here (RF-14). */
+  deleteAccount: () => Promise<void>
   updateProfile: (displayName: string) => Promise<void>
   updateOrganization: (changes: {
     name?: string
@@ -94,10 +103,17 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       const account = await api.readAccount(user.uid)
       // The user may have signed out while this was loading
       if (get().user?.uid !== user.uid) return
+      const { needsContactSync, ...data } = account
       set({
-        ...account,
-        status: account.profile ? 'ready' : 'needsOnboarding',
+        ...data,
+        status: data.profile && data.organization ? 'ready' : 'needsOnboarding',
       })
+      if (needsContactSync) {
+        // Once per older account; nothing to tell the user if it fails
+        api.callAccount({ action: 'syncContact' }).catch((error: unknown) => {
+          reportError(error, { operation: 'syncContact' })
+        })
+      }
     } catch (error) {
       reportError(error, { operation: 'readAccount' })
       set({ status: 'error' })
@@ -154,6 +170,22 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       await get().refresh()
     },
 
+    createOrganization: async ({ name, currency }) => {
+      const api = await sessionApi()
+      await api.callAccount({ action: 'createOrganization', name, currency })
+      await get().refresh()
+    },
+
+    deleteAccount: async () => {
+      const api = await sessionApi()
+      await api.callAccount({ action: 'deleteAccount' })
+      // The Auth user is gone: drop the local session and its cache
+      await api.signOutAndClear()
+      started = null
+      setHint(false)
+      set(EMPTY)
+    },
+
     updateProfile: async displayName => {
       const api = await sessionApi()
       await api.callAccount({ action: 'updateProfile', displayName })
@@ -189,3 +221,18 @@ export const useSessionStore = create<SessionState>()((set, get) => {
 /** The caller's role in the active organization. */
 export const selectActiveRole = (state: SessionState) =>
   state.memberships.find(m => m.orgId === state.organization?.id)?.role ?? null
+
+/**
+ * The rules rejected a write: the role or the membership changed while the
+ * app was open (backend specs/0005 RF-12). Reloads the account and tells the
+ * user. False for any other error, which the caller reports as usual.
+ */
+export const recoverFromLostPermission = (error: unknown): boolean => {
+  if (!isPermissionDenied(error)) return false
+  void useSessionStore.getState().refresh()
+  sileo.warning({
+    title: 'Tus permisos cambiaron',
+    description: 'Actualizamos tu cuenta. Revisa tu rol en Mi cuenta.',
+  })
+  return true
+}
