@@ -118,7 +118,7 @@ test('saves the measurement with the city name and shows the reading', async () 
     expect.objectContaining({ latitude: 12.13, longitude: -86.25 })
   )
   expect(
-    screen.getByRole('img', { name: 'Tanque al 48%: 26,22 galones' })
+    screen.getByRole('img', { name: 'Tanque al 48%: 26.22 galones' })
   ).toBeInTheDocument()
 })
 
@@ -156,13 +156,13 @@ test('accepts decimal inches with a comma', async () => {
   const [saved] = await db.measurements.toArray()
   // Stored with a dot, shown with a comma
   expect(saved).toMatchObject({ inches: 12.5, fuelHeight: '50.00' })
-  expect(screen.getByText('12,5')).toBeInTheDocument()
+  expect(screen.getByText('12.5')).toBeInTheDocument()
 })
 
 // §8.7: validation errors are shown inline under the field, not as toasts
 test.each([
   ['', 'Ingresa las pulgadas que mediste'],
-  ['doce', 'Escribe solo números, por ejemplo 12,5'],
+  ['doce', 'Escribe solo números, por ejemplo 12.5'],
   ['30', 'Tu tanque mide 25 pulgadas de diámetro. Ingresa hasta 25.'],
 ])('explains an invalid value %j under the field', async (inches, message) => {
   await selectTank()

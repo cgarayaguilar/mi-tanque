@@ -17,6 +17,7 @@ import TankCard from 'components/TankCard'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { radius } from 'theme/tokens'
+import { normalizeDecimal } from 'utils/parseDecimal'
 import type { Tank } from 'types'
 
 // Roughly a TankCard, so the page does not jump when the list arrives
@@ -30,7 +31,7 @@ const tileGrid = {
   gap: 2,
 } as const
 
-/** "24,5" and "24.5" find the same tank. */
+/** "24.5" and "24,5" find the same tank, and "1,500" finds 1500. */
 const matches = (tank: Tank, query: string) =>
   [tank.capacity, tank.diameter, tank.length].some(value =>
     String(value).includes(query)
@@ -44,7 +45,7 @@ export default function TankSearch() {
   const selectedTankId = useSelectedTankStore(state => state.selectedTank?.id)
   const [, navigate] = useLocation()
   const [search, setSearch] = useState('')
-  const query = useDeferredValue(search.trim().replace(',', '.'))
+  const query = useDeferredValue(normalizeDecimal(search) ?? search.trim())
 
   useEffect(() => {
     void load()

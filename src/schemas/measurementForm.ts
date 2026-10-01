@@ -14,7 +14,7 @@ export const measurementFormSchema = (tankDiameter: number) =>
         abort: true,
       }),
       z.refine(value => !Number.isNaN(parseDecimal(value)), {
-        error: 'Escribe solo números, por ejemplo 12,5',
+        error: 'Escribe solo números, por ejemplo 12.5',
         abort: true,
       }),
       z.refine(value => parseDecimal(value) > 0, {
@@ -57,7 +57,7 @@ export const cloudMeasurementFormSchema = (maxInches: number) =>
         abort: true,
       }),
       z.refine(value => !Number.isNaN(parseDecimal(value)), {
-        error: 'Escribe solo números, por ejemplo 12,5',
+        error: 'Escribe solo números, por ejemplo 12.5',
         abort: true,
       }),
       z.refine(value => parseDecimal(value) > 0, {

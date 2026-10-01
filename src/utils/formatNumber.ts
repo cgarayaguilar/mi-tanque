@@ -1,10 +1,10 @@
 const formatters = new Map<number | undefined, Intl.NumberFormat>()
 
 /**
- * A number as Spanish users write it: decimal comma ("24,5", "26,22") and no
- * thousands separator. With `decimals` it always shows that many; without
- * it, up to two and only when needed. Stored values keep their dot format:
- * this is for display only.
+ * A number as the app's users write it: dot for decimals and comma for
+ * thousands ("24.5", "1,500.25"). With `decimals` it always shows that many;
+ * without it, up to two and only when needed. Stored values are plain
+ * numbers: this is for display only.
  */
 export const formatNumber = (value: number | string, decimals?: number) => {
   const number = typeof value === 'number' ? value : Number(value)
@@ -12,8 +12,8 @@ export const formatNumber = (value: number | string, decimals?: number) => {
 
   let formatter = formatters.get(decimals)
   if (!formatter) {
-    formatter = new Intl.NumberFormat('es-ES', {
-      useGrouping: false,
+    formatter = new Intl.NumberFormat('en-US', {
+      useGrouping: true,
       minimumFractionDigits: decimals ?? 0,
       maximumFractionDigits: decimals ?? 2,
     })

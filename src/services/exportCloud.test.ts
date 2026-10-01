@@ -69,7 +69,7 @@ test('reads every page of the period and filter, 500 at a time (RF-8, CA-4)', as
   )
   expect(file?.csv.split('\r\n')).toHaveLength(1 + 501 + 1)
   expect(file?.csv).toContain(
-    ';Luis;Tanque izquierdo;Unidad 12;12;70,5;266,87;52,2;670;416;9,5;120500;74875;Managua;Managua;Nicaragua;'
+    ',Luis,Tanque izquierdo,Unidad 12,12,70.5,266.87,52.2,670,416,9.5,120500,74875,Managua,Managua,Nicaragua,'
   )
 })
 

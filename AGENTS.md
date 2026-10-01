@@ -39,7 +39,7 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 | Datos       | IndexedDB vía Dexie en `src/services` (**heredado**: modo básico; el modo autenticado usa Firestore filtrado por `orgId`) |
 | Formularios | React Hook Form + Zod (`zodResolver`), errores junto al campo con `NumberField`                                           |
 | Iconos      | `@mui/icons-material`                                                                                                     |
-| Números     | Se muestran con `formatNumber` (`utils/formatNumber`): coma decimal; se guardan con punto                                 |
+| Números     | Como en Centroamérica: punto decimal y coma de miles ("1,500.25"), con `formatNumber`; se leen con `parseDecimal`         |
 
 ## Comandos
 
@@ -95,13 +95,14 @@ en cada push y PR.
   procesa al entrar y al volver la conexión.
   Exportar a CSV (specs/0007): `components/ExportButton` solo importa tipos; el código vive en
   `services/exportCloud` (Firebase) y `services/exportLocal` (Dexie), cargados con `import()` al
-  tocar el botón. El formato (Excel en español, BOM, protección contra fórmulas) está en `utils/csv`;
-  las columnas, en `utils/exportColumns`.
+  tocar el botón. El formato (Excel de Centroamérica: coma entre columnas y punto decimal; BOM;
+  protección contra fórmulas) está en `utils/csv`; las columnas, en `utils/exportColumns`.
 - **App Check y el lugar sin cuenta (specs/0008):** `services/firebase/core` crea la app con App
   Check (Fraud Defense, antes reCAPTCHA Enterprise; clave del sitio en `config.ts`; no con los
-  emuladores) y las funciones, sin Auth ni Firestore. El modo sin cuenta lo carga solo con `import('services/placeLookup')` al medir con
-  ubicación: la ciudad la da la función `geocode` del backend; no hay claves de terceros en el
-  cliente. El texto de `components/RecaptchaNotice` reemplaza al sello oculto de reCAPTCHA.
+  emuladores) y las funciones, sin Auth ni Firestore. El modo sin cuenta lo carga solo con
+  `import('services/placeLookup')` al medir con ubicación: la ciudad la da la función `geocode` del
+  backend; no hay claves de terceros en el cliente. El texto de `components/RecaptchaNotice`
+  reemplaza al sello oculto de reCAPTCHA.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests

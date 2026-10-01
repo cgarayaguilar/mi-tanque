@@ -79,7 +79,7 @@ test('summarizes each tank and lists its measurements, newest first', async () =
   ).toBeInTheDocument()
   expect(screen.getByText('2 mediciones')).toBeInTheDocument()
   // Difference from the first (40) to the last (30) measurement
-  expect(screen.getByText('10,00')).toBeInTheDocument()
+  expect(screen.getByText('10.00')).toBeInTheDocument()
   expect(screen.getByText('gal. menos')).toBeInTheDocument()
 
   // A single tank shows its measurements right away
@@ -87,8 +87,8 @@ test('summarizes each tank and lists its measurements, newest first', async () =
     name: 'Mediciones del tanque de 75 galones',
   })
   const [newest, oldest] = Array.from(list.querySelectorAll('li'))
-  expect(newest).toHaveTextContent('30,00 gal de 75')
-  expect(oldest).toHaveTextContent('40,00 gal de 75')
+  expect(newest).toHaveTextContent('30.00 gal de 75')
+  expect(oldest).toHaveTextContent('40.00 gal de 75')
   expect(
     screen.getAllByRole('progressbar', { name: 'Nivel del tanque: 42%' })
   ).toHaveLength(2)

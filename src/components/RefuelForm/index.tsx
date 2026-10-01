@@ -234,7 +234,7 @@ export default function RefuelForm({
           id="refuelPrice"
           label="Precio"
           unit={currency || '—'}
-          placeholder="Ej. 30,50"
+          placeholder="Ej. 30.50"
           hint=""
           error={errors.price?.message}
           registration={register('price')}
