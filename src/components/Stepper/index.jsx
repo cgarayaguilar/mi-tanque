@@ -9,6 +9,7 @@ import { AppContext } from 'store'
 import { convertGallonsToLiters } from 'utils/converts'
 import { calcFuelLevel } from 'utils/calcFuelLevel'
 import { sileo } from 'sileo'
+import { parseDecimal } from 'utils/parseDecimal'
 import { space } from 'theme/tokens'
 import { px } from 'styles/type'
 
@@ -30,10 +31,10 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
     if (savingRef.current) return
 
     const formData = new FormData(form.current)
-    const inches = Number(formData.get('inches'))
+    const inches = parseDecimal(String(formData.get('inches') ?? ''))
 
     //Validaciones
-    if (inches < 1)
+    if (Number.isNaN(inches) || inches <= 0)
       return sileo.warning({
         title: 'Ingresa las pulgadas de combustible',
         description: 'Escribe cuántas pulgadas de combustible mediste.',
@@ -76,8 +77,9 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
     }
   }
 
+  // noValidate: our checks report through Sileo, not the browser's bubbles
   return (
-    <StepContainer onSubmit={handleSubmit} ref={form}>
+    <StepContainer onSubmit={handleSubmit} ref={form} noValidate>
       <Step>
         <BadgeContainer>
           <Badge completed={true}>1</Badge>
@@ -105,7 +107,8 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
           <Line></Line>
         </BadgeContainer>
         <TextField
-          type="number"
+          inputMode="decimal"
+          autoComplete="off"
           name="inches"
           placeholder="Ingrese la cantidad de pulgadas"
         />

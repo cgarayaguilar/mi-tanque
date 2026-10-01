@@ -156,7 +156,7 @@ test('warns when the inches exceed the tank diameter and keeps the value', async
   })
   expect(
     screen.getByPlaceholderText('Ingrese la cantidad de pulgadas')
-  ).toHaveValue(30)
+  ).toHaveValue('30')
   await settle()
   expect(await db.measurements.count()).toBe(0)
 })
@@ -167,4 +167,25 @@ test('asks for the inches when the field is empty', async () => {
   expect(sileo.warning).toHaveBeenCalledWith(
     expect.objectContaining({ title: 'Ingresa las pulgadas de combustible' })
   )
+})
+
+// Regression: the number input only took whole inches and the browser
+// rejected "12.5" with its own bubble instead of the app's feedback
+test('accepts decimal inches with a comma or a dot', async () => {
+  mockGeolocation()
+  await selectTankAndCalculate('12,5')
+
+  await waitFor(() => expect(sileo.success).toHaveBeenCalled())
+  const [saved] = await db.measurements.toArray()
+  expect(saved).toMatchObject({ inches: 12.5, fuelHeight: '50.00' })
+})
+
+test('asks for a number when the inches are not numeric', async () => {
+  await selectTankAndCalculate('doce')
+
+  expect(sileo.warning).toHaveBeenCalledWith(
+    expect.objectContaining({ title: 'Ingresa las pulgadas de combustible' })
+  )
+  await settle()
+  expect(await db.measurements.count()).toBe(0)
 })

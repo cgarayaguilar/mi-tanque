@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import useTanks from 'hooks/useTanks'
 import { tankDimensionsSchema } from 'schemas/tank'
+import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { sileo } from 'sileo'
 
@@ -39,9 +40,9 @@ export default function AddTank() {
 
     // Same schema the storage layer enforces (§8.7)
     const validation = tankDimensionsSchema.safeParse({
-      capacity,
-      diameter,
-      length,
+      capacity: parseDecimal(capacity),
+      diameter: parseDecimal(diameter),
+      length: parseDecimal(length),
     })
     if (!validation.success)
       return sileo.warning({
@@ -52,7 +53,8 @@ export default function AddTank() {
     savingRef.current = true
     setIsSaving(true)
     try {
-      const exists = await doesThisTankExist({ capacity, diameter, length })
+      const dimensions = validation.data
+      const exists = await doesThisTankExist(dimensions)
 
       if (exists)
         return sileo.warning({
@@ -61,7 +63,7 @@ export default function AddTank() {
             'Ya tienes un tanque con estas medidas: elígelo en la lista.',
         })
 
-      const newTank = await saveTank({ capacity, diameter, length })
+      const newTank = await saveTank(dimensions)
 
       //Limpiar campos
       setCapacity('')
@@ -94,10 +96,12 @@ export default function AddTank() {
 
   return (
     <Wrapper>
-      <Form onSubmit={handleSubmit} id="formTank">
+      {/* noValidate: our checks report through Sileo, not the browser's bubbles */}
+      <Form onSubmit={handleSubmit} id="formTank" noValidate>
         <TextField
           mb={px(space.base)}
-          type="number"
+          inputMode="decimal"
+          autoComplete="off"
           label="Capacidad en galones de su tanque"
           placeholder="Ej. 100, 150, 200"
           value={capacity}
@@ -105,7 +109,8 @@ export default function AddTank() {
         />
         <TextField
           mb={px(space.base)}
-          type="number"
+          inputMode="decimal"
+          autoComplete="off"
           label="Diámetro en pulgadas de su tanque"
           placeholder="Ej. 100, 150, 200"
           Icon={DiameterIcon}
@@ -114,7 +119,8 @@ export default function AddTank() {
         />
         <TextField
           mb={px(space.base)}
-          type="number"
+          inputMode="decimal"
+          autoComplete="off"
           label="Longitud en pulgadas de su tanque"
           placeholder="Ej. 22, 23, 25"
           Icon={LengthIcon}

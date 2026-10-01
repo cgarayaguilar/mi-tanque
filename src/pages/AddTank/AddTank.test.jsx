@@ -120,3 +120,14 @@ test('warns when a tank with the same dimensions exists', async () => {
   )
   expect(await db.tanks.count()).toBe(1)
 })
+
+// Regression: number inputs rejected decimal dimensions like 24.5
+test('accepts decimal dimensions written with a comma', async () => {
+  await fillAndSubmit({ capacity: '80', diameter: '24,5', length: '50' })
+
+  await waitFor(() =>
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Tanque agregado' })
+  )
+  const [saved] = await db.tanks.toArray()
+  expect(saved).toMatchObject({ capacity: 80, diameter: 24.5, length: 50 })
+})
