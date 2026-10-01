@@ -6,6 +6,12 @@ import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { settle } from '../../testUtils'
 
+// The place comes from the backend's `geocode` function (specs/0008)
+const places = vi.hoisted(() => ({
+  lookupPlace: vi.fn(() => Promise.resolve<string | null>(null)),
+}))
+vi.mock('services/placeLookup', () => places)
+
 const tank = { capacity: 50, diameter: 25, length: 26 }
 
 const renderHome = () => {
@@ -88,16 +94,7 @@ test('before calculating, results show that nothing was measured', async () => {
 test('saves the measurement with the city name and shows the reading', async () => {
   const tankId = await selectTank()
   mockGeolocation({ latitude: 12.13, longitude: -86.25 })
-  const fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () =>
-      Promise.resolve({
-        features: [
-          { properties: { locality: 'Managua', country: 'Nicaragua' } },
-        ],
-      }),
-  })
-  vi.stubGlobal('fetch', fetch)
+  places.lookupPlace.mockResolvedValueOnce('Managua, Nicaragua')
   renderHome()
 
   calculate('12')
@@ -115,8 +112,10 @@ test('saves the measurement with the city name and shows the reading', async () 
       }),
     ])
   })
-  expect(String(fetch.mock.calls[0]?.[0])).toContain(
-    'point.lat=12.13&point.lon=-86.25'
+  // Google's text replaces the hidden reCAPTCHA badge (specs/0008 RF-12)
+  expect(screen.getByText(/Protegido por reCAPTCHA/)).toBeInTheDocument()
+  expect(places.lookupPlace).toHaveBeenCalledWith(
+    expect.objectContaining({ latitude: 12.13, longitude: -86.25 })
   )
   expect(
     screen.getByRole('img', { name: 'Tanque al 48%: 26,22 galones' })

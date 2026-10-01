@@ -4,7 +4,6 @@ import {
   createMeasurement,
   updateMeasurementLocation,
 } from 'services/measurements'
-import { getPlaceName } from 'services/geocoding'
 import type { FuelReading, Tank } from 'types'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
@@ -18,7 +17,10 @@ const findLocation = async (): Promise<string> => {
   if (!position) return NO_LOCATION
 
   try {
-    return (await getPlaceName(position)) ?? NO_LOCATION
+    // import(): the place comes from our `geocode` function (specs/0008);
+    // its small Firebase client loads only now, never with the app
+    const { lookupPlace } = await import('services/placeLookup')
+    return (await lookupPlace(position)) ?? NO_LOCATION
   } catch (error) {
     if (navigator.onLine) reportError(error, { operation: 'reverseGeocode' })
     return NO_LOCATION
