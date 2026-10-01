@@ -4,7 +4,7 @@ import {
   readMeasurementsByDateRanges,
 } from 'services/measurements'
 import { readTanks } from 'services/tanks'
-import { addDays, addHours } from 'date-fns'
+import { endOfDay, startOfDay, subDays } from 'date-fns'
 import { sileo } from 'sileo'
 import { reportError } from 'utils/reportError'
 
@@ -18,18 +18,21 @@ export default function useMeasurement() {
   const [listOfTanks, setListOfTanks] = useState(null)
   const [totalGallons, setTotalGallons] = useState(initialTotalState)
 
-  const [date, setDate] = useState({
-    start: addDays(new Date(), -7),
-    end: addDays(new Date(), 0),
-  })
+  // Whole days: from the start of the first day to the end of the last one
+  const [date, setDate] = useState(() => ({
+    start: startOfDay(subDays(new Date(), 7)),
+    end: endOfDay(new Date()),
+  }))
 
   //Muestra la fecha seleccionada en la interfaz
   const onSelectDate = _date => {
     if (!_date) return
 
+    // endOfDay, not addHours(end, 23.59): date-fns truncates that to 23 hours,
+    // which dropped the last hour, and re-applying a range kept shifting it
     setDate({
-      start: _date.startDate,
-      end: addHours(_date.endDate, 23.59),
+      start: startOfDay(_date.startDate),
+      end: endOfDay(_date.endDate),
     })
   }
 

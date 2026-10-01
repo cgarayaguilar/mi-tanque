@@ -95,3 +95,28 @@ test('a double tap on Guardar creates the tank once', async () => {
 
   expect(await db.tanks.count()).toBe(1)
 })
+
+test('explains invalid dimensions with a Sileo warning and saves nothing', async () => {
+  await fillAndSubmit({ capacity: '300', diameter: '22', length: '50' })
+
+  await waitFor(() =>
+    expect(sileo.warning).toHaveBeenCalledWith({
+      title: 'Revisa las medidas del tanque',
+      description: 'Ingresa una capacidad entre 10 y 250',
+    })
+  )
+  expect(await db.tanks.count()).toBe(0)
+})
+
+test('warns when a tank with the same dimensions exists', async () => {
+  await db.tanks.add({ capacity: 80, diameter: 22, length: 50 })
+
+  await fillAndSubmit({ capacity: '80', diameter: '22', length: '50' })
+
+  await waitFor(() =>
+    expect(sileo.warning).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Ese tanque ya existe' })
+    )
+  )
+  expect(await db.tanks.count()).toBe(1)
+})

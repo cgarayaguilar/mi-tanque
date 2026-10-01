@@ -2,7 +2,7 @@ import { useContext, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import useTanks from 'hooks/useTanks'
-import { validationAlert } from 'utils/alerts'
+import { tankDimensionsSchema } from 'schemas/tank'
 import { reportError } from 'utils/reportError'
 import { sileo } from 'sileo'
 
@@ -35,13 +35,17 @@ export default function AddTank() {
     event.preventDefault()
     if (savingRef.current) return
 
-    //Validaciones
-    if (capacity < 10 || capacity > 250)
-      return validationAlert('Ingresa una capacidad valida para tu tanque')
-    if (diameter < 10 || diameter > 99)
-      return validationAlert('Ingresa un diametro valido para tu tanque')
-    if (length < 10 || length > 150)
-      return validationAlert('Ingresa una longitud valida para tu tanque')
+    // Same schema the storage layer enforces (§8.7)
+    const validation = tankDimensionsSchema.safeParse({
+      capacity,
+      diameter,
+      length,
+    })
+    if (!validation.success)
+      return sileo.warning({
+        title: 'Revisa las medidas del tanque',
+        description: validation.error.issues[0]?.message,
+      })
 
     savingRef.current = true
     setIsSaving(true)
@@ -49,7 +53,11 @@ export default function AddTank() {
       const exists = await doesThisTankExist({ capacity, diameter, length })
 
       if (exists)
-        return validationAlert('Ya existe un tanque con estas medidas')
+        return sileo.warning({
+          title: 'Ese tanque ya existe',
+          description:
+            'Ya tienes un tanque con estas medidas: elígelo en la lista.',
+        })
 
       const newTank = await saveTank({ capacity, diameter, length })
 

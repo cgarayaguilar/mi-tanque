@@ -8,8 +8,7 @@ import { useLocation } from 'wouter'
 import { AppContext } from 'store'
 import { convertGallonsToLiters } from 'utils/converts'
 import { calcFuelLevel } from 'utils/calcFuelLevel'
-import Swal from 'sweetalert2'
-import { validationAlert } from 'utils/alerts'
+import { sileo } from 'sileo'
 
 export default function Stepper({ onCalcFuelLevel, resetValues }) {
   const { defaultTank } = useContext(AppContext)
@@ -33,18 +32,18 @@ export default function Stepper({ onCalcFuelLevel, resetValues }) {
 
     //Validaciones
     if (inches < 1)
-      return validationAlert(
-        'Ingresa la cantidad de pulgadas que tiene de combustible tu tanque actualmente'
-      )
+      return sileo.warning({
+        title: 'Ingresa las pulgadas de combustible',
+        description: 'Escribe cuántas pulgadas de combustible mediste.',
+      })
 
     if (inches > defaultTank.diameter) {
-      form.current.reset()
+      // Clear the stale results; keep the typed value so it can be corrected
       resetValues()
 
-      return Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: 'La cantidad de pulgadas supera la capacidad del tanque!',
+      return sileo.warning({
+        title: 'La medida supera el tamaño del tanque',
+        description: `Tu tanque mide ${defaultTank.diameter} pulgadas de diámetro. Ingresa un valor entre 1 y ${defaultTank.diameter}.`,
       })
     }
 

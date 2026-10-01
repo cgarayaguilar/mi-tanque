@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react'
+import React, { lazy, useState, Suspense } from 'react'
 import NavBar from 'components/NavBar'
 import TextField from 'components/TextField'
 import { format } from 'date-fns'
@@ -11,8 +11,10 @@ import Typography from 'components/Typography'
 
 import useMeasurement from 'hooks/useMeasurement'
 
+// Module scope: declared inside the component it was recreated (and remounted) on every render
+const DateModal = lazy(() => import('components/DateModal'))
+
 function History() {
-  const DateModal = React.lazy(() => import('components/DateModal'))
   const [calendarIsVisible, setCalendarIsVisible] = useState(false)
 
   //Obtenemos la lista de mediciones
@@ -73,10 +75,11 @@ function History() {
       </NavBarContainer>
 
       {calendarIsVisible && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={null}>
           <DateModal
-            onSelect={dates => onSelectDate(dates)}
-            closeModal={hideCalendar}
+            initialRange={{ startDate: date.start, endDate: date.end }}
+            onSelect={onSelectDate}
+            onClose={hideCalendar}
           />
         </Suspense>
       )}

@@ -25,15 +25,14 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 
 ## Stack: heredado vs. objetivo
 
-| Área        | Heredado (no extender)                                  | Objetivo (todo código nuevo)                                                 |
-| ----------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Lenguaje    | JavaScript (`.js`/`.jsx`)                               | TypeScript estricto (`.ts`/`.tsx`)                                           |
-| UI          | styled-components, theme en `src/store/initialState.js` | MUI con theme derivado de `DESIGN.md`                                        |
-| Estado      | Context + `useLocalStorage`                             | Stores de Zustand por dominio, con selectores                                |
-| Datos       | IndexedDB vía Dexie (`src/services`)                    | Firestore, filtrado por `accountId`                                          |
-| Feedback    | sweetalert2 (`src/utils/alerts.js`)                     | Toasts de Sileo; `<Dialog>` de MUI solo para confirmar acciones destructivas |
-| Formularios | `FormData` + validación manual                          | React Hook Form + Zod (`zodResolver`)                                        |
-| Iconos      | `react-icons`                                           | `@mui/icons-material`                                                        |
+| Área        | Heredado (no extender)                                  | Objetivo (todo código nuevo)                  |
+| ----------- | ------------------------------------------------------- | --------------------------------------------- |
+| Lenguaje    | JavaScript (`.js`/`.jsx`)                               | TypeScript estricto (`.ts`/`.tsx`)            |
+| UI          | styled-components, theme en `src/store/initialState.js` | MUI con theme derivado de `DESIGN.md`         |
+| Estado      | Context + `useLocalStorage`                             | Stores de Zustand por dominio, con selectores |
+| Datos       | IndexedDB vía Dexie (`src/services`)                    | Firestore, filtrado por `accountId`           |
+| Formularios | `FormData` + validación manual                          | React Hook Form + Zod (`zodResolver`)         |
+| Iconos      | `react-icons`                                           | `@mui/icons-material`                         |
 
 No agregues código nuevo sobre el stack heredado. Si un cambio modifica de forma sustancial un
 archivo heredado, migra ese archivo (o su pantalla completa) al stack objetivo en el mismo cambio,
@@ -67,8 +66,14 @@ en cada push y PR.
 - **Errores:** todo `catch` llama a `reportError(error, { operation, ...contexto })`
   (`src/utils/reportError.ts`, el canal único de §7.3) y avisa al usuario con Sileo. Nunca pongas
   ubicaciones ni datos personales en el contexto.
-- **Feedback:** cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
+- **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
+  `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
+  ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
   `sileo` está simulado globalmente (`src/setupTests.js`): verifica las llamadas, no el DOM.
+- **Theme:** los tokens viven en `src/theme/tokens.ts` (reflejo de `DESIGN.md`). De ahí salen el
+  theme de MUI (`src/theme/muiTheme.ts`) y el de styled-components heredado
+  (`src/store/initialState.js`). Cambia un color en `DESIGN.md` y en `tokens.ts`, nunca en los
+  componentes.
 - **Idioma:** código, identificadores, comentarios y logs en inglés; texto de cara al usuario en
   español, con la voz de `ENGINEERING_PRINCIPLES.md` §9 (tú, español neutro).
 - **Commits:** Conventional Commits, un cambio lógico por commit, en una rama (nunca directo en
@@ -90,6 +95,9 @@ en cada push y PR.
   calendario del historial en desarrollo: `StrictMode` remonta los componentes y `react-list` perdía
   su listener de scroll. Bórralo junto con `react-date-range` cuando se reemplace el calendario
   (fase 3).
+- **Tras instalar o quitar dependencias, reinicia `npm run dev`.** Si el servidor sigue encendido,
+  el optimizador de Vite puede servir dos copias de React y la app queda en blanco con "Invalid
+  hook call". Si pasa: para el servidor, borra `node_modules/.vite` y arráncalo de nuevo.
 - `typescript` está fijado en `~6.0` porque `typescript-eslint` todavía no soporta la 7.
 - Si `npm install` falla con `EACCES` en `~/.npm`, la caché global de npm del usuario tiene
   problemas de permisos: usa `--cache <directorio temporal>` en vez de cambiar el sistema del

@@ -4,9 +4,9 @@
 > tokens, nunca valores sueltos (§8.13). Si cambia este archivo, cambia el theme, y viceversa: van
 > **en sincronía**.
 >
-> **Implementación actual:** theme de styled-components en `src/store/initialState.js`
-> (`darkTheme` / `lightTheme`). **Implementación objetivo:** theme de MUI derivado de este archivo
-> (sección "Mapeo al theme de MUI"), según el plan del
+> **Implementación:** los tokens de este archivo viven en `src/theme/tokens.ts`. De ahí salen el
+> theme de MUI (`src/theme/muiTheme.ts`) y el theme heredado de styled-components
+> (`src/store/initialState.js`) mientras conviven, según el plan del
 > [ADR 0001](docs/adr/0001-adopt-engineering-principles.md).
 
 ## Principios visuales
@@ -149,7 +149,7 @@ Todo icono interactivo lleva `aria-label`.
 
 | Componente             | Variantes y estados                                                                                                                                                                                                       | Notas                                                                                                               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Button**             | `filled` (fondo `accent`), `outlined` (borde `accent`), `link` (texto `accent`) · tamaños `small` 14/700, `medium` 16/700, `large` 20/500 · alto 48px · ancho completo · `active`: escala 0.95 · `hover`: velo oscuro 20% | Falta estado `disabled` + spinner de envío (§8.6)                                                                   |
+| **Button**             | `filled` (fondo `accent`), `outlined` (borde `accent`), `link` (texto `accent`) · tamaños `small` 14/700, `medium` 16/700, `large` 20/500 · alto 48px · ancho completo · `active`: escala 0.95 · `hover`: velo oscuro 20% | `disabled`: opacidad 0.6, sin escala; muestra "Guardando…" mientras envía (§8.6)                                    |
 | **TextField**          | Etiqueta opcional, icono de búsqueda opcional · borde `textSecondary`, en foco `textPrimary` · fondo `surface`                                                                                                            | ⚠️ El área táctil del input (~35px) es menor que los 48px recomendados. Faltan error inline y texto de ayuda (§8.7) |
 | **Card**               | Fondo `surface`, radio 8px, padding 8–16px                                                                                                                                                                                | Tarjeta de tanque y de medición                                                                                     |
 | **AppBar**             | Logo + nombre a la izquierda, cambio de tema a la derecha                                                                                                                                                                 | Alto ~49px                                                                                                          |
@@ -157,12 +157,13 @@ Todo icono interactivo lleva `aria-label`.
 | **Stepper**            | Badge circular de 20px · completado `accent`, pendiente `textSecondary` · línea vertical de 1px                                                                                                                           | Formulario de medición en 3 pasos                                                                                   |
 | **Diagrama de tanque** | Cilindro con capacidad al centro y cotas de diámetro y longitud                                                                                                                                                           | SVG (`src/assets/tank.svg`)                                                                                         |
 | **Medidor**            | Círculo de 250px en `surface` con ola animada `accent` (`react-wavify`) que sube hasta el % de llenado                                                                                                                    | Muestra % y galones encima                                                                                          |
-| **Modal**              | Overlay `overlay` a pantalla completa                                                                                                                                                                                     | Selector de rango de fechas                                                                                         |
+| **Dialog** (MUI)       | Título + contenido + acciones (`Cancelar` texto, acción principal `contained`) · pantalla completa en `xs` · backdrop `overlay` · papel `surface` sin elevación                                                           | Todo modal de la app (§8.8). Hoy: selector de periodo del historial                                                 |
 
-## Mapeo al theme de MUI (objetivo)
+## Mapeo al theme de MUI
+
+Implementado en `src/theme/muiTheme.ts` a partir de `src/theme/tokens.ts`:
 
 ```ts
-// src/theme.ts — se crea en la fase de migración a MUI (ADR 0001)
 palette: {
   mode: 'dark' | 'light',
   primary:    { main: accent, contrastText: onAccent },
@@ -170,19 +171,36 @@ palette: {
   text:       { primary: textPrimary, secondary: textSecondary },
   error:      { main: error },
 },
-typography: { fontFamily: "'Roboto', sans-serif", /* variantes de la tabla de tipografía */ },
+typography: { fontFamily: "'Roboto', sans-serif", button: { textTransform: 'none' } },
 spacing: 8,
 shape: { borderRadius: 8 },
-components: { MuiPaper: { defaultProps: { elevation: 0 } } /* diseño plano */ },
+components: {
+  MuiPaper:    { styleOverrides: { root: { backgroundImage: 'none' } } }, // diseño plano
+  MuiBackdrop: { styleOverrides: { root: { backgroundColor: overlay } } },
+},
 ```
 
 ## Valores hardcodeados pendientes de eliminar (§8.13)
 
-| Archivo                                  | Valor                                                          | Token que lo sustituye          |
-| ---------------------------------------- | -------------------------------------------------------------- | ------------------------------- |
-| `src/components/AppBar/index.jsx`        | `#fff` / `#142850`                                             | `textPrimary`                   |
-| `src/components/CardHistory/index.jsx`   | `#00A8CC`                                                      | `accent`                        |
-| `src/components/DateModal/index.jsx`     | `#00A8CC` (×2)                                                 | `accent`                        |
-| `src/components/TankAnimation/index.jsx` | `#00A8CC`                                                      | `accent`                        |
-| `src/utils/alerts.js`                    | `#00A8CC`                                                      | `accent` (desaparece con Sileo) |
-| `src/components/TankAnimation/styles.js` | `theme.textSecondary` (no existe: debería ser `secondaryText`) | `textSecondary`                 |
+| Archivo                                  | Valor                                                          | Token que lo sustituye |
+| ---------------------------------------- | -------------------------------------------------------------- | ---------------------- |
+| `src/components/AppBar/index.jsx`        | `#fff` / `#142850`                                             | `textPrimary`          |
+| `src/components/CardHistory/index.jsx`   | `#00A8CC`                                                      | `accent`               |
+| `src/components/TankAnimation/index.jsx` | `#00A8CC`                                                      | `accent`               |
+| `src/components/TankAnimation/styles.js` | `theme.textSecondary` (no existe: debería ser `secondaryText`) | `textSecondary`        |
+
+## Toasts (Sileo)
+
+Todo aviso al usuario es un toast de Sileo (ENGINEERING_PRINCIPLES.md §8.8), en la parte inferior
+central. Tema del toast: `dark` en modo oscuro y `light` en modo claro. Dos ajustes globales en
+`src/styles/globalStyles.js`:
+
+- Títulos en mayúscula inicial solamente (Sileo los capitaliza palabra por palabra).
+- Descripción del toast claro al 70% de opacidad: 8.6:1 en lugar de 3.95:1 (AA).
+
+| Estado    | Uso                                                                                 |
+| --------- | ----------------------------------------------------------------------------------- |
+| `success` | Una mutación salió bien; la app quedó lista sin conexión                            |
+| `error`   | Una operación falló (guardar, cargar)                                               |
+| `warning` | Un dato ingresado no es válido o ya existe                                          |
+| `action`  | Aviso que requiere una acción, con botón (nueva versión disponible); no expira solo |

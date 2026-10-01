@@ -17,6 +17,7 @@ const absoluteImportDirs = [
   'services',
   'store',
   'styles',
+  'theme',
   'types',
   'utils',
 ]

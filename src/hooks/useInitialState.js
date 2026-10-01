@@ -2,7 +2,8 @@ import { darkTheme, lightTheme } from 'store/initialState'
 import { useLocalStorage } from 'hooks/useLocalStorage'
 
 const useInitialState = () => {
-  const [theme, setTheme] = useLocalStorage('theme', darkTheme)
+  // Only the preference is stored; colors always come from the design tokens
+  // (storing the whole theme object kept old colors after a design change)
   const [isDarkModeActive, setIsDarkModeActive] = useLocalStorage(
     'isDarkModeActive',
     true
@@ -10,13 +11,13 @@ const useInitialState = () => {
   //Estado que guarda el tanque seleccionado
   const [defaultTank, setDefaultTank] = useLocalStorage('defaultTank', {})
 
+  const theme = isDarkModeActive ? darkTheme : lightTheme
+
   const activateDarkMode = () => {
-    setTheme(darkTheme)
     setIsDarkModeActive(true)
   }
 
   const disableDarkMode = () => {
-    setTheme(lightTheme)
     setIsDarkModeActive(false)
   }
 

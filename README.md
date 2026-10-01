@@ -63,7 +63,7 @@ La app queda en http://localhost:3000. `npm install` también instala el hook de
 ## Imports absolutos
 
 Las carpetas de primer nivel de `src/` (`components`, `hooks`, `pages`, `schemas`, `services`,
-`store`, `styles`, `utils`, `assets`) y el archivo `src/types.ts` se importan sin ruta relativa, p. ej.
+`store`, `styles`, `theme`, `utils`, `assets`) y el archivo `src/types.ts` se importan sin ruta relativa, p. ej.
 `import Button from 'components/Button'`. Los alias están definidos en `tsconfig.json` y en
 `vite.config.mjs`.
 

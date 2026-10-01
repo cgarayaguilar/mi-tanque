@@ -145,3 +145,26 @@ test('a double tap on Calcular saves the measurement once', async () => {
   expect(await db.measurements.count()).toBe(1)
   expect(screen.getByRole('button', { name: 'Calcular' })).toBeEnabled()
 })
+
+test('warns when the inches exceed the tank diameter and keeps the value', async () => {
+  await selectTankAndCalculate('30')
+
+  expect(sileo.warning).toHaveBeenCalledWith({
+    title: 'La medida supera el tamaño del tanque',
+    description:
+      'Tu tanque mide 25 pulgadas de diámetro. Ingresa un valor entre 1 y 25.',
+  })
+  expect(
+    screen.getByPlaceholderText('Ingrese la cantidad de pulgadas')
+  ).toHaveValue(30)
+  await settle()
+  expect(await db.measurements.count()).toBe(0)
+})
+
+test('asks for the inches when the field is empty', async () => {
+  await selectTankAndCalculate('')
+
+  expect(sileo.warning).toHaveBeenCalledWith(
+    expect.objectContaining({ title: 'Ingresa las pulgadas de combustible' })
+  )
+})

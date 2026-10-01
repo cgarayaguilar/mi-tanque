@@ -5,6 +5,8 @@ import History from 'pages/History'
 import TankSearch from 'pages/TankSearch'
 import AddTank from 'pages/AddTank'
 import { ThemeProvider } from 'styled-components'
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles'
+import { muiThemes } from 'theme/muiTheme'
 import { Toaster } from 'sileo'
 import { AppContext } from 'store'
 
@@ -22,7 +24,7 @@ function App() {
   }, [theme.background])
 
   return (
-    <div>
+    <MuiThemeProvider theme={muiThemes[isDarkModeActive ? 'dark' : 'light']}>
       <ThemeProvider theme={theme}>
         <GlobalStyle />
         <AppBar />
@@ -36,7 +38,7 @@ function App() {
         position="bottom-center"
         theme={isDarkModeActive ? 'dark' : 'light'}
       />
-    </div>
+    </MuiThemeProvider>
   )
 }
 
