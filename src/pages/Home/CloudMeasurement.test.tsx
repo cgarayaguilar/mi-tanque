@@ -1,0 +1,303 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { sileo } from 'sileo'
+import App from '../../App'
+import { useFleetStore } from 'store/fleet'
+import { useSessionStore } from 'store/session'
+import { gallonsAt } from 'utils/tankVolume'
+import type { Role } from 'utils/roles'
+import {
+  accountWithRole,
+  ORG_ID,
+  tank,
+  trailer,
+  truck,
+} from '../../testing/fleetFixtures'
+
+const fleetApi = vi.hoisted(() => ({
+  readFleet: vi.fn(),
+  readMembers: vi.fn(() => Promise.resolve([])),
+}))
+vi.mock('services/fleet', () => fleetApi)
+
+const measurementsApi = vi.hoisted(() => ({
+  createCloudMeasurement: vi.fn(() => Promise.resolve()),
+  addMeasurementLocation: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('services/cloudMeasurements', () => measurementsApi)
+
+const signIn = (role: Role = 'driver') => {
+  useSessionStore.setState({
+    status: 'ready',
+    user: { uid: 'luis', displayName: 'Luis', email: null, phoneNumber: null },
+    ...accountWithRole(role),
+    start: () => Promise.resolve(),
+  })
+}
+
+const mockGeolocation = (coords?: {
+  latitude: number
+  longitude: number
+  accuracy: number
+}) => {
+  Object.defineProperty(navigator, 'geolocation', {
+    configurable: true,
+    value: {
+      getCurrentPosition: (
+        success: (position: { coords: typeof coords }) => void,
+        error: (reason: { code: number; message: string }) => void
+      ) =>
+        setTimeout(() => {
+          if (coords) success({ coords })
+          else error({ code: 1, message: 'User denied Geolocation' })
+        }, 10),
+    },
+  })
+}
+
+const LEFT = tank()
+const RIGHT = tank({
+  id: 'tank-2',
+  name: 'Tanque derecho',
+  shape: 'cylinder',
+  dimensions: { diameterIn: 26, lengthIn: 48 },
+  capacityGal: 100,
+})
+const REEFER = tank({
+  id: 'tank-3',
+  name: 'Tanque del termo',
+  shape: 'rectangular',
+  dimensions: { heightIn: 20, widthIn: 24, lengthIn: 30 },
+  capacityGal: 50,
+  equipment: { kind: 'trailer', id: 'trailer-1' },
+})
+const LOOSE = tank({
+  id: 'tank-4',
+  name: 'Tanque de reserva',
+  shape: 'cylinder',
+  dimensions: { diameterIn: 25, lengthIn: 26 },
+  capacityGal: 50,
+  equipment: { kind: 'none', id: null },
+})
+
+const renderHome = () => {
+  window.history.pushState({}, '', '/')
+  render(<App />)
+}
+
+const measure = (inches: string) => {
+  fireEvent.change(screen.getByLabelText('Pulgadas de combustible'), {
+    target: { value: inches },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Calcular' }))
+}
+
+beforeEach(() => {
+  window.localStorage.clear()
+  useFleetStore.getState().reset()
+  fleetApi.readFleet.mockResolvedValue({
+    trucks: [truck()],
+    trailers: [trailer()],
+    tanks: [LEFT, RIGHT, REEFER, LOOSE],
+  })
+  mockGeolocation()
+  signIn()
+})
+
+afterEach(() => {
+  vi.clearAllMocks()
+  Reflect.deleteProperty(navigator, 'geolocation')
+})
+
+test('a truck with two tanks asks for the truck, then the tank (CA-1)', async () => {
+  renderHome()
+
+  const equipment = await screen.findByLabelText('Equipo')
+  expect(
+    [...(equipment as HTMLSelectElement).options].map(option => option.text)
+  ).toEqual(['Camión · Unidad 12', 'Remolque · Caja 7', 'Tanques individuales'])
+  expect(screen.getByLabelText('Tanque')).toHaveValue('')
+  expect(screen.queryByLabelText('Pulgadas de combustible')).toBeNull()
+
+  fireEvent.change(screen.getByLabelText('Tanque'), {
+    target: { value: 'tank-1' },
+  })
+  expect(screen.getByLabelText('Pulgadas de combustible')).toBeInTheDocument()
+})
+
+test('a trailer with a single tank picks it by itself (CA-1)', async () => {
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'trailer:trailer-1' },
+  })
+  expect(screen.queryByLabelText('Tanque')).toBeNull()
+  expect(screen.getByText('Tanque del termo')).toBeInTheDocument()
+})
+
+test('the inches field rejects more than the tank height (CA-1)', async () => {
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Tanque'), {
+    target: { value: 'tank-1' },
+  })
+  measure('25')
+  expect(
+    await screen.findByText('Este tanque permite hasta 24 pulgadas.')
+  ).toBeInTheDocument()
+  expect(measurementsApi.createCloudMeasurement).not.toHaveBeenCalled()
+})
+
+test('a "D" tank at 12 inches shows its gallons and the truck range, and saves at once (CA-2, CA-3)', async () => {
+  mockGeolocation({ latitude: 12.13, longitude: -86.25, accuracy: 9.6 })
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Tanque'), {
+    target: { value: 'tank-1' },
+  })
+  fireEvent.change(screen.getByLabelText('Odómetro (opcional)'), {
+    target: { value: '120600' },
+  })
+  measure('12')
+
+  const gallons = gallonsAt(
+    {
+      shape: 'd_flat_side',
+      orientation: 'horizontal',
+      dimensions: { heightIn: 24, widthIn: 30, lengthIn: 48 },
+    },
+    12
+  )
+  const km = Math.round(gallons * 9.5)
+  expect(
+    await screen.findByText(
+      `Alcanza para unos ${String(km).replace(/\B(?=(\d{3})+(?!\d))/g, '')} km`,
+      { exact: false }
+    )
+  ).toBeInTheDocument()
+
+  expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+    expect.objectContaining({
+      orgId: ORG_ID,
+      tankId: 'tank-1',
+      tankName: 'Tanque izquierdo',
+      equipment: { kind: 'truck', id: 'truck-1', name: 'Unidad 12' },
+      userId: 'luis',
+      userName: 'Luis',
+      odometerKm: 120600,
+      reading: expect.objectContaining({
+        inches: 12,
+        gallons: Math.round(gallons * 100) / 100,
+        estimate: expect.objectContaining({ kmPerGal: 9.5 }) as unknown,
+      }) as unknown,
+    })
+  )
+  expect(sileo.success).toHaveBeenCalledWith({ title: 'Medición guardada' })
+
+  // The location arrives later, as one update of the same document (RF-4)
+  const [[saved]] = measurementsApi.createCloudMeasurement.mock
+    .calls as unknown as [[{ id: string }]]
+  await waitFor(() => {
+    expect(measurementsApi.addMeasurementLocation).toHaveBeenCalledWith(
+      saved.id,
+      'luis',
+      { latitude: 12.13, longitude: -86.25, accuracy: 9.6 }
+    )
+  })
+})
+
+test('each save is a new intent; a reefer tank uses the hitched truck (CA-2)', async () => {
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'trailer:trailer-1' },
+  })
+  measure('10')
+  await waitFor(() => {
+    expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(1)
+  })
+  measure('11')
+  await waitFor(() => {
+    expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(2)
+  })
+
+  const calls = measurementsApi.createCloudMeasurement.mock
+    .calls as unknown as [{ id: string; reading: { estimate: unknown } }][]
+  expect(calls).toHaveLength(2)
+  expect(calls[0]?.[0].id).not.toBe(calls[1]?.[0].id)
+  expect(calls[0]?.[0].reading.estimate).toEqual(
+    expect.objectContaining({ kmPerGal: 9.5 })
+  )
+  // Not a truck tank: no odometer asked
+  expect(screen.queryByLabelText('Odómetro (opcional)')).toBeNull()
+})
+
+test('an individual tank has no estimate', async () => {
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'none' },
+  })
+  measure('10')
+  expect(
+    await screen.findByText(
+      'Este tanque no es de un camión: no hay estimación de distancia.'
+    )
+  ).toBeInTheDocument()
+  expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+    expect.objectContaining({
+      equipment: { kind: 'none', id: null, name: null },
+      reading: expect.objectContaining({ estimate: null }) as unknown,
+    })
+  )
+})
+
+test('the last tank measured is chosen next time', async () => {
+  const { unmount } = render(<App />)
+  fireEvent.change(await screen.findByLabelText('Tanque'), {
+    target: { value: 'tank-2' },
+  })
+  measure('10')
+  unmount()
+
+  renderHome()
+  expect(await screen.findByLabelText('Tanque')).toHaveValue('tank-2')
+})
+
+test('a rejected save is reported', async () => {
+  measurementsApi.createCloudMeasurement.mockRejectedValueOnce(
+    new Error('permission-denied')
+  )
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'none' },
+  })
+  measure('10')
+  await waitFor(() => {
+    expect(sileo.error).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'No pudimos guardar la medición' })
+    )
+  })
+})
+
+test('Lectura calculates without saving', async () => {
+  signIn('viewer')
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'none' },
+  })
+  expect(
+    screen.getByText(
+      'Con tu rol de Lectura puedes calcular, pero no se guarda la medición.'
+    )
+  ).toBeInTheDocument()
+  measure('10')
+  expect(await screen.findByRole('status')).toBeInTheDocument()
+  expect(measurementsApi.createCloudMeasurement).not.toHaveBeenCalled()
+})
+
+test('without tanks it invites to add one', async () => {
+  fleetApi.readFleet.mockResolvedValue({ trucks: [], trailers: [], tanks: [] })
+  renderHome()
+  expect(
+    await screen.findByText('Agrega tus tanques para medir')
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: 'Agregar tanque' })
+  ).toBeInTheDocument()
+})

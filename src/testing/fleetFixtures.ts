@@ -1,4 +1,5 @@
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
+import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
 import type { Role } from 'utils/roles'
 
@@ -67,4 +68,35 @@ export const accountWithRole = (role: Role): Account => ({
   profile: { displayName: 'Luis', activeOrgId: ORG_ID },
   memberships: [{ orgId: ORG_ID, role, orgName: 'Flota de Luis' }],
   organization: { id: ORG_ID, name: 'Flota de Luis', defaultCurrency: 'NIO' },
+})
+
+export const cloudMeasurement = (
+  overrides: Partial<CloudMeasurement> = {}
+): CloudMeasurement => ({
+  id: 'm-1',
+  orgId: ORG_ID,
+  tankId: 'tank-1',
+  tankName: 'Tanque izquierdo',
+  equipment: { kind: 'truck', id: 'truck-1', name: 'Unidad 12' },
+  userId: 'luis',
+  userName: 'Luis',
+  takenAt: new Date(2026, 8, 30, 14, 5),
+  createdAt: new Date(),
+  location: { lat: 12.13, lng: -86.25, accuracyM: 12 },
+  place: {
+    country: 'Nicaragua',
+    countryCode: 'NI',
+    state: 'Managua',
+    city: 'Managua',
+  },
+  placeStatus: 'done',
+  legacyPlace: null,
+  inches: 12,
+  gallons: 70.5,
+  liters: 266.87,
+  fillPercent: 52.2,
+  estimate: { km: 669.75, miles: 416.16, kmPerGal: 9.5 },
+  odometerKm: 120500,
+  source: 'app',
+  ...overrides,
 })

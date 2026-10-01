@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
@@ -17,6 +17,7 @@ import {
   type MeasurementFormValues,
 } from 'schemas/measurementForm'
 import { useSelectedTankStore } from 'store/selectedTank'
+import { useSessionStore } from 'store/session'
 import { layout, radius } from 'theme/tokens'
 import type { FuelReading, Tank } from 'types'
 import { calculateReading } from 'utils/fuelReading'
@@ -24,6 +25,10 @@ import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 
 const NOT_MEASURED = '—'
+
+// With a session, the organization's tanks (backend specs/0004). Lazy: its
+// chunk brings the Firebase SDK, which the basic mode never downloads
+const CloudMeasurement = lazy(() => import('./CloudMeasurement'))
 
 // Read by screen readers only: the gauge and figures speak for themselves
 const visuallyHidden = {
@@ -183,6 +188,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
 
 export default function Home() {
   const selectedTank = useSelectedTankStore(state => state.selectedTank)
+  const sessionStatus = useSessionStore(state => state.status)
   const [, navigate] = useLocation()
 
   const chooseTank = () => {
@@ -199,7 +205,11 @@ export default function Home() {
       }}
     >
       <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
-        {selectedTank ? (
+        {sessionStatus === 'ready' || sessionStatus === 'loading' ? (
+          <Suspense fallback={null}>
+            {sessionStatus === 'ready' && <CloudMeasurement />}
+          </Suspense>
+        ) : selectedTank ? (
           // A different tank is a new form (fresh values and intent)
           <Measurement
             key={selectedTank.id}

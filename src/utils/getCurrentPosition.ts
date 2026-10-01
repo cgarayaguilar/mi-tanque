@@ -3,6 +3,11 @@ export interface Coordinates {
   longitude: number
 }
 
+export interface Position extends Coordinates {
+  /** Meters (68% confidence radius). */
+  accuracy: number
+}
+
 // Resolves with the device coordinates, or null when geolocation is unavailable,
 // denied or times out. Asked on demand so nothing keeps watching the GPS.
 export const getCurrentPosition = ({
@@ -11,7 +16,7 @@ export const getCurrentPosition = ({
 }: {
   timeout?: number
   maximumAge?: number
-} = {}): Promise<Coordinates | null> =>
+} = {}): Promise<Position | null> =>
   new Promise(resolve => {
     if (!('geolocation' in navigator)) {
       resolve(null)
@@ -20,7 +25,11 @@ export const getCurrentPosition = ({
 
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        resolve({ latitude: coords.latitude, longitude: coords.longitude })
+        resolve({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: coords.accuracy,
+        })
       },
       () => {
         resolve(null)
