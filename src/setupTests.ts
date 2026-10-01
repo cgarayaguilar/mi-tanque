@@ -5,6 +5,12 @@
 import '@testing-library/jest-dom/vitest'
 // jsdom has no IndexedDB; Dexie (services/db) needs one.
 import 'fake-indexeddb/auto'
+import { configure } from '@testing-library/react'
+
+// Screens load their chunk with lazy() the first time a test renders them;
+// on a busy machine or in CI that can pass the default 1 s of findBy* and
+// waitFor. 3 s keeps real failures fast enough without flaky timeouts
+configure({ asyncUtilTimeout: 3000 })
 
 // Sileo renders animated toasts that jsdom cannot lay out. Tests assert on the
 // calls instead: import { sileo } from 'sileo' and check sileo.success/error.
