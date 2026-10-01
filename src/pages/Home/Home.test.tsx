@@ -110,11 +110,15 @@ test('saves the measurement with the city name and shows the reading', async () 
   await waitFor(() => {
     expect(sileo.success).toHaveBeenCalledWith({ title: 'Medición guardada' })
   })
-  const [saved] = await db.measurements.toArray()
-  expect(saved).toMatchObject({
-    tankId,
-    inches: 12,
-    location: 'Managua, Nicaragua',
+  // The place name is added once the GPS and the geocoding answer
+  await waitFor(async () => {
+    expect(await db.measurements.toArray()).toEqual([
+      expect.objectContaining({
+        tankId,
+        inches: 12,
+        location: 'Managua, Nicaragua',
+      }),
+    ])
   })
   expect(String(fetch.mock.calls[0]?.[0])).toContain(
     'point.lat=12.13&point.lon=-86.25'
@@ -122,6 +126,28 @@ test('saves the measurement with the city name and shows the reading', async () 
   expect(
     screen.getByRole('img', { name: 'Tanque al 48%: 26.22 galones' })
   ).toBeInTheDocument()
+})
+
+// Regression: the save waited for the GPS (up to 10 s, or the permission
+// prompt) and the geocoding before storing anything, so "Guardando…" hung
+test('saves right away without waiting for the location', async () => {
+  const tankId = await selectTank()
+  Object.defineProperty(navigator, 'geolocation', {
+    configurable: true,
+    // Never answers, like a permission prompt nobody has replied to yet
+    value: { getCurrentPosition: () => undefined },
+  })
+  renderHome()
+
+  calculate('12')
+
+  await waitFor(() => {
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Medición guardada' })
+  })
+  expect(await db.measurements.toArray()).toEqual([
+    expect.objectContaining({ tankId, location: 'Sin ubicación' }),
+  ])
+  expect(screen.getByRole('button', { name: 'Calcular' })).toBeEnabled()
 })
 
 test('accepts decimal inches with a comma', async () => {

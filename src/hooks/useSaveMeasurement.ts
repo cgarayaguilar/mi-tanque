@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { sileo } from 'sileo'
-import { createMeasurement } from 'services/measurements'
+import {
+  createMeasurement,
+  updateMeasurementLocation,
+} from 'services/measurements'
 import { getPlaceName } from 'services/geocoding'
 import type { FuelReading, Tank } from 'types'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
@@ -19,6 +22,20 @@ const findLocation = async (): Promise<string> => {
   } catch (error) {
     if (navigator.onLine) reportError(error, { operation: 'reverseGeocode' })
     return NO_LOCATION
+  }
+}
+
+// Runs after the save: the GPS can take up to its timeout (or wait for the
+// permission prompt) and geocoding needs the network, so the user never waits
+// for them. If the app closes first, the measurement keeps "Sin ubicación".
+const addLocation = async (measurementId: number) => {
+  const location = await findLocation()
+  if (location === NO_LOCATION) return
+
+  try {
+    await updateMeasurementLocation(measurementId, location)
+  } catch (error) {
+    reportError(error, { operation: 'updateMeasurementLocation' })
   }
 }
 
@@ -42,16 +59,16 @@ export const useSaveMeasurement = (): ((
     const date = new Date()
 
     try {
-      const location = await findLocation()
-      await createMeasurement({
+      const measurementId = await createMeasurement({
         ...reading,
         date,
-        location,
+        location: NO_LOCATION,
         tankId: tank.id,
         intentId,
       })
       setIntentId(crypto.randomUUID())
       sileo.success({ title: 'Medición guardada' })
+      void addLocation(measurementId)
       return true
     } catch (error) {
       reportError(error, { operation: 'createMeasurement', tankId: tank.id })

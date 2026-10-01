@@ -22,6 +22,17 @@ export const createMeasurement = async (
   })
 }
 
+/**
+ * Adds the place name once it is known: measurements are saved right away
+ * and the location arrives later (it can take seconds, or never come).
+ */
+export const updateMeasurementLocation = async (
+  id: number,
+  location: string
+): Promise<void> => {
+  await db.measurements.update(id, { location })
+}
+
 // Older versions stored amounts as numbers; the app shows and computes them
 // as 2-decimal strings, so readers normalize them (§6.4)
 const toFixedAmount = (value: unknown) => {

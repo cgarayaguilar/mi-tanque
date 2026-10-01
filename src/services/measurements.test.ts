@@ -2,6 +2,7 @@ import { db } from 'services/db'
 import {
   createMeasurement,
   readMeasurementsInPeriod,
+  updateMeasurementLocation,
 } from 'services/measurements'
 import type { NewMeasurement } from 'types'
 
@@ -102,5 +103,15 @@ test('readMeasurementsInPeriod normalizes amounts stored as numbers', async () =
     liters: '99.25',
     fuelHeight: '',
     tankId: 1,
+  })
+})
+
+test('updateMeasurementLocation adds the place name later', async () => {
+  const id = await createMeasurement({ ...valid, location: 'Sin ubicación' })
+
+  await updateMeasurementLocation(id, 'Managua, Nicaragua')
+
+  expect(await db.measurements.get(id)).toMatchObject({
+    location: 'Managua, Nicaragua',
   })
 })
