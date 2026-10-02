@@ -55,7 +55,7 @@ import {
 } from 'store/session'
 import { colorTokens, layout, radius, typeScale } from 'theme/tokens'
 import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
-import { formatNumber } from 'utils/formatNumber'
+import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { maxInchesFor, rangeTruckFor, readingFor } from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
@@ -387,7 +387,7 @@ function EditDialog({
       cloudMeasurementFormSchema(tank ? maxInchesFor(tank) : 600)
     ),
     defaultValues: {
-      inches: formatNumber(measurement.inches),
+      inches: formatEditable(measurement.inches),
       odometer:
         measurement.odometerKm === null
           ? ''

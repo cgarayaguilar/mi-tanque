@@ -270,3 +270,25 @@ test('an unknown item says it was not found', async () => {
     await screen.findByRole('heading', { name: 'No encontramos ese camión' })
   ).toBeInTheDocument()
 })
+
+// Regression: a driver who left the organization stayed in the form, and the
+// rules refused every edit of the truck that kept them
+test('a truck whose driver left is saved unassigned', async () => {
+  api.readFleet.mockResolvedValue({
+    trucks: [truck({ assignedDriverUid: 'gone' })],
+    trailers: [trailer()],
+    tanks: [tank()],
+  })
+  renderAt('/flota/camiones/truck-1')
+  await screen.findByText('Luis (Dueño)')
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Guardar cambios' })
+  )
+  await waitFor(() => {
+    expect(api.updateFleetItem).toHaveBeenCalledWith(
+      'trucks',
+      'truck-1',
+      expect.objectContaining({ assignedDriverUid: null })
+    )
+  })
+})

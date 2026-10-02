@@ -21,3 +21,16 @@ export const formatNumber = (value: number | string, decimals?: number) => {
   }
   return formatter.format(number)
 }
+
+const editable = new Intl.NumberFormat('en-US', {
+  useGrouping: true,
+  maximumFractionDigits: 6,
+})
+
+/**
+ * A stored number back in a form field, with all its decimals: editing with
+ * the two shown in lists changed 24.125 to 24.13 on any save (audit
+ * 2026-10-01). parseDecimal reads it back.
+ */
+export const formatEditable = (value: number) =>
+  Number.isFinite(value) ? editable.format(value) : ''

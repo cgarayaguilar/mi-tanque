@@ -1,6 +1,7 @@
 import {
   equipmentFromValue,
   equipmentToValue,
+  convertDistanceFields,
   tankFormSchema,
   tankFromForm,
   tankToForm,
@@ -243,4 +244,19 @@ describe('tanks (RF-8)', () => {
     expect(equipmentFromValue('none')).toEqual({ kind: 'none', id: null })
     expect(equipmentFromValue('garbage')).toEqual({ kind: 'none', id: null })
   })
+})
+
+// Regression: switching km and mi kept the numbers, so an odometer of
+// 160,934 km was saved as 160,934 mi (259,000 km)
+test('switching the distance unit converts what was typed', () => {
+  expect(
+    convertDistanceFields(
+      { efficiency: '9.5', odometer: '160,934' },
+      'km',
+      'mi'
+    )
+  ).toEqual({ efficiency: '5.9', odometer: '100,000' })
+  expect(
+    convertDistanceFields({ efficiency: '', odometer: 'x' }, 'mi', 'km')
+  ).toEqual({ efficiency: '', odometer: 'x' })
 })

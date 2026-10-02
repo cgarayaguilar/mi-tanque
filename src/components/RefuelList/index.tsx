@@ -27,7 +27,7 @@ import type { RefuelFormValues } from 'schemas/refuelForm'
 import { radius } from 'theme/tokens'
 import type { RefuelValues } from 'types'
 import { formatMeasurementDate } from 'utils/formatDate'
-import { formatNumber } from 'utils/formatNumber'
+import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { refuelAmounts, refuelSummary } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import type { TankGeometry } from 'utils/tankVolume'
@@ -84,11 +84,11 @@ export const toFormValues = (
     priceUnit: item.priceUnit,
   }).total
   const optional = (value: number | null) =>
-    value === null ? '' : formatNumber(value)
+    value === null ? '' : formatEditable(value)
   return {
-    quantity: formatNumber(quantity),
+    quantity: formatEditable(quantity),
     quantityUnit: item.quantityUnit,
-    price: formatNumber(price),
+    price: formatEditable(price),
     priceUnit: item.priceUnit,
     currency: item.currency,
     // A total that differs only by the rounding of the stored quantity and
@@ -98,7 +98,7 @@ export const toFormValues = (
       Math.abs(item.total - computed) <=
       ROUNDING * (Math.abs(quantity) + Math.abs(price)) + ROUNDING * 2
         ? ''
-        : formatNumber(item.total),
+        : formatEditable(item.total),
     inchesBefore: optional(item.inchesBefore),
     inchesAfter: optional(item.inchesAfter),
     odometer:

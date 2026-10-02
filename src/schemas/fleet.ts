@@ -5,7 +5,7 @@ import {
   type TankOrientation,
   type TankShape,
 } from 'utils/tankVolume'
-import { formatNumber } from 'utils/formatNumber'
+import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 
 // Same lists and limits as solocamioneros-backend/firestore.rules (specs/0003)
@@ -371,7 +371,7 @@ const textOrNull = (value: string) => value.trim() || null
 const decimalOrNull = (value: string) =>
   value.trim() === '' ? null : parseDecimal(value)
 const show = (value: number | null) =>
-  value === null ? '' : formatNumber(value)
+  value === null ? '' : formatEditable(value)
 
 const colorFrom = (swatch: string, other: string): VehicleColor | null => {
   if (swatch === '') return null
@@ -419,6 +419,30 @@ export const truckFromForm = (values: TruckFormValues) => {
     // Whole kilometers: an odometer has no use for fractions
     odometerKm: odometer === null ? null : Math.round(odometer * toKm),
     assignedDriverUid: values.assignedDriverUid || null,
+  }
+}
+
+/**
+ * Efficiency and odometer as typed, in the other distance unit. Switching
+ * km and mi used to keep the numbers, so an odometer of 160,934 km saved as
+ * 160,934 mi (259,000 km) (audit 2026-10-01).
+ */
+export const convertDistanceFields = (
+  values: { efficiency: string; odometer: string },
+  from: DistanceUnit,
+  to: DistanceUnit
+): { efficiency: string; odometer: string } => {
+  if (from === to) return values
+  const factor = to === 'mi' ? 1 / KM_PER_MILE : KM_PER_MILE
+  const convert = (text: string, round: (value: number) => number) => {
+    const value = decimalOrNull(text)
+    return value === null || Number.isNaN(value)
+      ? text
+      : formatEditable(round(value * factor))
+  }
+  return {
+    efficiency: convert(values.efficiency, v => Math.round(v * 100) / 100),
+    odometer: convert(values.odometer, Math.round),
   }
 }
 

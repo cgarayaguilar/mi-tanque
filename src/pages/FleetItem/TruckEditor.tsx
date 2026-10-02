@@ -7,9 +7,11 @@ import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
 import {
+  convertDistanceFields,
   truckFormSchema,
   truckFromForm,
   truckToForm,
+  type DistanceUnit,
   type Truck,
   type TruckFormValues,
 } from 'schemas/fleet'
@@ -42,6 +44,8 @@ export default function TruckEditor({
     register,
     handleSubmit,
     control,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckFormSchema),
@@ -51,7 +55,16 @@ export default function TruckEditor({
   const unit = useWatch({ control, name: 'distanceUnit' })
 
   const onSubmit = (values: TruckFormValues) => {
-    const fields = truckFromForm(values)
+    // A driver who left the organization: the rules refuse any edit that
+    // keeps them, so the truck is left unassigned (audit 2026-10-01). Only
+    // with the members loaded, or a real driver would be dropped
+    const gone =
+      members.length > 0 &&
+      values.assignedDriverUid !== '' &&
+      !members.some(member => member.uid === values.assignedDriverUid)
+    const fields = truckFromForm(
+      gone ? { ...values, assignedDriverUid: '' } : values
+    )
     saveItem(
       {
         id,
@@ -146,7 +159,18 @@ export default function TruckEditor({
               { value: 'mi', label: 'Millas' },
             ]}
             hint="Para el rendimiento y el odómetro de este camión."
-            registration={register('distanceUnit')}
+            registration={register('distanceUnit', {
+              // The numbers typed follow the unit (`unit` is still the old one)
+              onChange: (event: { target: { value: DistanceUnit } }) => {
+                const converted = convertDistanceFields(
+                  getValues(),
+                  unit,
+                  event.target.value
+                )
+                setValue('efficiency', converted.efficiency)
+                setValue('odometer', converted.odometer)
+              },
+            })}
           />
           <NumberField
             id="efficiency"
