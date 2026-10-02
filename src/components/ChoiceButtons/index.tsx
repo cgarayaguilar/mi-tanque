@@ -6,6 +6,7 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import { Controller, type FieldValues } from 'react-hook-form'
 import type { ChoiceFieldProps, SelectOption } from 'components/SelectField'
+import { typeScale } from 'theme/tokens'
 
 interface ChoiceButtonsBaseProps {
   id: string
@@ -19,6 +20,8 @@ interface ChoiceButtonsBaseProps {
   disabled?: boolean
   /** Given to the first button, so a failed save can focus the choice. */
   firstRef?: Ref<HTMLButtonElement>
+  /** Smaller text, for a narrow column beside a field (specs/0012 RF-6). */
+  compact?: boolean
 }
 
 /**
@@ -37,6 +40,7 @@ export function ChoiceButtonsBase({
   error,
   disabled = false,
   firstRef,
+  compact = false,
 }: ChoiceButtonsBaseProps) {
   const labelId = `${id}-label`
   const helpId = `${id}-help`
@@ -63,6 +67,11 @@ export function ChoiceButtonsBase({
             key={option.value}
             value={option.value}
             ref={index === 0 ? firstRef : undefined}
+            sx={
+              compact
+                ? { ...typeScale.caption, fontWeight: 500, px: 1 }
+                : undefined
+            }
           >
             {option.label}
           </ToggleButton>
@@ -82,7 +91,7 @@ export default function ChoiceButtons<T extends FieldValues>({
   onChange,
   disabled = false,
   ...props
-}: ChoiceFieldProps<T>) {
+}: ChoiceFieldProps<T> & { compact?: boolean }) {
   return (
     <Controller
       control={control}

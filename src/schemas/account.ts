@@ -18,22 +18,47 @@ export const CURRENCIES = [
 ] as const
 export type Currency = (typeof CURRENCIES)[number]
 
-export const CURRENCY_NAMES: Record<Currency, string> = {
-  USD: 'Dólar estadounidense',
-  MXN: 'Peso mexicano',
-  GTQ: 'Quetzal',
-  BZD: 'Dólar beliceño',
-  HNL: 'Lempira',
-  NIO: 'Córdoba',
-  CRC: 'Colón costarricense',
-  PAB: 'Balboa',
+interface CurrencyDetails {
+  /** Plural and demonym, as people say it: "Córdobas nicaragüenses". */
+  name: string
+  /** Written before amounts: "C$9,274.26 NIO" (specs/0012 RF-2). */
+  symbol: string
+  /** Where it is used, so the list finds it by country. */
+  countries: string
 }
 
-/** For selects: "NIO · Córdoba". */
-export const CURRENCY_OPTIONS = CURRENCIES.map(currency => ({
-  value: currency,
-  label: `${currency} · ${CURRENCY_NAMES[currency]}`,
-}))
+// specs/0012 RF-1
+export const CURRENCY_DETAILS: Record<Currency, CurrencyDetails> = {
+  USD: {
+    name: 'Dólares estadounidenses',
+    symbol: '$',
+    countries: 'Estados Unidos El Salvador Panamá',
+  },
+  MXN: { name: 'Pesos mexicanos', symbol: '$', countries: 'México' },
+  GTQ: { name: 'Quetzales guatemaltecos', symbol: 'Q', countries: 'Guatemala' },
+  BZD: { name: 'Dólares beliceños', symbol: 'BZ$', countries: 'Belice' },
+  HNL: { name: 'Lempiras hondureños', symbol: 'L', countries: 'Honduras' },
+  NIO: { name: 'Córdobas nicaragüenses', symbol: 'C$', countries: 'Nicaragua' },
+  CRC: {
+    name: 'Colones costarricenses',
+    symbol: '₡',
+    countries: 'Costa Rica',
+  },
+  PAB: { name: 'Balboas panameños', symbol: 'B/.', countries: 'Panamá' },
+}
+
+/**
+ * For selects: "Córdobas nicaragüenses (C$)", found by name, code or
+ * country ("nio", "nicaragua").
+ */
+export const CURRENCY_OPTIONS = CURRENCIES.map(currency => {
+  const { name, symbol, countries } = CURRENCY_DETAILS[currency]
+  return {
+    value: currency,
+    label: `${name} (${symbol})`,
+    keywords: `${currency} ${countries}`,
+  }
+})
 
 const name = (missing: string) =>
   z.string().check(

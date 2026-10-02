@@ -121,6 +121,19 @@ tarjetas.
 - Medidor de **200px**: Medición entera cabe en una pantalla de teléfono (812px).
 - Barra de navegación **fija abajo** en Medición, Historial y Flota (esta última solo con sesión, con tres pestañas); los toasts quedan por encima de ella, salvo los de error, que salen arriba al centro.
 
+## Números, dinero y unidades
+
+- Números como en Centroamérica: punto decimal y coma de miles ("1,500.25"), con `formatNumber`.
+- **Dinero** (specs/0012), siempre con `utils/formatMoney`:
+  - Totales: símbolo al inicio y código al final, "C$9,274.26 NIO" (`moneyTotal`).
+  - Precios por unidad: solo el símbolo, "C$185.49/gal · C$49.00/litro" (`unitPrice`).
+  - En los campos de dinero, el símbolo va a la izquierda del número.
+  - Cada moneda se nombra en plural con su gentilicio y su símbolo: "Córdobas nicaragüenses
+    (C$)".
+- **Litros** se escribe completo ("189.27 litros", "por litro"), nunca "L": es el símbolo del
+  lempira. Galones se abrevia "gal".
+- Botones de unidad junto a un campo: `ChoiceButtons` con `compact` (texto `caption`).
+
 ## Componentes
 
 | Componente                   | Especificación                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |

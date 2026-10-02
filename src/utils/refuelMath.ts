@@ -54,6 +54,25 @@ export const refuelAmounts = ({
   }
 }
 
+/** How full the tank is, as when measuring: of its volume by measures. */
+export const fillPercent = (
+  geometry: TankGeometry,
+  gallons: number
+): number | null => {
+  const full = fullVolumeGallons(geometry)
+  return full <= 0 ? null : round2(Math.min(100, (gallons / full) * 100))
+}
+
+/** A level typed in inches, shown live (backend specs/0012 RF-8, RF-10). */
+export const levelAt = (geometry: TankGeometry, inches: number) => {
+  const gallons = gallonsAt(geometry, inches)
+  return {
+    gallons: round2(gallons),
+    liters: round2(gallons * LITERS_PER_GALLON),
+    percent: fillPercent(geometry, gallons),
+  }
+}
+
 export interface RefuelLevels {
   gallonsBefore: number | null
   gallonsAfter: number | null
@@ -89,9 +108,7 @@ export const refuelLevels = ({
         ? null
         : Math.min(full, before + gallonsAdded)
   const percent = (gallons: number | null) =>
-    gallons === null || full <= 0
-      ? null
-      : round2(Math.min(100, (gallons / full) * 100))
+    gallons === null ? null : fillPercent(geometry, gallons)
   return {
     gallonsBefore: before === null ? null : round2(before),
     gallonsAfter: after === null ? null : round2(after),

@@ -4,8 +4,10 @@ import TextField from 'components/TextField'
 interface NumberFieldProps {
   id: string
   label: string
-  /** Short unit shown inside the field, e.g. "pulg.". */
-  unit: string
+  /** Short unit shown inside the field, at the end, e.g. "pulg.". */
+  unit?: string | undefined
+  /** Shown inside the field before the number, e.g. "C$" (specs/0012 RF-4). */
+  prefix?: string | undefined
   placeholder: string
   /** Shown under the field until there is an error. */
   hint: string
@@ -17,6 +19,17 @@ interface NumberFieldProps {
  * Decimal input with its unit. Text, not type="number", so "1,500.5" and
  * keyboards that offer only a comma both work (utils/parseDecimal).
  */
-export default function NumberField({ unit, ...props }: NumberFieldProps) {
-  return <TextField {...props} inputMode="decimal" endAdornment={unit} />
+export default function NumberField({
+  unit,
+  prefix,
+  ...props
+}: NumberFieldProps) {
+  return (
+    <TextField
+      {...props}
+      inputMode="decimal"
+      startAdornment={prefix || undefined}
+      endAdornment={unit || undefined}
+    />
+  )
 }

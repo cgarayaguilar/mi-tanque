@@ -15,14 +15,11 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlaceIcon from '@mui/icons-material/Place'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import ConfirmDialog from 'components/ConfirmDialog'
-import RefuelForm, {
-  levelText,
-  money,
-  type RefuelResult,
-} from 'components/RefuelForm'
+import RefuelForm, { levelText, type RefuelResult } from 'components/RefuelForm'
 import Stat from 'components/Stat'
 import { useLoad } from 'hooks/useLoad'
 import { KM_PER_MILE } from 'schemas/fleet'
+import { moneyTotal, unitPrices } from 'utils/formatMoney'
 import type { RefuelFormValues } from 'schemas/refuelForm'
 import { radius } from 'theme/tokens'
 import type { RefuelValues } from 'types'
@@ -64,8 +61,8 @@ export interface TruckEfficiencyRow {
 
 const written = (item: RefuelItem) =>
   item.quantityUnit === 'liter'
-    ? `${formatNumber(item.litersAdded, 2)} L (${formatNumber(item.gallonsAdded, 2)} gal)`
-    : `${formatNumber(item.gallonsAdded, 2)} gal (${formatNumber(item.litersAdded, 2)} L)`
+    ? `${formatNumber(item.litersAdded, 2)} litros (${formatNumber(item.gallonsAdded, 2)} gal)`
+    : `${formatNumber(item.gallonsAdded, 2)} gal (${formatNumber(item.litersAdded, 2)} litros)`
 
 // Quantity and price are stored with 2 decimals: half a cent each way
 const ROUNDING = 0.005
@@ -143,15 +140,19 @@ export function RefuelPeriodSummary({
           size="small"
           label="Combustible"
           value={`${formatNumber(summary.gallons, 2)} gal`}
-          caption={`${formatNumber(summary.liters, 2)} L · ${String(items.length)} ${items.length === 1 ? 'relleno' : 'rellenos'}`}
+          caption={`${formatNumber(summary.liters, 2)} litros · ${String(items.length)} ${items.length === 1 ? 'relleno' : 'rellenos'}`}
         />
         {summary.byCurrency.map(group => (
           <Stat
             key={group.currency}
             size="small"
             label={`Gastado en ${group.currency}`}
-            value={money(group.currency, group.total)}
-            caption={`${money(group.currency, group.perGallon)}/gal · ${money(group.currency, group.perLiter)}/L`}
+            value={moneyTotal(group.currency, group.total)}
+            caption={unitPrices(
+              group.currency,
+              group.perGallon,
+              group.perLiter
+            )}
           />
         ))}
       </Box>
@@ -255,7 +256,7 @@ function RefuelRow({
           {item.userName && ` · ${item.userName}`}
         </Typography>
         <Typography variant="subtitle2" component="span">
-          {money(item.currency, item.total)}
+          {moneyTotal(item.currency, item.total)}
         </Typography>
         {editable && (
           <>
@@ -304,8 +305,7 @@ function RefuelRow({
         sx={{ color: 'text.secondary' }}
       >
         {[item.tankName, item.equipmentName].filter(Boolean).join(' · ')} ·{' '}
-        {money(item.currency, item.pricePerGallon)}/gal ·{' '}
-        {money(item.currency, item.pricePerLiter)}/L
+        {unitPrices(item.currency, item.pricePerGallon, item.pricePerLiter)}
       </Typography>
       <Typography
         variant="caption"

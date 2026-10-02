@@ -132,7 +132,7 @@ test('the summary shows money per currency and the truck efficiency by levels (C
   const summary = await screen.findByRole('region', {
     name: 'Resumen del periodo',
   })
-  expect(summary).toHaveTextContent('Gastado en NIONIO 28,600.00')
+  expect(summary).toHaveTextContent('Gastado en NIOC$28,600.00 NIO')
   // 1 000 km with 180 − 60 = 120 gal
   expect(summary).toHaveTextContent('Unidad 12: 8.3 km/gal (1,000 km, 120 gal)')
   expect(refuelsApi.readRefuelsPage).toHaveBeenCalledWith(

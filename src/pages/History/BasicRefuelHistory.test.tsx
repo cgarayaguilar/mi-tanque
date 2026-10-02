@@ -90,19 +90,19 @@ test('summarizes the period per currency and lists the refuels (RF-8, RF-10)', a
     name: 'Resumen del periodo',
   })
   expect(summary).toHaveTextContent('33.21 gal')
-  expect(summary).toHaveTextContent('Gastado en NIONIO 1,500.00')
-  expect(summary).toHaveTextContent('Gastado en USDUSD 80.00')
+  expect(summary).toHaveTextContent('Gastado en NIOC$1,500.00 NIO')
+  expect(summary).toHaveTextContent('Gastado en USD$80.00 USD')
 
   const rows = within(
     screen.getByRole('list', { name: 'Rellenos' })
   ).getAllByRole('listitem')
-  expect(rows[0]).toHaveTextContent('50.00 L (13.21 gal)')
+  expect(rows[0]).toHaveTextContent('50.00 litros (13.21 gal)')
   expect(rows[0]).toHaveTextContent('Tanque de 50 gal')
   expect(rows[0]).toHaveTextContent(
     'Antes 20.00 gal (40 %) → Después 33.21 gal (66 %)'
   )
   expect(rows[0]).toHaveTextContent('Puma Km 7')
-  expect(rows[1]).toHaveTextContent('20.00 gal (75.71 L)')
+  expect(rows[1]).toHaveTextContent('20.00 gal (75.71 litros)')
 })
 
 test('a refuel is corrected and deleted on this phone (RF-11)', async () => {

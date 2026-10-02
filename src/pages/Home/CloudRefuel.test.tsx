@@ -92,9 +92,13 @@ afterEach(() => {
 test('a truck refuel saves the amounts, the levels and the truck totals (CA-1, RF-9)', async () => {
   await openRefuel()
   // The organization's currency is proposed
-  expect(screen.getByLabelText('Moneda')).toHaveValue('NIO · Córdoba')
+  expect(screen.getByLabelText('Moneda')).toHaveValue(
+    'Córdobas nicaragüenses (C$)'
+  )
   type('Cantidad echada', '50')
   type('Precio', '30')
+  // specs/0012 RF-11: the odometer waits in "Ver más detalles"
+  fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
   type('Odómetro (opcional)', '120600')
   type('Gasolinera (opcional)', 'Puma Km 7')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))
@@ -124,6 +128,25 @@ test('a truck refuel saves the amounts, the levels and the truck totals (CA-1, R
   )
   expect(sileo.success).toHaveBeenCalledWith({ title: 'Relleno guardado' })
   expect(queue.enqueueInvoice).not.toHaveBeenCalled()
+})
+
+// specs/0012 CA-7: a wrong odometer in the closed section opens it
+test('an invalid odometer opens "Ver más detalles" and is focused', async () => {
+  await openRefuel()
+  type('Cantidad echada', '50')
+  type('Precio', '30')
+  const toggle = screen.getByRole('button', { name: 'Ver más detalles' })
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  type('Odómetro (opcional)', '99999999')
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Odómetro (opcional)')).toHaveFocus()
+  })
+  expect(
+    screen.getByRole('button', { name: 'Ocultar detalles' })
+  ).toHaveAttribute('aria-expanded', 'true')
+  expect(refuelsApi.createCloudRefuel).not.toHaveBeenCalled()
 })
 
 test('stations are suggested from the organization (RF-5)', async () => {
