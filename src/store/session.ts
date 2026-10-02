@@ -237,17 +237,37 @@ export const useSessionStore = create<SessionState>()((set, get) => {
 export const selectActiveRole = (state: SessionState) =>
   state.memberships.find(m => m.orgId === state.organization?.id)?.role ?? null
 
+const accessOf = (state: SessionState) =>
+  `${state.organization?.id ?? ''}|${selectActiveRole(state) ?? ''}`
+
 /**
- * The rules rejected a write: the role or the membership changed while the
- * app was open (backend specs/0005 RF-12). Reloads the account and tells the
- * user. False for any other error, which the caller reports as usual.
+ * The rules rejected a write (backend specs/0005 RF-12). Reloads the account
+ * and tells the user what happened: their role or membership changed while
+ * the app was open, or, if not, the server refused the data itself (the
+ * phone's clock ahead, a reading out of range), which is no permission
+ * matter. False for any other error, which the caller reports as usual.
  */
 export const recoverFromLostPermission = (error: unknown): boolean => {
   if (!isPermissionDenied(error)) return false
-  void useSessionStore.getState().refresh()
-  sileo.warning({
-    title: 'Tus permisos cambiaron',
-    description: 'Actualizamos tu cuenta. Revisa tu rol en Mi cuenta.',
-  })
+  const session = useSessionStore.getState()
+  const before = accessOf(session)
+  void session
+    .refresh()
+    .catch(() => undefined)
+    .then(() => {
+      if (accessOf(useSessionStore.getState()) !== before) {
+        sileo.warning({
+          title: 'Tus permisos cambiaron',
+          description: 'Actualizamos tu cuenta. Revisa tu rol en Mi cuenta.',
+        })
+      } else {
+        // Regression: a refused reading was blamed on permissions
+        sileo.error({
+          title: 'El servidor no aceptó el cambio',
+          description:
+            'Revisa que la fecha y hora del teléfono sean correctas y que los datos estén bien.',
+        })
+      }
+    })
   return true
 }

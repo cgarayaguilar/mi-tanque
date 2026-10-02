@@ -248,6 +248,13 @@ describe('specs/0005', () => {
     emit(ana)
     await settled()
     api.readAccount.mockClear()
+    api.readAccount.mockResolvedValueOnce({
+      ...readyAccount,
+      memberships: readyAccount.memberships.map(m => ({
+        ...m,
+        role: 'viewer' as const,
+      })),
+    })
     const { recoverFromLostPermission } = await import('store/session')
 
     expect(recoverFromLostPermission(new Error('offline'))).toBe(false)
@@ -261,6 +268,25 @@ describe('specs/0005', () => {
       description: 'Actualizamos tu cuenta. Revisa tu rol en Mi cuenta.',
     })
     expect(store.getState().status).toBe('ready')
+  })
+
+  // Regression: a reading the rules refused for its data (the phone's clock
+  // ahead, out of range) was shown as "Tus permisos cambiaron"
+  test('a refusal with the same role is not blamed on permissions', async () => {
+    const { sileo } = await import('sileo')
+    const { emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    const { recoverFromLostPermission } = await import('store/session')
+
+    recoverFromLostPermission({ code: 'permission-denied', message: '' })
+    await settled()
+    expect(sileo.warning).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Tus permisos cambiaron' })
+    )
+    expect(sileo.error).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'El servidor no aceptó el cambio' })
+    )
   })
 
   test('creating an organization calls the callable and reloads', async () => {

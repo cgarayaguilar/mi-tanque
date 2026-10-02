@@ -147,6 +147,22 @@ describe('tanks (RF-8)', () => {
     expect(tankMessages({ diameter: '25', length: '40' })).toBeUndefined()
   })
 
+  // Regression: measures giving more than twice the capacity (centimeters
+  // typed as inches) only warned, and the rules then refused every reading
+  test('measures over twice the capacity are refused', () => {
+    expect(
+      tankMessages({ diameter: '60', length: '120', capacity: '100' })
+    ).toEqual([
+      [
+        'capacity',
+        'Las medidas dan 1,469 gal, más del doble de la capacidad. Revisa que estén en pulgadas',
+      ],
+    ])
+    expect(
+      tankMessages({ diameter: '25', length: '40', capacity: '60' })
+    ).toBeUndefined()
+  })
+
   test('a D tank asks for height and width, and the round side must fit', () => {
     expect(
       tankMessages({

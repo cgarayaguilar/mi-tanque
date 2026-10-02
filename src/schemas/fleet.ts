@@ -1,6 +1,10 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
-import type { TankOrientation, TankShape } from 'utils/tankVolume'
+import {
+  fullVolumeGallons,
+  type TankOrientation,
+  type TankShape,
+} from 'utils/tankVolume'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 
@@ -261,6 +265,27 @@ const inRange = (value: string, min: number, max: number) => {
   return !Number.isNaN(number) && number >= min && number <= max
 }
 
+/**
+ * The rules hold every reading to twice the capacity (backend specs/0004):
+ * measures that give more, like centimeters typed as inches, would have
+ * every measurement of the tank refused after it said "saved".
+ */
+const fitsCapacity = (
+  values: { capacity: string } & Parameters<typeof tankGeometryFromForm>[0],
+  ctx: { issues: unknown[] }
+) => {
+  const capacity = parseDecimal(values.capacity)
+  if (!Number.isFinite(capacity) || capacity <= 0) return
+  const volume = fullVolumeGallons(tankGeometryFromForm(values))
+  if (!Number.isFinite(volume) || volume <= capacity * 2) return
+  ctx.issues.push({
+    code: 'custom',
+    input: values.capacity,
+    path: ['capacity'],
+    message: `Las medidas dan ${formatNumber(volume, 0)} gal, más del doble de la capacidad. Revisa que estén en pulgadas`,
+  })
+}
+
 export const tankFormSchema = z
   .object({
     name: requiredText('Escribe el nombre del tanque', FLEET_LIMITS.name),
@@ -306,15 +331,16 @@ export const tankFormSchema = z
         return true
       }
       const { min: lMin, max: lMax } = FLEET_LIMITS.tankLength
-      check('length', 'el largo', lMin, lMax)
+      const lengthOk = check('length', 'el largo', lMin, lMax)
 
       if (values.shape === 'cylinder') {
-        check('diameter', 'el diámetro', min, max)
+        if (check('diameter', 'el diámetro', min, max) && lengthOk)
+          fitsCapacity(values, ctx)
         return
       }
       const heightOk = check('height', 'el alto', min, max)
       const widthOk = check('width', 'el ancho', min, max)
-      if (!heightOk || !widthOk) return
+      if (!heightOk || !widthOk || !lengthOk) return
 
       const height = parseDecimal(values.height)
       const width = parseDecimal(values.width)
@@ -334,6 +360,7 @@ export const tankFormSchema = z
           message: 'El alto debe ser al menos la mitad del ancho',
         })
       }
+      fitsCapacity(values, ctx)
     })
   )
 export type TankFormValues = z.infer<typeof tankFormSchema>
