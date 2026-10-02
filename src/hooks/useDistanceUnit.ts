@@ -1,26 +1,21 @@
-import { useEffect } from 'react'
-import { useFleetStore } from 'store/fleet'
+import { useState } from 'react'
 import { useSessionStore } from 'store/session'
-import { organizationDistanceUnit } from 'utils/distanceUnit'
-
-/** The active organization's distance unit (backend specs/0010). */
-export const useDistanceUnit = () => {
-  const saved = useSessionStore(state => state.organization?.distanceUnit)
-  const trucks = useFleetStore(state => state.trucks)
-  return organizationDistanceUnit(saved, trucks)
-}
 
 /**
- * The same where the fleet is not loaded (Mi cuenta): without a saved unit
- * it comes from the trucks (RF-3), so they are read.
+ * The active organization's distance unit (backend specs/0010). It is known
+ * when the session is ready: an organization from before the setting gets it
+ * settled then (services/session), never guessed from the loaded trucks.
  */
-export const useOrganizationDistanceUnit = () => {
-  const orgId = useSessionStore(state => state.organization?.id ?? null)
-  const saved = useSessionStore(state => state.organization?.distanceUnit)
-  const fleetOrgId = useFleetStore(state => state.orgId)
-  const load = useFleetStore(state => state.load)
-  useEffect(() => {
-    if (!saved && orgId && fleetOrgId !== orgId) void load(orgId)
-  }, [saved, orgId, fleetOrgId, load])
-  return useDistanceUnit()
+export const useDistanceUnit = () =>
+  useSessionStore(state => state.organization?.distanceUnit ?? 'km')
+
+/**
+ * The unit when a form opened, for both showing and saving its numbers: a
+ * change of the organization's unit while it is open cannot convert them
+ * twice (audit 2026-10-02).
+ */
+export const useFormDistanceUnit = () => {
+  const unit = useDistanceUnit()
+  const [pinned] = useState(unit)
+  return pinned
 }

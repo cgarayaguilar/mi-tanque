@@ -28,6 +28,8 @@ import { httpsCallable } from 'firebase/functions'
 import * as z from 'zod/mini'
 import { CURRENCIES, type Currency } from 'schemas/account'
 import { loadFirebase, signOutAndClearFirebase } from 'services/firebase'
+import { majorityUnit } from 'utils/distanceUnit'
+import { reportError } from 'utils/reportError'
 import { ROLES } from 'utils/roles'
 
 export interface SessionUser {
@@ -196,9 +198,40 @@ export const readAccount = async (uid: string): Promise<Account> => {
         ...organizationSchema.parse(organizationSnapshot.data()),
       }
     : null
+  if (organization && !organization.distanceUnit) {
+    organization.distanceUnit = await settleDistanceUnit(organization.id)
+  }
 
   return { profile, memberships, organization, needsContactSync }
 }
+
+/**
+ * The unit of an organization from before specs/0010 (RF-3), known before
+ * any screen opens: settled once on the server; without a connection, from
+ * the trucks this phone has (audit 2026-10-02: guessing it later, from
+ * whatever trucks had loaded, changed it under open forms).
+ */
+const settleDistanceUnit = async (orgId: string): Promise<'km' | 'mi'> => {
+  try {
+    const result = await callAccount({ action: 'settleDistanceUnit', orgId })
+    return settledSchema.parse(result).distanceUnit
+  } catch (error) {
+    reportError(error, { operation: 'settleDistanceUnit' })
+    const { db } = await loadFirebase()
+    const trucks = await getDocs(
+      query(
+        collection(db, 'trucks'),
+        where('orgId', '==', orgId),
+        where('archived', '==', false)
+      )
+    )
+    return majorityUnit(
+      trucks.docs.map((document): unknown => document.get('distanceUnit'))
+    )
+  }
+}
+
+const settledSchema = z.object({ distanceUnit: z.enum(['km', 'mi']) })
 
 export type AccountRequest =
   | { action: 'warmup' }
@@ -209,6 +242,7 @@ export type AccountRequest =
       currency: Currency
     }
   | { action: 'updateProfile'; displayName: string }
+  | { action: 'settleDistanceUnit'; orgId: string }
   | {
       action: 'updateOrganization'
       orgId: string

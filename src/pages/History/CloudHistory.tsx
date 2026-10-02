@@ -57,7 +57,8 @@ import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
 import { equipmentLabel } from 'hooks/equipmentLabel'
-import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { useDistanceUnit, useFormDistanceUnit } from 'hooks/useDistanceUnit'
+import { odometerText } from 'utils/distanceUnit'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -114,6 +115,7 @@ function MeasurementRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const distanceUnit = useDistanceUnit()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const estimate = measurement.estimate
   return (
@@ -194,7 +196,7 @@ function MeasurementRow({
             ? ` · ~${formatNumber(Math.round(estimate.km))} km (${formatNumber(Math.round(estimate.miles))} mi)`
             : ''}
           {measurement.odometerKm !== null
-            ? ` · odómetro ${formatNumber(measurement.odometerKm)} km`
+            ? ` · odómetro ${odometerText(measurement.odometerKm, distanceUnit)}`
             : ''}
         </Typography>
       </Box>
@@ -374,7 +376,7 @@ function EditDialog({
     item => !item.archived || item.id === measurement.tankId
   )
   const truck = tank ? rangeTruckFor(tank, trucks, trailers) : null
-  const unit = useDistanceUnit()
+  const unit = useFormDistanceUnit()
   const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
   const {
     register,

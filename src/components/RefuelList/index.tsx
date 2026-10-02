@@ -31,6 +31,8 @@ import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { refuelAmounts, refuelSummary } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import type { TankGeometry } from 'utils/tankVolume'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { odometerText } from 'utils/distanceUnit'
 
 /** A refuel as the lists show it, with or without an account. */
 export interface RefuelItem extends RefuelValues {
@@ -240,6 +242,7 @@ function RefuelRow({
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const [showInvoice, setShowInvoice] = useState(false)
+  const distanceUnit = useDistanceUnit()
   const date = formatMeasurementDate(item.takenAt)
   return (
     <Box component="li" sx={{ py: 3 }}>
@@ -312,7 +315,7 @@ function RefuelRow({
         Antes {levelText(item.gallonsBefore, item.fillPercentBefore)} → Después{' '}
         {levelText(item.gallonsAfter, item.fillPercentAfter)}
         {item.odometerKm !== null &&
-          ` · odómetro ${formatNumber(item.odometerKm)} km`}
+          ` · odómetro ${odometerText(item.odometerKm, distanceUnit)}`}
       </Typography>
       {(item.stationName ?? item.place) && (
         <Typography

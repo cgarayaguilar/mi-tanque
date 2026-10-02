@@ -37,7 +37,7 @@ import {
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
-import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { useDistanceUnit, useFormDistanceUnit } from 'hooks/useDistanceUnit'
 
 const NOT_MEASURED = '—'
 const INDIVIDUAL = 'none'
@@ -151,7 +151,7 @@ function MeasureForm({
 }) {
   const [reading, setReading] = useState<CloudReading | null>(null)
   const maxInches = maxInchesFor(tank)
-  const odometerUnit = useDistanceUnit()
+  const odometerUnit = useFormDistanceUnit()
   const asksOdometer = tank.equipment.kind === 'truck' && truck !== null
   const {
     register,

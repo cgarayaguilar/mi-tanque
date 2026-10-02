@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import { useOrganizationDistanceUnit } from 'hooks/useDistanceUnit'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 import { useImportLocalData } from 'hooks/useImportLocalData'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -164,13 +164,12 @@ function OrganizationSwitcher() {
 function OrganizationForm() {
   const organization = useSessionStore(state => state.organization)
   const updateOrganization = useSessionStore(state => state.updateOrganization)
-  const distanceUnit = useOrganizationDistanceUnit()
+  const distanceUnit = useDistanceUnit()
   const {
     register,
     handleSubmit,
     control,
     reset,
-    setValue,
     formState: { errors, isSubmitting, isDirty, dirtyFields },
   } = useForm<OrganizationSettingsValues>({
     resolver: zodResolver(organizationSettingsSchema),
@@ -180,12 +179,6 @@ function OrganizationForm() {
       distanceUnit,
     },
   })
-
-  // Without a saved unit it comes from the trucks, which load after the form
-  // (specs/0010 RF-3): follow them until the user picks one
-  useEffect(() => {
-    if (!dirtyFields.distanceUnit) setValue('distanceUnit', distanceUnit)
-  }, [distanceUnit, dirtyFields.distanceUnit, setValue])
 
   const onSubmit = async (values: OrganizationSettingsValues) => {
     try {
@@ -256,7 +249,7 @@ function OrganizationForm() {
 function OrganizationSection() {
   const organization = useSessionStore(state => state.organization)
   const role = useSessionStore(selectActiveRole)
-  const distanceUnit = useOrganizationDistanceUnit()
+  const distanceUnit = useDistanceUnit()
 
   return (
     <Section id="organization-title" title="Organización">

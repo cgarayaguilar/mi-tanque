@@ -17,7 +17,7 @@ import {
   type Truck,
   type TruckFormValues,
 } from 'schemas/fleet'
-import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { useFormDistanceUnit } from 'hooks/useDistanceUnit'
 import { useFleetStore } from 'store/fleet'
 import { ROLE_LABELS } from 'utils/roles'
 import type { FleetSection } from 'utils/fleetSections'
@@ -56,13 +56,13 @@ export default function TruckEditor({
   const members = useFleetStore(state => state.members)
   const saveItem = useSaveFleetItem(section)
   // Typed and shown in the organization's unit (backend specs/0010 RF-4)
-  const unit = useDistanceUnit()
+  const unit = useFormDistanceUnit()
   const {
     register,
     handleSubmit,
     control,
     setFocus,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckFormSchema),
     defaultValues: truckToForm(truck, unit),
@@ -87,6 +87,12 @@ export default function TruckEditor({
       gone ? { ...values, assignedDriverUid: '' } : values,
       unit
     )
+    // Untouched, they keep what is stored: shown rounded in miles, they came
+    // back a kilometer off on every save (audit 2026-10-02)
+    if (truck && !dirtyFields.odometer) fields.odometerKm = truck.odometerKm
+    if (truck && !dirtyFields.efficiency) {
+      fields.fuelEfficiencyKmPerGal = truck.fuelEfficiencyKmPerGal
+    }
     saveItem(
       {
         id,

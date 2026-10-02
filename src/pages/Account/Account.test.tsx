@@ -21,11 +21,6 @@ const api = vi.hoisted(() => ({
   signOutAndClear: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/session', () => api)
-// Mi cuenta reads the trucks for an organization without a saved unit
-vi.mock('services/fleet', () => ({
-  readFleet: () => Promise.resolve({ trucks: [], trailers: [], tanks: [] }),
-  readMembers: () => Promise.resolve([]),
-}))
 
 // Mi cuenta → Equipo reads the team (specs/0005); not under test here
 vi.mock('services/team', () => ({
