@@ -124,6 +124,9 @@ en cada push y PR.
   previa `TankPreview` dibuja el tanque en 3D a escala con `utils/tankProjection` (pura, con tests
   de proporciones) y compara el volumen con la capacidad (`capacityMatches` de `utils/tankVolume`).
   La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
+- **Catálogo de tanques (specs/0014):** `components/TankCatalog` (lógica pura en
+  `utils/tankCatalog`) lo usan `ModelPicker` ("De un modelo", en un diálogo) y "Elige tu tanque"
+  sin cuenta. `TankSolid` dibuja el sólido para la vista previa y las miniaturas.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
