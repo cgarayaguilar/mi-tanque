@@ -237,6 +237,31 @@ const openOptions = async (choice: 'Editar' | 'Borrar') => {
   fireEvent.click(screen.getByRole('menuitem', { name: choice }))
 }
 
+// Regression: a tank no longer on a truck has no odometer field, and saving
+// any correction erased the odometer the measurement had
+test('correcting a measurement of a tank off its truck keeps its odometer', async () => {
+  historyApi.readHistoryPage.mockResolvedValue({
+    items: [cloudMeasurement({ tankId: 'tank-2', odometerKm: 120500 })],
+    cursor: null,
+  })
+  renderHistory()
+  await openOptions('Editar')
+
+  const dialog = screen.getByRole('dialog', { name: 'Corregir medición' })
+  fireEvent.change(within(dialog).getByLabelText('Pulgadas de combustible'), {
+    target: { value: '10' },
+  })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+
+  await waitFor(() => {
+    expect(historyApi.updateCloudMeasurement).toHaveBeenCalledWith(
+      'm-1',
+      'luis',
+      expect.objectContaining({ tankId: 'tank-2', odometerKm: 120500 })
+    )
+  })
+})
+
 test('editing recomputes with the chosen tank and saves without waiting (RF-12, CA-7)', async () => {
   historyApi.readHistoryPage.mockResolvedValue({
     items: [cloudMeasurement()],

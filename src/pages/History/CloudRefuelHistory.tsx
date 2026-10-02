@@ -25,6 +25,7 @@ import {
   useSessionStore,
 } from 'store/session'
 import { radius } from 'theme/tokens'
+import type { FleetTank } from 'schemas/fleet'
 import type { Period } from 'types'
 import { geometryOf, maxInchesFor } from 'utils/measurementMath'
 import { truckEfficiency, truckTotals } from 'utils/refuelMath'
@@ -150,6 +151,11 @@ export default function CloudRefuelHistory({
     }
   )
 
+  const truckOf = (tank: FleetTank) =>
+    tank.equipment.kind === 'truck'
+      ? trucks.find(candidate => candidate.id === tank.equipment.id)
+      : undefined
+
   return (
     <Stack spacing={4}>
       <RefuelPeriodSummary items={items} efficiency={efficiency} />
@@ -163,10 +169,7 @@ export default function CloudRefuelHistory({
           const refuel = byId.get(item.id)
           const tank = tanks.find(candidate => candidate.id === refuel?.tankId)
           if (!tank) return null
-          const truck =
-            tank.equipment.kind === 'truck'
-              ? trucks.find(candidate => candidate.id === tank.equipment.id)
-              : undefined
+          const truck = truckOf(tank)
           return {
             geometry: geometryOf(tank),
             maxInches: maxInchesFor(tank),
@@ -188,7 +191,14 @@ export default function CloudRefuelHistory({
             refuel.equipment.kind === 'truck'
               ? truckTotals(values, [rest])
               : { truckGallonsBefore: null, truckGallonsAfter: null }
-          const edit = { values, totals, odometerKm }
+          // Without a truck the form does not ask the odometer: keep the one
+          // saved instead of erasing it (audit 2026-10-01)
+          const tank = tanks.find(candidate => candidate.id === refuel.tankId)
+          const edit = {
+            values,
+            totals,
+            odometerKm: tank && truckOf(tank) ? odometerKm : refuel.odometerKm,
+          }
           refuels.applyEdit(refuel.id, edit)
           updateCloudRefuel(refuel.id, uid, edit).catch((error: unknown) => {
             reportError(error, { operation: 'updateCloudRefuel' })

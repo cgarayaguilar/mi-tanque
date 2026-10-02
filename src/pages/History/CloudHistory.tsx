@@ -60,6 +60,7 @@ import { maxInchesFor, rangeTruckFor, readingFor } from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
+import { equipmentLabel } from 'hooks/equipmentLabel'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -403,27 +404,33 @@ function EditDialog({
         : null
 
   const onSubmit = ({ inches, odometer }: CloudMeasurementFormValues) => {
-    if (!tank) return
+    if (!tank) {
+      // Regression: "Guardar" did nothing while the fleet had not loaded
+      sileo.error({
+        title: 'Todavía no cargamos el tanque',
+        description: 'Espera un momento y vuelve a intentarlo.',
+      })
+      return
+    }
     const edit: MeasurementEdit = {
       tankId: tank.id,
       tankName: tank.name,
-      equipment:
-        tank.equipment.kind === 'none'
-          ? { kind: 'none', id: null, name: null }
-          : {
-              kind: tank.equipment.kind,
-              id: tank.equipment.id,
-              name: equipmentNameOf(tank) ?? '',
-            },
+      equipment: equipmentLabel(tank, equipmentNameOf(tank)),
       reading: readingFor(
         tank,
         parseDecimal(inches),
         truck?.fuelEfficiencyKmPerGal ?? null
       ),
+      // Without a truck the form does not ask it: the same tank keeps the
+      // one saved (it was erased); another tank has none
       odometerKm:
-        tank.equipment.kind === 'truck' && odometer.trim() !== ''
-          ? Math.round(parseDecimal(odometer) / fromKm)
-          : null,
+        tank.equipment.kind === 'truck'
+          ? odometer.trim() !== ''
+            ? Math.round(parseDecimal(odometer) / fromKm)
+            : null
+          : tank.id === measurement.tankId
+            ? measurement.odometerKm
+            : null,
     }
     applyEdit(measurement.id, edit)
     updateCloudMeasurement(measurement.id, uid, edit).catch(
