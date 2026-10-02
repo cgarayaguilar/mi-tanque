@@ -129,6 +129,21 @@ test('without a session it sends the user to sign in', async () => {
   })
 })
 
+// Regression: a ready account went through Mi cuenta (a flash and its
+// chunk) before Welcome sent it to Medición
+test('an account already set up goes straight to Medición', async () => {
+  useSessionStore.setState({
+    status: 'ready',
+    start: () => Promise.resolve(),
+  })
+  window.history.pushState({}, '', '/bienvenida')
+  render(<App />)
+
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/')
+  })
+})
+
 test('someone left without organizations only names a new one (specs/0005)', async () => {
   useSessionStore.setState({
     status: 'needsOnboarding',

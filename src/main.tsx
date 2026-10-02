@@ -4,11 +4,13 @@ import { sileo } from 'sileo'
 import App from './App'
 import ErrorBoundary from 'components/ErrorBoundary'
 import registerServiceWorker from './registerServiceWorker'
+import { reloadOnOldChunks } from 'utils/chunkReload'
 import { redirectFromLegacyHost } from 'utils/legacyHost'
 import { placeToasts } from 'utils/toastPositions'
 
 const start = () => {
   placeToasts(sileo)
+  reloadOnOldChunks()
   const rootElement = document.getElementById('root')
 
   if (!rootElement) {

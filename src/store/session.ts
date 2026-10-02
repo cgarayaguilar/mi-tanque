@@ -7,6 +7,7 @@ import type {
   SessionUser,
 } from 'services/session'
 import { sileo } from 'sileo'
+import { forgetInvitation } from 'utils/pendingInvitation'
 import { reportError } from 'utils/reportError'
 import { isPermissionDenied } from 'utils/teamErrors'
 
@@ -229,6 +230,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       await api.signOutAndClear()
       started = null
       setHint(false)
+      forgetInvitation()
       set(EMPTY)
     },
 
@@ -258,6 +260,9 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       await api.signOutAndClear()
       started = null
       setHint(false)
+      // An invitation left undecided is not offered to the next account
+      // signing in on this phone (audit 2026-10-01)
+      forgetInvitation()
       set(EMPTY)
       return 'signedOut'
     },

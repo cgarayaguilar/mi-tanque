@@ -203,6 +203,20 @@ describe('signing out (specs/0002 RF-14)', () => {
     expect(window.localStorage.getItem('sessionActive')).toBeNull()
   })
 
+  // Regression: an invitation left undecided was offered to the next
+  // account signing in on the same phone
+  test('forgets an invitation left undecided', async () => {
+    const { rememberInvitation, pendingInvitation } =
+      await import('utils/pendingInvitation')
+    rememberInvitation('token-1')
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+
+    await store.getState().signOut({ discardPending: true })
+    expect(pendingInvitation()).toBeNull()
+  })
+
   test('a sign-out from another tab also returns to the basic mode', async () => {
     const { store, emit } = await startWithListener()
     emit(ana)

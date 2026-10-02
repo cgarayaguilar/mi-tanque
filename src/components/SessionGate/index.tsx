@@ -17,7 +17,9 @@ interface SessionGateProps {
 const HOME_FOR: Partial<Record<SessionStatus, string>> = {
   signedOut: '/entrar',
   needsOnboarding: '/bienvenida',
-  ready: '/cuenta',
+  // Only Welcome sends a ready account away: to Medición, where Welcome
+  // goes too (it went through Mi cuenta first, a flash and a chunk)
+  ready: '/',
 }
 
 /**
