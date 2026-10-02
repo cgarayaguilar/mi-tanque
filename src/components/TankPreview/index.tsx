@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import { radius } from 'theme/tokens'
+import TankSolid, { toPath } from 'components/TankSolid'
 import { formatNumber } from 'utils/formatNumber'
 import { projectTank, type PreviewSize } from 'utils/tankProjection'
 import {
@@ -50,21 +51,6 @@ const SHAPE_NAMES: Record<TankShape, string> = {
 
 const valid = (value: number | null | undefined): value is number =>
   value !== null && value !== undefined && Number.isFinite(value) && value > 0
-
-/** a → b by t (0–1), for hex colors: solid shades without seams. */
-const mix = (a: string, b: string, t: number) => {
-  const parse = (hex: string) =>
-    /^#[0-9a-f]{6}$/i.test(hex)
-      ? [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16))
-      : null
-  const from = parse(a)
-  const to = parse(b)
-  if (!from || !to) return b
-  return `rgb(${from.map((value, index) => Math.round(value + ((to[index] ?? value) - value) * t)).join(',')})`
-}
-
-const toPath = (points: readonly (readonly [number, number])[]) =>
-  `M${points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}Z`
 
 /** The names of the measures of a shape, as the form calls them. */
 const measureNames = (shape: TankShape, orientation: TankOrientation) => ({
@@ -250,8 +236,6 @@ export default function TankPreview({
       }`
     : `${SHAPE_NAMES[shape]} ${orientation === 'vertical' ? 'de pie' : 'acostado'}, sin todas sus medidas`
 
-  const ink = theme.palette.text.primary
-  const paper = theme.palette.background.paper
   const muted = theme.palette.text.secondary
 
   return (
@@ -282,47 +266,11 @@ export default function TankPreview({
           mx: 'auto',
         }}
       >
-        <g opacity={complete || labels === 'names' ? 1 : 0.45}>
-          {drawing.faces.map((face, index) => {
-            // Solid: the side of a cylinder is many faces, and see-through
-            // shades showed their seams
-            const shade = mix(
-              paper,
-              ink,
-              (face.cap ? 0.1 : 0.05) + 0.3 * (1 - face.light)
-            )
-            return (
-              <path
-                key={index}
-                d={toPath(face.points.map(at))}
-                fill={shade}
-                stroke={shade}
-                strokeWidth={0.8}
-                strokeLinejoin="round"
-              />
-            )
-          })}
-          {drawing.faces
-            .filter(face => face.cap)
-            .map((face, index) => (
-              <path
-                key={`cap-${String(index)}`}
-                d={toPath(face.points.map(at))}
-                fill="none"
-                stroke={ink}
-                strokeOpacity={0.55}
-                strokeWidth={1}
-              />
-            ))}
-          <path
-            d={toPath(drawing.outline.map(at))}
-            fill="none"
-            stroke={ink}
-            strokeWidth={1.6}
-            strokeLinejoin="round"
-            strokeDasharray={complete || labels === 'names' ? undefined : '5 4'}
-          />
-        </g>
+        <TankSolid
+          drawing={drawing}
+          at={at}
+          faint={!complete && labels !== 'names'}
+        />
 
         {dims.map(item => (
           <g key={item.which}>

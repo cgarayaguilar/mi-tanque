@@ -31,7 +31,7 @@ test('starts in light mode and the toggle switches it', () => {
 test('tank cards are buttons named after the tank', () => {
   fireEvent.click(
     screen.getByRole('button', {
-      name: 'Seleccionar: tanque de 50 galones, 25 por 26 pulgadas',
+      name: 'Seleccionar: tanque de 50 galones, 25 pulgadas de diámetro y 26 de largo',
     })
   )
 

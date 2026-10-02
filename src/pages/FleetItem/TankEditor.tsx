@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type FieldErrors,
+} from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
@@ -13,6 +18,7 @@ import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import MeasureGuide from 'components/MeasureGuide'
 import MeasureHelp from 'components/MeasureHelp'
+import ModelPicker from 'components/ModelPicker'
 import TankPreview from 'components/TankPreview'
 import TextField from 'components/TextField'
 import {
@@ -252,20 +258,23 @@ export default function TankEditor({
 
           {describe === 'template' ? (
             <>
-              <AutocompleteField
-                id="templateId"
-                label="Modelo"
-                placeholder="Busca por galones o medidas"
-                options={TANK_TEMPLATES.map(item => ({
-                  value: item.id,
-                  label: item.label,
-                }))}
-                hint="Un tanque común: llena forma, medidas y capacidad."
-                error={errors.templateId?.message}
+              <Controller
                 control={control}
                 name="templateId"
-                disabled={!canWrite}
-                onChange={applyTemplate}
+                render={({ field }) => (
+                  <ModelPicker
+                    id="templateId"
+                    value={field.value}
+                    hint="Un tanque común: llena forma, medidas y capacidad."
+                    error={errors.templateId?.message}
+                    disabled={!canWrite}
+                    buttonRef={field.ref}
+                    onChange={templateId => {
+                      field.onChange(templateId)
+                      applyTemplate(templateId)
+                    }}
+                  />
+                )}
               />
               {template && (
                 <TankPreview

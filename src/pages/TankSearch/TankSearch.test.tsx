@@ -1,5 +1,11 @@
 import { StrictMode } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import App from '../../App'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
@@ -57,7 +63,7 @@ test('selecting a tank remembers it and goes to the measurement', async () => {
 
   fireEvent.click(
     await screen.findByRole('button', {
-      name: 'Seleccionar: tanque de 75 galones, 24 por 41 pulgadas',
+      name: 'Seleccionar: tanque de 75 galones, 24 pulgadas de diámetro y 41 de largo',
     })
   )
 
@@ -79,10 +85,14 @@ test('filters by any dimension and offers to clear an empty search', async () =>
 
   search('999')
   expect(
-    await screen.findByRole('heading', { name: 'No encontramos ese tanque' })
+    await screen.findByRole('heading', {
+      name: 'Ningún tanque con esos filtros',
+    })
   ).toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Limpiar búsqueda' }))
+  fireEvent.click(
+    screen.getAllByRole('button', { name: 'Limpiar' })[0] as HTMLElement
+  )
   expect(await screen.findByText('15 tanques')).toBeInTheDocument()
 })
 
@@ -97,7 +107,7 @@ test('a decimal search matches with a comma or a dot', async () => {
   // Shown the way it was typed
   expect(
     screen.getByRole('button', {
-      name: 'Seleccionar: tanque de 80 galones, 24.5 por 50 pulgadas',
+      name: 'Seleccionar: tanque de 80 galones, 24.5 pulgadas de diámetro y 50 de largo, tuyo',
     })
   ).toBeInTheDocument()
 })
@@ -134,12 +144,50 @@ test('marks the tank being measured', async () => {
 
   expect(
     await screen.findByRole('button', {
-      name: 'Seleccionar: tanque de 75 galones, 24 por 41 pulgadas',
+      name: 'Seleccionar: tanque de 75 galones, 24 pulgadas de diámetro y 41 de largo',
     })
   ).toHaveAttribute('aria-current', 'true')
   expect(
     screen.getByRole('button', {
-      name: 'Seleccionar: tanque de 50 galones, 25 por 26 pulgadas',
+      name: 'Seleccionar: tanque de 50 galones, 25 pulgadas de diámetro y 26 de largo',
     })
   ).not.toHaveAttribute('aria-current')
+})
+
+// specs/0014 CA-1, CA-2, CA-7: grouped by capacity, filtered, yours marked
+test('tanks are grouped by capacity, filtered with chips, and yours say so', async () => {
+  // The predefined tanks first, then one the user added
+  await useTanksStore.getState().load()
+  await db.tanks.add({ capacity: 100, diameter: 30, length: 33 })
+  useTanksStore.setState({ tanks: [], status: 'idle' })
+  renderTankSearch()
+
+  const hundred = await screen.findByRole('region', { name: '100 galones' })
+  expect(hundred).toHaveTextContent('100 gal · 4 tanques')
+  expect(
+    screen.getAllByRole('button', { name: /de largo, tuyo$/ })
+  ).toHaveLength(1)
+})
+
+test('capacity and diameter chips combine, and Limpiar clears them', async () => {
+  renderTankSearch()
+  await screen.findByText('15 tanques')
+
+  const capacity = screen.getAllByRole('group', {
+    name: 'Capacidad',
+  })[0] as HTMLElement
+  fireEvent.click(within(capacity).getByRole('button', { name: '100 gal' }))
+  expect(await screen.findByText('3 tanques')).toBeInTheDocument()
+
+  const diameter = screen.getAllByRole('group', {
+    name: 'Diámetro',
+  })[0] as HTMLElement
+  fireEvent.click(within(diameter).getByRole('button', { name: '24 pulg.' }))
+  expect(await screen.findByText('1 tanque')).toBeInTheDocument()
+  expect(
+    within(diameter).getByRole('button', { name: '24 pulg.' })
+  ).toHaveAttribute('aria-pressed', 'true')
+
+  fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
+  expect(await screen.findByText('15 tanques')).toBeInTheDocument()
 })

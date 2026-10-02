@@ -70,6 +70,29 @@ afterEach(() => {
 })
 
 // The organization reads miles (backend specs/0010 CA-3)
+
+/** Picks a model in the catalog dialog (backend specs/0014 RF-7, RF-8). */
+const pickModel = async (
+  capacity: number,
+  diameter: number,
+  length: number
+) => {
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: /^(Elegir modelo|Cambiar modelo)/,
+    })
+  )
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+  fireEvent.click(
+    within(dialog).getByRole('button', {
+      name: `Elegir: tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`,
+    })
+  )
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+}
+
 test('a new truck in miles is saved in kilometers and the list opens (CA-2)', async () => {
   useSessionStore.setState(state => ({
     organization: state.organization && {
@@ -180,7 +203,7 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
     'Tanque derecho'
   )
   // A new tank starts from a model (backend specs/0009 RF-9)
-  await choose('Modelo', '75 gal · 25 × 39 pulg.')
+  await pickModel(75, 25, 39)
   // specs/0013 RF-9: the model's tank, drawn to scale
   expect(
     screen.getByRole('img', {
@@ -490,8 +513,18 @@ describe('simpler forms (backend specs/0009)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
     expect(api.createFleetItem).not.toHaveBeenCalled()
+    // specs/0014 CA-6: the focus goes to the button
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Elegir modelo' })
+      ).toHaveFocus()
+    })
 
-    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    await pickModel(75, 25, 39)
+    // specs/0014 CA-5: the chosen model, with "Cambiar"
+    expect(
+      screen.getByRole('button', { name: 'Cambiar modelo: 75 galones' })
+    ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     await waitFor(() => {
       expect(api.createFleetItem).toHaveBeenCalledWith(
@@ -543,7 +576,7 @@ describe('simpler forms (backend specs/0009)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
 
-    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    await pickModel(75, 25, 39)
     await waitFor(() => {
       expect(screen.queryByText('Elige un modelo')).toBeNull()
     })
@@ -604,4 +637,33 @@ test('each measure has its ⓘ and the guide shows how to measure', async () => 
   await waitFor(() => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+})
+
+// specs/0014 CA-1, CA-2: the catalog dialog, grouped and filtered
+test('the model catalog is grouped by capacity and filters combine', async () => {
+  renderAt('/flota/tanques/nuevo')
+  fireEvent.click(await screen.findByRole('button', { name: 'Elegir modelo' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+
+  expect(within(dialog).getByText('15 modelos')).toBeInTheDocument()
+  expect(
+    within(dialog).getByRole('region', { name: '100 galones' })
+  ).toHaveTextContent('100 gal · 3 modelos')
+
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Capacidad' })).getByRole(
+      'button',
+      { name: '100 gal' }
+    )
+  )
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Diámetro' })).getByRole(
+      'button',
+      { name: '24 pulg.' }
+    )
+  )
+  expect(await within(dialog).findByText('1 modelo')).toBeInTheDocument()
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Limpiar' }))
+  expect(await within(dialog).findByText('15 modelos')).toBeInTheDocument()
 })
