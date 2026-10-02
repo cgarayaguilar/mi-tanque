@@ -86,3 +86,25 @@ test('switching organization clears the previous fleet', async () => {
 
   expect(useFleetStore.getState()).toMatchObject({ trucks: [], status: 'idle' })
 })
+
+// Regression: the trigger updates the tank later, so a refuel right after a
+// measurement took the previous level as "before"
+test('a reading saved here is the tank last reading at once, unless older', async () => {
+  await useFleetStore.getState().load(ORG_ID)
+  const id = useFleetStore.getState().tanks[0]?.id ?? ''
+  const reading = {
+    id: 'm-new',
+    takenAt: new Date(2030, 0, 1),
+    gallons: 42,
+    fillPercent: 56,
+  }
+
+  useFleetStore.getState().setLastReading(id, reading)
+  useFleetStore.getState().setLastReading(id, {
+    ...reading,
+    id: 'm-old',
+    takenAt: new Date(2020, 0, 1),
+  })
+
+  expect(useFleetStore.getState().tanks[0]?.lastMeasurement).toEqual(reading)
+})

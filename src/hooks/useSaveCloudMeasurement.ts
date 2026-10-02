@@ -12,6 +12,8 @@ import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
 import { authorName } from 'utils/personName'
 import { createRepeatGuard } from 'utils/repeatGuard'
+import { equipmentLabel } from 'hooks/equipmentLabel'
+import { useFleetStore } from 'store/fleet'
 
 /**
  * Saves a fleet tank's measurement (backend specs/0004 RF-4, RF-5): written
@@ -41,14 +43,11 @@ export const useSaveCloudMeasurement = (
     if (repeated(`${tank.id}|${String(reading.inches)}`)) return
     savingRef.current = true
     const id = intentId
-    const equipment: MeasurementEquipment =
-      tank.equipment.kind === 'none'
-        ? { kind: 'none', id: null, name: null }
-        : {
-            kind: tank.equipment.kind,
-            id: tank.equipment.id,
-            name: equipmentName(tank) ?? '',
-          }
+    const takenAt = new Date()
+    const equipment: MeasurementEquipment = equipmentLabel(
+      tank,
+      equipmentName(tank)
+    )
 
     createCloudMeasurement({
       id,
@@ -58,7 +57,7 @@ export const useSaveCloudMeasurement = (
       equipment,
       userId: user.uid,
       userName: authorName(userName),
-      takenAt: new Date(),
+      takenAt,
       reading,
       odometerKm,
     }).catch((error: unknown) => {
@@ -70,6 +69,12 @@ export const useSaveCloudMeasurement = (
       })
     })
 
+    useFleetStore.getState().setLastReading(tank.id, {
+      id,
+      takenAt,
+      gallons: reading.gallons,
+      fillPercent: reading.fillPercent,
+    })
     sileo.success({
       title: 'Medición guardada',
       ...(!navigator.onLine && {

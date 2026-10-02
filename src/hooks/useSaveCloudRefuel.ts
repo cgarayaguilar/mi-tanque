@@ -13,6 +13,8 @@ import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
 import { authorName } from 'utils/personName'
+import { equipmentLabel } from 'hooks/equipmentLabel'
+import { useFleetStore } from 'store/fleet'
 
 /**
  * Saves a refuel of a fleet tank (backend specs/0006 RF-4, RF-6): written
@@ -34,14 +36,11 @@ export const useSaveCloudRefuel = (
     if (savingRef.current || !user || !orgId) return
     savingRef.current = true
     const id = intentId
-    const equipment: MeasurementEquipment =
-      tank.equipment.kind === 'none'
-        ? { kind: 'none', id: null, name: null }
-        : {
-            kind: tank.equipment.kind,
-            id: tank.equipment.id,
-            name: equipmentName(tank) ?? '',
-          }
+    const takenAt = new Date()
+    const equipment: MeasurementEquipment = equipmentLabel(
+      tank,
+      equipmentName(tank)
+    )
 
     createCloudRefuel({
       id,
@@ -51,7 +50,7 @@ export const useSaveCloudRefuel = (
       equipment,
       userId: user.uid,
       userName: authorName(userName),
-      takenAt: new Date(),
+      takenAt,
       values: result.values,
       totals,
       odometerKm: result.odometerKm,
@@ -64,6 +63,15 @@ export const useSaveCloudRefuel = (
       })
     })
 
+    const { gallonsAfter, fillPercentAfter } = result.values
+    if (gallonsAfter !== null && fillPercentAfter !== null) {
+      useFleetStore.getState().setLastReading(tank.id, {
+        id,
+        takenAt,
+        gallons: gallonsAfter,
+        fillPercent: fillPercentAfter,
+      })
+    }
     sileo.success({
       title: 'Relleno guardado',
       ...(!navigator.onLine && {
@@ -83,6 +91,11 @@ export const useSaveCloudRefuel = (
         .then(() => processInvoiceQueue(user.uid))
         .catch((error: unknown) => {
           reportError(error, { operation: 'enqueueInvoice' })
+          // The refuel is saved; only the photo was lost (audit 2026-10-01)
+          sileo.error({
+            title: 'No pudimos guardar la foto de la factura',
+            description: 'El relleno quedó guardado sin la foto.',
+          })
         })
     }
 

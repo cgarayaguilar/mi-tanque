@@ -65,6 +65,9 @@ const written = (item: RefuelItem) =>
     ? `${formatNumber(item.litersAdded, 2)} L (${formatNumber(item.gallonsAdded, 2)} gal)`
     : `${formatNumber(item.gallonsAdded, 2)} gal (${formatNumber(item.litersAdded, 2)} L)`
 
+// Quantity and price are stored with 2 decimals: half a cent each way
+const ROUNDING = 0.005
+
 /** The stored refuel back in the form, to correct it (RF-11). */
 export const toFormValues = (
   item: RefuelItem,
@@ -88,7 +91,14 @@ export const toFormValues = (
     price: formatNumber(price),
     priceUnit: item.priceUnit,
     currency: item.currency,
-    total: item.total === computed ? '' : formatNumber(item.total),
+    // A total that differs only by the rounding of the stored quantity and
+    // price was computed, not typed: prefilling it as a correction froze it
+    // at the old amount when the quantity changed (audit 2026-10-01 #13)
+    total:
+      Math.abs(item.total - computed) <=
+      ROUNDING * (Math.abs(quantity) + Math.abs(price)) + ROUNDING * 2
+        ? ''
+        : formatNumber(item.total),
     inchesBefore: optional(item.inchesBefore),
     inchesAfter: optional(item.inchesAfter),
     odometer:

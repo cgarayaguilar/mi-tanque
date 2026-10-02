@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
+import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import type { FleetCollection, OrgMember } from 'services/fleet'
 import { useSessionStore } from 'store/session'
 import { reportError } from 'utils/reportError'
@@ -36,6 +36,12 @@ interface FleetState extends FleetItems {
     archived: boolean
   ) => Promise<void>
   setPhotoPath: (collection: FleetCollection, id: string, path: string) => void
+  /**
+   * A reading just saved here becomes the tank's last one at once: the
+   * trigger updates the document later, and a refuel right after a
+   * measurement took the old level as "before" (audit 2026-10-01 #14).
+   */
+  setLastReading: (tankId: string, reading: LastMeasurement) => void
   reset: () => void
 }
 
@@ -125,6 +131,18 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
       trailers:
         collection === 'trailers' ? patch(state.trailers) : state.trailers,
       tanks: collection === 'tanks' ? patch(state.tanks) : state.tanks,
+    }))
+  },
+
+  setLastReading: (tankId, reading) => {
+    set(state => ({
+      tanks: state.tanks.map(tank =>
+        tank.id === tankId &&
+        (tank.lastMeasurement === null ||
+          tank.lastMeasurement.takenAt <= reading.takenAt)
+          ? { ...tank, lastMeasurement: reading }
+          : tank
+      ),
     }))
   },
 
