@@ -190,7 +190,7 @@ function MeasurementRow({
           {formatNumber(measurement.gallons, 2)} gal
         </Typography>{' '}
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {formatNumber(measurement.liters, 2)} L ·{' '}
+          {formatNumber(measurement.liters, 2)} litros ·{' '}
           {formatNumber(measurement.inches)} pulg.
           {estimate
             ? ` · ~${formatNumber(Math.round(estimate.km))} km (${formatNumber(Math.round(estimate.miles))} mi)`

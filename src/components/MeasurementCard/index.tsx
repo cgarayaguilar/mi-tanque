@@ -64,7 +64,7 @@ export default function MeasurementCard({
         </Typography>
         {/* Not laid out in a flex row, but keeps the words apart when read */}{' '}
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          de {formatNumber(tank.capacity)} · {formatNumber(liters, 2)} L ·{' '}
+          de {formatNumber(tank.capacity)} · {formatNumber(liters, 2)} litros ·{' '}
           {formatNumber(inches)} pulg.
         </Typography>
       </Box>
