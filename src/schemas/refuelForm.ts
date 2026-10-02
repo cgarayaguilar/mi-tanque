@@ -3,7 +3,11 @@ import { CURRENCIES } from 'schemas/account'
 import { optionalOdometer } from 'schemas/measurementForm'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
-import { LITERS_PER_GALLON, type VolumeUnit } from 'utils/refuelMath'
+import {
+  LITERS_PER_GALLON,
+  refuelAmounts,
+  type VolumeUnit,
+} from 'utils/refuelMath'
 
 // The refuel form (backend specs/0006 RF-2). Numbers are typed as in Central
 // America ("1,500.50"; utils/parseDecimal); messages show under each field
@@ -45,6 +49,36 @@ const optionalDecimal = (max: number, tooBig: string) =>
   )
 
 const unit = z.enum(['gallon', 'liter'])
+
+/**
+ * The highest price in the unit written. The rules allow 1000 per liter,
+ * which is about 3785 per gallon: 1000 per gallon left out diesel in CRC
+ * (audit 2026-10-01).
+ */
+const priceMaxFor = (priceUnit: VolumeUnit) =>
+  priceUnit === 'liter' ? PRICE_MAX : Math.floor(PRICE_MAX * LITERS_PER_GALLON)
+
+/** Whether quantity and price stay above 0 once rounded as stored. */
+const storedAmounts = (
+  quantity: string,
+  quantityUnit: VolumeUnit,
+  price: string,
+  priceUnit: VolumeUnit
+) => {
+  const amount = parseDecimal(quantity)
+  const perUnit = parseDecimal(price)
+  if (!(amount > 0) || !(perUnit > 0)) return null
+  const stored = refuelAmounts({
+    quantity: amount,
+    quantityUnit,
+    price: perUnit,
+    priceUnit,
+  })
+  return {
+    quantity: stored.gallonsAdded > 0 && stored.litersAdded > 0,
+    price: stored.pricePerGallon > 0 && stored.pricePerLiter > 0,
+  }
+}
 
 export const refuelFormSchema = ({
   maxInches,
@@ -98,12 +132,28 @@ export const refuelFormSchema = ({
         }
       ),
       z.refine(
-        ({ price }) =>
-          Number.isNaN(parseDecimal(price)) || parseDecimal(price) <= PRICE_MAX,
+        ({ price, priceUnit }) =>
+          Number.isNaN(parseDecimal(price)) ||
+          parseDecimal(price) <= priceMaxFor(priceUnit),
         {
-          error: `Revisa el precio: hasta ${String(PRICE_MAX)}`,
+          error: 'Revisa el precio: es demasiado alto',
           path: ['price'],
         }
+      ),
+      // What is stored has 2 decimals; the rules ask more than 0 (audit
+      // 2026-10-01): 0.004 gal or 0.001 per liter rounded to 0 and the
+      // refuel was refused after "saved"
+      z.refine(
+        ({ quantity, quantityUnit, price, priceUnit }) =>
+          storedAmounts(quantity, quantityUnit, price, priceUnit)?.quantity ??
+          true,
+        { error: 'Es muy poco para guardarlo', path: ['quantity'] }
+      ),
+      z.refine(
+        ({ quantity, quantityUnit, price, priceUnit }) =>
+          storedAmounts(quantity, quantityUnit, price, priceUnit)?.price ??
+          true,
+        { error: 'El precio es demasiado bajo para guardarlo', path: ['price'] }
       ),
       z.refine(
         ({ inchesBefore, inchesAfter }) =>

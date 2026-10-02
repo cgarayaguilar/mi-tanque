@@ -51,7 +51,7 @@ test('no more than twice the capacity, in the unit written', () => {
 
 test('prices up to 1000, inches up to the tank, after never below before', () => {
   expect(errorsOf(values({ price: '1001' }))).toMatchObject({
-    price: 'Revisa el precio: hasta 1000',
+    price: 'Revisa el precio: es demasiado alto',
   })
   expect(errorsOf(values({ inchesBefore: '26' }))).toMatchObject({
     inchesBefore: 'Este tanque permite hasta 25 pulgadas.',
@@ -64,4 +64,24 @@ test('prices up to 1000, inches up to the tank, after never below before', () =>
   expect(errorsOf(values({ stationName: 'x'.repeat(61) }))).toMatchObject({
     stationName: 'Usa 60 caracteres como máximo',
   })
+})
+
+// Regression: per gallon the form stopped at 1000, while the rules allow
+// about 3785 (1000 per liter): diesel in CRC per gallon could not be saved
+test('per gallon the price goes up to what 1000 per liter is', () => {
+  expect(errorsOf(values({ price: '2800', priceUnit: 'gallon' }))).toEqual({})
+  expect(
+    errorsOf(values({ price: '3786', priceUnit: 'gallon' }))
+  ).toMatchObject({ price: 'Revisa el precio: es demasiado alto' })
+})
+
+// Regression: amounts that round to 0 when stored passed the form and were
+// refused by the rules after "saved"
+test('amounts too small to store are said', () => {
+  expect(
+    errorsOf(values({ quantity: '0.004', quantityUnit: 'gallon' }))
+  ).toMatchObject({ quantity: 'Es muy poco para guardarlo' })
+  expect(
+    errorsOf(values({ price: '0.001', priceUnit: 'liter' }))
+  ).toMatchObject({ price: 'El precio es demasiado bajo para guardarlo' })
 })
