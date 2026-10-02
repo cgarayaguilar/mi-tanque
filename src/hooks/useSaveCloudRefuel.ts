@@ -12,6 +12,7 @@ import type { FleetTank } from 'schemas/fleet'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
+import { authorName } from 'utils/personName'
 
 /**
  * Saves a refuel of a fleet tank (backend specs/0006 RF-4, RF-6): written
@@ -49,7 +50,7 @@ export const useSaveCloudRefuel = (
       tankName: tank.name,
       equipment,
       userId: user.uid,
-      userName: userName || 'Sin nombre',
+      userName: authorName(userName),
       takenAt: new Date(),
       values: result.values,
       totals,

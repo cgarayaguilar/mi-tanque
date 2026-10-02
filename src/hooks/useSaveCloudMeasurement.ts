@@ -10,6 +10,7 @@ import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
+import { authorName } from 'utils/personName'
 
 /**
  * Saves a fleet tank's measurement (backend specs/0004 RF-4, RF-5): written
@@ -52,7 +53,7 @@ export const useSaveCloudMeasurement = (
       tankName: tank.name,
       equipment,
       userId: user.uid,
-      userName: userName || 'Sin nombre',
+      userName: authorName(userName),
       takenAt: new Date(),
       reading,
       odometerKm,

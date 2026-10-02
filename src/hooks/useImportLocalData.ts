@@ -4,6 +4,7 @@ import { useCloudHistoryStore } from 'store/cloudHistory'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { reportError } from 'utils/reportError'
+import { authorName } from 'utils/personName'
 
 /** Per organization and phone: 'done' or 'dismissed' (specs/0004 RF-15). */
 export const importOfferKey = (orgId: string) => `importOffer:${orgId}`
@@ -68,7 +69,7 @@ export const useImportLocalData = () => {
       const { measurements, refuels, skipped } = await importLocalData({
         orgId,
         uid,
-        userName: userName || 'Sin nombre',
+        userName: authorName(userName),
       })
       rememberImportOffer(orgId, 'done')
       sileo.success({

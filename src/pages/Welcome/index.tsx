@@ -21,6 +21,7 @@ import { useSessionStore } from 'store/session'
 import { authErrorMessage } from 'utils/authErrors'
 import { currencyForPhone } from 'utils/phoneCountries'
 import { reportError } from 'utils/reportError'
+import { usableName } from 'utils/personName'
 
 const suggestedOrgName = (name: string | undefined) => {
   const first = name?.trim().split(/\s+/)[0]
@@ -36,7 +37,9 @@ function WelcomeForm() {
   const [, navigate] = useLocation()
   const online = useOnlineStatus()
   // Google brings a name; a phone sign-in does not (specs/0002 RF-7)
-  const knownName = user?.displayName ?? profileName
+  // Held to 2–60 characters like a typed one; a Google name of one letter
+  // is asked for again
+  const knownName = usableName(user?.displayName) ?? usableName(profileName)
   const asksName = !knownName
   const {
     register,
@@ -68,7 +71,9 @@ function WelcomeForm() {
 
   const onSubmit = async (values: WelcomeFormValues) => {
     try {
-      const displayName = asksName ? values.displayName : profileName
+      const displayName = asksName
+        ? values.displayName
+        : (usableName(profileName) ?? undefined)
       await completeOnboarding({
         ...(displayName !== undefined && { displayName }),
         orgName: values.orgName,
