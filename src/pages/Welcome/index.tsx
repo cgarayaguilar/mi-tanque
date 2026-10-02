@@ -7,7 +7,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
 import SessionGate from 'components/SessionGate'
 import TextField from 'components/TextField'
 import { useOnlineStatus } from 'hooks/useOnlineStatus'
@@ -132,13 +132,14 @@ function WelcomeForm() {
             error={errors.orgName?.message}
             registration={register('orgName')}
           />
-          <SelectField
+          <AutocompleteField
             id="currency"
             label="Moneda"
             options={CURRENCY_OPTIONS}
             hint="Para el costo de los rellenos de combustible."
             error={errors.currency?.message}
-            registration={register('currency')}
+            control={control}
+            name="currency"
           />
         </Stack>
 

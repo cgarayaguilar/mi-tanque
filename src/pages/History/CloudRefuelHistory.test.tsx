@@ -20,6 +20,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
+import { choose } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -142,9 +143,7 @@ test('the summary shows money per currency and the truck efficiency by levels (C
 test('the equipment filter applies to refuels too (RF-7)', async () => {
   await openRefuels()
   await screen.findByRole('region', { name: 'Resumen del periodo' })
-  fireEvent.change(screen.getByLabelText('Equipo'), {
-    target: { value: 'truck-1' },
-  })
+  await choose('Equipo', 'Camión · Unidad 12')
   await waitFor(() => {
     expect(refuelsApi.readRefuelsPage).toHaveBeenLastCalledWith(
       expect.objectContaining({ equipmentId: 'truck-1' })

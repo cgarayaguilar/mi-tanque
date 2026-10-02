@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { sileo } from 'sileo'
 import App from '../../App'
 import { useSessionStore } from 'store/session'
+import { choose } from '../../testing/choose'
 
 const api = vi.hoisted(() => ({
   signInWithGoogle: vi.fn(() => Promise.resolve()),
@@ -33,10 +34,13 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+const COUNTRY_NAMES: Record<string, string> = {
+  NI: 'Nicaragua (+505)',
+  MX: 'México (+52)',
+}
+
 const choosePhone = async (country: string, number: string) => {
-  fireEvent.change(await screen.findByLabelText('País'), {
-    target: { value: country },
-  })
+  await choose('País', COUNTRY_NAMES[country] ?? country)
   fireEvent.change(screen.getByLabelText('Número de teléfono'), {
     target: { value: number },
   })

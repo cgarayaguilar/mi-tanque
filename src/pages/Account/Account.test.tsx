@@ -10,6 +10,7 @@ import App from '../../App'
 import type { Account as AccountData } from 'services/session'
 import { useSessionStore } from 'store/session'
 import type { Role } from 'utils/roles'
+import { choose } from '../../testing/choose'
 
 const api = vi.hoisted(() => ({
   callAccount: vi.fn(() => Promise.resolve({ ok: true })),
@@ -114,9 +115,7 @@ test('changing the name saves it', async () => {
 test('the organization selector appears only with several memberships (CA-5)', async () => {
   renderAccount(account('owner', 1))
 
-  fireEvent.change(await screen.findByLabelText('Organización activa'), {
-    target: { value: 'org-0' },
-  })
+  await choose('Organización activa', 'Otra 0')
 
   await waitFor(() => {
     expect(api.setActiveOrganization).toHaveBeenCalledWith('ana', 'org-0')

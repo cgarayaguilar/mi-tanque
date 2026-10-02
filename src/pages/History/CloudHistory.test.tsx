@@ -19,6 +19,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
+import { choose } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -162,9 +163,7 @@ test('the equipment filter queries that truck or trailer (CA-6)', async () => {
   renderHistory()
   await screen.findByRole('article', { name: 'Tanque izquierdo' })
 
-  fireEvent.change(screen.getByLabelText('Equipo'), {
-    target: { value: 'trailer-1' },
-  })
+  await choose('Equipo', 'Remolque · Caja 7')
   await waitFor(() => {
     expect(historyApi.readHistoryPage).toHaveBeenLastCalledWith(
       expect.objectContaining({ equipmentId: 'trailer-1', after: null })
@@ -271,9 +270,7 @@ test('editing recomputes with the chosen tank and saves without waiting (RF-12, 
   await openOptions('Editar')
 
   const dialog = screen.getByRole('dialog', { name: 'Corregir medición' })
-  fireEvent.change(within(dialog).getByLabelText('Tanque'), {
-    target: { value: 'tank-2' },
-  })
+  await choose('Tanque', 'Tanque de 50', dialog)
   fireEvent.change(within(dialog).getByLabelText('Pulgadas de combustible'), {
     target: { value: '12,5' },
   })

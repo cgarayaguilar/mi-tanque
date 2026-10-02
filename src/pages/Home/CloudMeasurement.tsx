@@ -4,10 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import FormControl from '@mui/material/FormControl'
-import FormLabel from '@mui/material/FormLabel'
-import NativeSelect from '@mui/material/NativeSelect'
-import OutlinedInput from '@mui/material/OutlinedInput'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -20,6 +16,7 @@ import FuelGauge from 'components/FuelGauge'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
 import TankShapeIcon from 'components/TankShapeIcon'
+import { AutocompleteBase } from 'components/AutocompleteField'
 import { useSaveCloudMeasurement } from 'hooks/useSaveCloudMeasurement'
 import { KM_PER_MILE, type FleetTank, type Truck } from 'schemas/fleet'
 import {
@@ -356,43 +353,29 @@ export default function CloudMeasurement() {
     <>
       <ModeToggle mode={mode} onChange={setMode} />
       <Stack spacing={3}>
-        <FormControl fullWidth>
-          <FormLabel htmlFor="measureEquipment">Equipo</FormLabel>
-          <NativeSelect
-            input={<OutlinedInput />}
-            value={equipment ?? ''}
-            inputProps={{ id: 'measureEquipment' }}
-            onChange={event => {
-              setChosenEquipment(event.target.value)
-              setChosenTank(null)
-            }}
-          >
-            {equipmentOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </NativeSelect>
-        </FormControl>
+        <AutocompleteBase
+          id="measureEquipment"
+          label="Equipo"
+          placeholder="Elige el equipo"
+          options={equipmentOptions}
+          value={equipment ?? ''}
+          onChange={value => {
+            setChosenEquipment(value)
+            setChosenTank(null)
+          }}
+        />
         {tanksOfEquipment.length > 1 && (
-          <FormControl fullWidth>
-            <FormLabel htmlFor="measureTank">Tanque</FormLabel>
-            <NativeSelect
-              input={<OutlinedInput />}
-              value={tank?.id ?? ''}
-              inputProps={{ id: 'measureTank' }}
-              onChange={event => {
-                setChosenTank(event.target.value)
-              }}
-            >
-              {!tank && <option value="">Elige el tanque</option>}
-              {tanksOfEquipment.map(item => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </FormControl>
+          <AutocompleteBase
+            id="measureTank"
+            label="Tanque"
+            placeholder="Elige el tanque"
+            options={tanksOfEquipment.map(item => ({
+              value: item.id,
+              label: item.name,
+            }))}
+            value={tank?.id ?? ''}
+            onChange={setChosenTank}
+          />
         )}
       </Stack>
 

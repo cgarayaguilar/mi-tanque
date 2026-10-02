@@ -2,7 +2,12 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
+import AutocompleteField from 'components/AutocompleteField'
 import ColorField from 'components/ColorField'
+import MoreDetails, {
+  countFilled,
+  useMoreDetails,
+} from 'components/MoreDetails'
 import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
@@ -29,6 +34,9 @@ interface Props {
 
 const FORM_ID = 'trailer-form'
 
+// Behind "Ver más detalles" (backend specs/0009 RF-8)
+const DETAILS = ['reeferConsumption', 'vin', 'description'] as const
+
 export default function TrailerEditor({
   section,
   trailer,
@@ -42,13 +50,16 @@ export default function TrailerEditor({
     register,
     handleSubmit,
     control,
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<TrailerFormValues>({
     resolver: zodResolver(trailerFormSchema),
     defaultValues: trailerToForm(trailer),
     disabled: !canWrite,
   })
-  const trailerType = useWatch({ control, name: 'trailerType' })
+  const values = useWatch({ control })
+  const trailerType = values.trailerType
+  const details = useMoreDetails<TrailerFormValues>(DETAILS, setFocus)
 
   const onSubmit = (values: TrailerFormValues) => {
     const fields = trailerFromForm(values)
@@ -88,7 +99,7 @@ export default function TrailerEditor({
         noValidate
         aria-label="Datos del remolque"
         onSubmit={event => {
-          void handleSubmit(onSubmit)(event)
+          void handleSubmit(onSubmit, details.onInvalid)(event)
         }}
       >
         <Stack spacing={5}>
@@ -106,7 +117,9 @@ export default function TrailerEditor({
               value: type.id,
               label: type.label,
             }))}
-            registration={register('trailerType')}
+            control={control}
+            name="trailerType"
+            disabled={!canWrite}
           />
           {trailerType === 'other' && (
             <TextField
@@ -117,27 +130,18 @@ export default function TrailerEditor({
               registration={register('trailerTypeOther')}
             />
           )}
-          <SelectField
+          <AutocompleteField
             id="hitchedTruckId"
-            label="Enganchado a"
+            label="Enganchado a (opcional)"
             options={truckOptions}
             hint="De este camión sale el rendimiento para estimar distancias."
-            registration={register('hitchedTruckId')}
+            control={control}
+            name="hitchedTruckId"
+            disabled={!canWrite}
           />
-          {trailerType === 'reefer' && (
-            <NumberField
-              id="reeferConsumption"
-              label="Consumo del equipo de frío"
-              unit="gal/h"
-              placeholder="Ej. 0.8"
-              hint="Galones por hora del termo."
-              error={errors.reeferConsumption?.message}
-              registration={register('reeferConsumption')}
-            />
-          )}
           <NumberField
             id="lengthFt"
-            label="Largo"
+            label="Largo (opcional)"
             unit="pies"
             placeholder="Ej. 53"
             hint="Entre 10 y 60 pies."
@@ -146,21 +150,21 @@ export default function TrailerEditor({
           />
           <TextField
             id="plate"
-            label="Placa"
+            label="Placa (opcional)"
             error={errors.plate?.message}
             registration={register('plate')}
           />
           <Stack direction="row" spacing={3}>
             <TextField
               id="brand"
-              label="Marca"
+              label="Marca (opcional)"
               placeholder="Utility"
               error={errors.brand?.message}
               registration={register('brand')}
             />
             <TextField
               id="model"
-              label="Modelo"
+              label="Modelo (opcional)"
               placeholder="3000R"
               error={errors.model?.message}
               registration={register('model')}
@@ -168,7 +172,7 @@ export default function TrailerEditor({
           </Stack>
           <TextField
             id="year"
-            label="Año"
+            label="Año (opcional)"
             placeholder="2018"
             inputMode="numeric"
             maxLength={4}
@@ -178,22 +182,44 @@ export default function TrailerEditor({
           <ColorField
             control={control}
             swatchName="colorSwatch"
+            isOther={values.colorSwatch === 'other'}
             otherRegistration={register('colorOther')}
             otherError={errors.colorOther?.message}
             disabled={!canWrite}
           />
-          <TextField
-            id="vin"
-            label="VIN o número de serie"
-            error={errors.vin?.message}
-            registration={register('vin')}
-          />
-          <TextField
-            id="description"
-            label="Descripción"
-            error={errors.description?.message}
-            registration={register('description')}
-          />
+          <MoreDetails
+            open={details.open}
+            onToggle={details.toggle}
+            filled={countFilled([
+              trailerType === 'reefer' ? values.reeferConsumption : '',
+              values.vin,
+              values.description,
+            ])}
+          >
+            {trailerType === 'reefer' && (
+              <NumberField
+                id="reeferConsumption"
+                label="Consumo del equipo de frío (opcional)"
+                unit="gal/h"
+                placeholder="Ej. 0.8"
+                hint="Galones por hora del termo."
+                error={errors.reeferConsumption?.message}
+                registration={register('reeferConsumption')}
+              />
+            )}
+            <TextField
+              id="vin"
+              label="VIN o número de serie (opcional)"
+              error={errors.vin?.message}
+              registration={register('vin')}
+            />
+            <TextField
+              id="description"
+              label="Descripción (opcional)"
+              error={errors.description?.message}
+              registration={register('description')}
+            />
+          </MoreDetails>
         </Stack>
       </Box>
     </EditorLayout>

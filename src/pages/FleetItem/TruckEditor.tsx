@@ -3,8 +3,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import ColorField from 'components/ColorField'
+import MoreDetails, {
+  countFilled,
+  useMoreDetails,
+} from 'components/MoreDetails'
 import NumberField from 'components/NumberField'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
+import ChoiceButtons from 'components/ChoiceButtons'
 import TextField from 'components/TextField'
 import {
   convertDistanceFields,
@@ -31,6 +36,16 @@ interface Props {
 
 const FORM_ID = 'truck-form'
 
+// Behind "Ver más detalles" (backend specs/0009 RF-7)
+const DETAILS = [
+  'distanceUnit',
+  'efficiency',
+  'odometer',
+  'assignedDriverUid',
+  'vin',
+  'description',
+] as const
+
 export default function TruckEditor({
   section,
   truck,
@@ -46,13 +61,16 @@ export default function TruckEditor({
     control,
     getValues,
     setValue,
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckFormSchema),
     defaultValues: truckToForm(truck),
     disabled: !canWrite,
   })
-  const unit = useWatch({ control, name: 'distanceUnit' })
+  const values = useWatch({ control })
+  const unit = values.distanceUnit ?? 'km'
+  const details = useMoreDetails<TruckFormValues>(DETAILS, setFocus)
 
   const onSubmit = (values: TruckFormValues) => {
     // A driver who left the organization: the rules refuse any edit that
@@ -101,7 +119,7 @@ export default function TruckEditor({
         noValidate
         aria-label="Datos del camión"
         onSubmit={event => {
-          void handleSubmit(onSubmit)(event)
+          void handleSubmit(onSubmit, details.onInvalid)(event)
         }}
       >
         <Stack spacing={5}>
@@ -114,7 +132,7 @@ export default function TruckEditor({
           />
           <TextField
             id="plate"
-            label="Placa"
+            label="Placa (opcional)"
             placeholder="M 123-456"
             error={errors.plate?.message}
             registration={register('plate')}
@@ -122,14 +140,14 @@ export default function TruckEditor({
           <Stack direction="row" spacing={3}>
             <TextField
               id="brand"
-              label="Marca"
+              label="Marca (opcional)"
               placeholder="Freightliner"
               error={errors.brand?.message}
               registration={register('brand')}
             />
             <TextField
               id="model"
-              label="Modelo"
+              label="Modelo (opcional)"
               placeholder="Cascadia"
               error={errors.model?.message}
               registration={register('model')}
@@ -137,7 +155,7 @@ export default function TruckEditor({
           </Stack>
           <TextField
             id="year"
-            label="Año"
+            label="Año (opcional)"
             placeholder="2019"
             inputMode="numeric"
             maxLength={4}
@@ -147,68 +165,84 @@ export default function TruckEditor({
           <ColorField
             control={control}
             swatchName="colorSwatch"
+            isOther={values.colorSwatch === 'other'}
             otherRegistration={register('colorOther')}
             otherError={errors.colorOther?.message}
             disabled={!canWrite}
           />
-          <SelectField
-            id="distanceUnit"
-            label="Unidad de distancia"
-            options={[
-              { value: 'km', label: 'Kilómetros' },
-              { value: 'mi', label: 'Millas' },
-            ]}
-            hint="Para el rendimiento y el odómetro de este camión."
-            registration={register('distanceUnit', {
+          <MoreDetails
+            open={details.open}
+            onToggle={details.toggle}
+            filled={countFilled([
+              values.efficiency,
+              values.odometer,
+              values.assignedDriverUid,
+              values.vin,
+              values.description,
+            ])}
+          >
+            <ChoiceButtons
+              id="distanceUnit"
+              label="Unidad de distancia"
+              options={[
+                { value: 'km', label: 'Kilómetros' },
+                { value: 'mi', label: 'Millas' },
+              ]}
+              hint="Para el rendimiento y el odómetro de este camión."
+              control={control}
+              name="distanceUnit"
+              disabled={!canWrite}
               // The numbers typed follow the unit (`unit` is still the old one)
-              onChange: (event: { target: { value: DistanceUnit } }) => {
+              onChange={next => {
                 const converted = convertDistanceFields(
                   getValues(),
                   unit,
-                  event.target.value
+                  next as DistanceUnit
                 )
                 setValue('efficiency', converted.efficiency)
                 setValue('odometer', converted.odometer)
-              },
-            })}
-          />
-          <NumberField
-            id="efficiency"
-            label="Rendimiento"
-            unit={`${unit}/gal`}
-            placeholder="Ej. 6.5"
-            hint="Para estimar cuánto puedes recorrer con el combustible."
-            error={errors.efficiency?.message}
-            registration={register('efficiency')}
-          />
-          <NumberField
-            id="odometer"
-            label="Odómetro"
-            unit={unit}
-            placeholder="Ej. 120000"
-            hint="El kilometraje o millaje actual."
-            error={errors.odometer?.message}
-            registration={register('odometer')}
-          />
-          <SelectField
-            id="assignedDriverUid"
-            label="Chofer asignado"
-            options={driverOptions}
-            registration={register('assignedDriverUid')}
-          />
-          <TextField
-            id="vin"
-            label="VIN o número de serie"
-            error={errors.vin?.message}
-            registration={register('vin')}
-          />
-          <TextField
-            id="description"
-            label="Descripción"
-            placeholder="Notas para tu equipo"
-            error={errors.description?.message}
-            registration={register('description')}
-          />
+              }}
+            />
+            <NumberField
+              id="efficiency"
+              label="Rendimiento (opcional)"
+              unit={`${unit}/gal`}
+              placeholder="Ej. 6.5"
+              hint="Para estimar cuánto puedes recorrer con el combustible."
+              error={errors.efficiency?.message}
+              registration={register('efficiency')}
+            />
+            <NumberField
+              id="odometer"
+              label="Odómetro (opcional)"
+              unit={unit}
+              placeholder="Ej. 120000"
+              hint="El kilometraje o millaje actual."
+              error={errors.odometer?.message}
+              registration={register('odometer')}
+            />
+            <AutocompleteField
+              id="assignedDriverUid"
+              label="Chofer asignado (opcional)"
+              options={driverOptions}
+              control={control}
+              name="assignedDriverUid"
+              disabled={!canWrite}
+            />
+            <TextField
+              id="vin"
+              label="VIN o número de serie (opcional)"
+              error={errors.vin?.message}
+              registration={register('vin')}
+            />
+            <TextField
+              id="description"
+              label="Descripción (opcional)"
+              placeholder="Notas para tu equipo"
+              error={errors.description?.message}
+              registration={register('description')}
+            />
+          </MoreDetails>
         </Stack>
       </Box>
     </EditorLayout>

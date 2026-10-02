@@ -9,7 +9,7 @@ import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import GoogleIcon from '@mui/icons-material/Google'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
 import TextField from 'components/TextField'
 import { useOnlineStatus } from 'hooks/useOnlineStatus'
 import {
@@ -169,6 +169,7 @@ export default function SignIn() {
   const {
     register,
     handleSubmit,
+    control,
     getValues,
     formState: { errors, isSubmitting },
   } = useForm<PhoneFormValues>({
@@ -275,11 +276,12 @@ export default function SignIn() {
             }}
           >
             <Stack spacing={4}>
-              <SelectField
+              <AutocompleteField
                 id="country"
                 label="País"
                 options={COUNTRY_OPTIONS}
-                registration={register('country')}
+                control={control}
+                name="country"
               />
               <TextField
                 id="phone"

@@ -12,6 +12,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
+import { choose } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -115,33 +116,28 @@ afterEach(() => {
 test('a truck with two tanks asks for the truck, then the tank (CA-1)', async () => {
   renderHome()
 
-  const equipment = await screen.findByLabelText('Equipo')
+  fireEvent.mouseDown(await screen.findByLabelText('Equipo'))
   expect(
-    [...(equipment as HTMLSelectElement).options].map(option => option.text)
+    (await screen.findAllByRole('option')).map(option => option.textContent)
   ).toEqual(['Camión · Unidad 12', 'Remolque · Caja 7', 'Tanques individuales'])
+  fireEvent.keyDown(screen.getByLabelText('Equipo'), { key: 'Escape' })
   expect(screen.getByLabelText('Tanque')).toHaveValue('')
   expect(screen.queryByLabelText('Pulgadas de combustible')).toBeNull()
 
-  fireEvent.change(screen.getByLabelText('Tanque'), {
-    target: { value: 'tank-1' },
-  })
+  await choose('Tanque', 'Tanque izquierdo')
   expect(screen.getByLabelText('Pulgadas de combustible')).toBeInTheDocument()
 })
 
 test('a trailer with a single tank picks it by itself (CA-1)', async () => {
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'trailer:trailer-1' },
-  })
+  await choose('Equipo', 'Remolque · Caja 7')
   expect(screen.queryByLabelText('Tanque')).toBeNull()
   expect(screen.getByText('Tanque del termo')).toBeInTheDocument()
 })
 
 test('the inches field rejects more than the tank height (CA-1)', async () => {
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Tanque'), {
-    target: { value: 'tank-1' },
-  })
+  await choose('Tanque', 'Tanque izquierdo')
   measure('25')
   expect(
     await screen.findByText('Este tanque permite hasta 24 pulgadas.')
@@ -152,9 +148,7 @@ test('the inches field rejects more than the tank height (CA-1)', async () => {
 test('a "D" tank at 12 inches shows its gallons and the truck range, and saves at once (CA-2, CA-3)', async () => {
   mockGeolocation({ latitude: 12.13, longitude: -86.25, accuracy: 9.6 })
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Tanque'), {
-    target: { value: 'tank-1' },
-  })
+  await choose('Tanque', 'Tanque izquierdo')
   fireEvent.change(screen.getByLabelText('Odómetro (opcional)'), {
     target: { value: '120600' },
   })
@@ -208,9 +202,7 @@ test('a "D" tank at 12 inches shows its gallons and the truck range, and saves a
 
 test('each save is a new intent; a reefer tank uses the hitched truck (CA-2)', async () => {
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'trailer:trailer-1' },
-  })
+  await choose('Equipo', 'Remolque · Caja 7')
   measure('10')
   await waitFor(() => {
     expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(1)
@@ -235,9 +227,7 @@ test('each save is a new intent; a reefer tank uses the hitched truck (CA-2)', a
 // "Calcular" saved the same measurement twice (ADR 0003)
 test('a double tap saves one measurement', async () => {
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'trailer:trailer-1' },
-  })
+  await choose('Equipo', 'Remolque · Caja 7')
   measure('10')
   await waitFor(() => {
     expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(1)
@@ -250,9 +240,7 @@ test('a double tap saves one measurement', async () => {
 
 test('an individual tank has no estimate', async () => {
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'none' },
-  })
+  await choose('Equipo', 'Tanques individuales')
   measure('10')
   expect(
     await screen.findByText(
@@ -269,14 +257,12 @@ test('an individual tank has no estimate', async () => {
 
 test('the last tank measured is chosen next time', async () => {
   const { unmount } = render(<App />)
-  fireEvent.change(await screen.findByLabelText('Tanque'), {
-    target: { value: 'tank-2' },
-  })
+  await choose('Tanque', 'Tanque derecho')
   measure('10')
   unmount()
 
   renderHome()
-  expect(await screen.findByLabelText('Tanque')).toHaveValue('tank-2')
+  expect(await screen.findByLabelText('Tanque')).toHaveValue('Tanque derecho')
 })
 
 test('a rejected save is reported', async () => {
@@ -285,9 +271,7 @@ test('a rejected save is reported', async () => {
   )
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'none' },
-  })
+  await choose('Equipo', 'Tanques individuales')
   measure('10')
   await waitFor(() => {
     expect(sileo.error).toHaveBeenCalledWith(
@@ -299,9 +283,7 @@ test('a rejected save is reported', async () => {
 test('Lectura calculates without saving', async () => {
   signIn('viewer')
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'none' },
-  })
+  await choose('Equipo', 'Tanques individuales')
   expect(
     screen.getByText(
       'Con tu rol de Lectura puedes calcular, pero no se guarda la medición.'
@@ -333,9 +315,7 @@ test('a save refused because the role changed reloads the account instead of bla
   })
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   renderHome()
-  fireEvent.change(await screen.findByLabelText('Equipo'), {
-    target: { value: 'none' },
-  })
+  await choose('Equipo', 'Tanques individuales')
   measure('10')
   await waitFor(() => {
     expect(sileo.warning).toHaveBeenCalledWith(

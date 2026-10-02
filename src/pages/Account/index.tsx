@@ -7,18 +7,15 @@ import { useImportLocalData } from 'hooks/useImportLocalData'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import FormControl from '@mui/material/FormControl'
-import FormLabel from '@mui/material/FormLabel'
-import NativeSelect from '@mui/material/NativeSelect'
-import OutlinedInput from '@mui/material/OutlinedInput'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import LogoutIcon from '@mui/icons-material/Logout'
 import RecaptchaNotice from 'components/RecaptchaNotice'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
 import SessionGate from 'components/SessionGate'
 import Stat from 'components/Stat'
 import TextField from 'components/TextField'
+import { AutocompleteBase } from 'components/AutocompleteField'
 import { useSignOut } from 'hooks/useSignOut'
 import {
   CreateOrganizationButton,
@@ -138,28 +135,26 @@ function OrganizationSwitcher() {
   if (memberships.length < 2) return null
 
   return (
-    <FormControl fullWidth sx={{ mb: 4 }}>
-      <FormLabel htmlFor="activeOrg">Organización activa</FormLabel>
-      <NativeSelect
-        input={<OutlinedInput />}
+    <Box sx={{ mb: 4 }}>
+      <AutocompleteBase
+        id="activeOrg"
+        label="Organización activa"
+        options={memberships.map(membership => ({
+          value: membership.orgId,
+          label: membership.orgName,
+        }))}
         value={activeOrgId}
-        inputProps={{ id: 'activeOrg' }}
-        onChange={event => {
-          switchOrganization(event.target.value).then(
+        onChange={orgId => {
+          if (orgId === activeOrgId) return
+          switchOrganization(orgId).then(
             () => {
               sileo.success({ title: 'Cambiaste de organización' })
             },
             failed('switchOrganization', 'No pudimos cambiar de organización')
           )
         }}
-      >
-        {memberships.map(membership => (
-          <option key={membership.orgId} value={membership.orgId}>
-            {membership.orgName}
-          </option>
-        ))}
-      </NativeSelect>
-    </FormControl>
+      />
+    </Box>
   )
 }
 
@@ -169,6 +164,7 @@ function OrganizationForm() {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors, isSubmitting, isDirty, dirtyFields },
   } = useForm<OrganizationFormValues>({
@@ -211,13 +207,14 @@ function OrganizationForm() {
           error={errors.name?.message}
           registration={register('name')}
         />
-        <SelectField
+        <AutocompleteField
           id="defaultCurrency"
           label="Moneda"
           options={CURRENCY_OPTIONS}
           hint="Para el costo de los rellenos de combustible."
           error={errors.defaultCurrency?.message}
-          registration={register('defaultCurrency')}
+          control={control}
+          name="defaultCurrency"
         />
       </Stack>
       <Button

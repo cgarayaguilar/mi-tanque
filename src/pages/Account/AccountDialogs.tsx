@@ -15,7 +15,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import AddBusinessIcon from '@mui/icons-material/AddBusiness'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
 import TextField from 'components/TextField'
 import { useLoad } from 'hooks/useLoad'
 import {
@@ -45,6 +45,7 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationFormSchema),
@@ -98,12 +99,13 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
               error={errors.name?.message}
               registration={register('name')}
             />
-            <SelectField
+            <AutocompleteField
               id="newOrgCurrency"
               label="Moneda"
               options={CURRENCY_OPTIONS}
               error={errors.defaultCurrency?.message}
-              registration={register('defaultCurrency')}
+              control={control}
+              name="defaultCurrency"
             />
           </Stack>
         </Box>

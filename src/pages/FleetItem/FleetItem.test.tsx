@@ -17,6 +17,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
+import { choose } from '../../testing/choose'
 
 const api = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -77,10 +78,11 @@ test('a new truck in miles is saved in kilometers and the list opens (CA-2)', as
       .then(() => 'Nombre o número de unidad'),
     'Unidad 20'
   )
-  type('Unidad de distancia', 'mi')
-  type('Rendimiento', '6')
-  type('Odómetro', '100000')
-  fireEvent.click(screen.getByRole('radio', { name: 'Azul' }))
+  await choose('Color (opcional)', 'Azul')
+  fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+  await choose('Unidad de distancia', 'Millas')
+  type('Rendimiento (opcional)', '6')
+  type('Odómetro (opcional)', '100000')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
 
   await waitFor(() => {
@@ -140,9 +142,11 @@ test('the trailer hitches to a truck and shows the reefer field only for reefers
       .then(() => 'Nombre o número de unidad'),
     'Caja 9'
   )
-  type('Tipo de remolque', 'dry')
-  expect(screen.queryByLabelText('Consumo del equipo de frío')).toBeNull()
-  type('Enganchado a', 'truck-1')
+  await choose('Tipo de remolque', 'Seco (caja cerrada)')
+  expect(
+    screen.queryByLabelText('Consumo del equipo de frío (opcional)')
+  ).toBeNull()
+  await choose('Enganchado a (opcional)', 'Unidad 12')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar remolque' }))
 
   await waitFor(() => {
@@ -168,13 +172,17 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
       .then(() => 'Nombre del tanque'),
     'Tanque derecho'
   )
-  type('Partir de un modelo', 'cyl-75-25x39')
-  await waitFor(() => {
-    expect(screen.getByLabelText('Diámetro')).toHaveValue('25')
-  })
+  // A new tank starts from a model (backend specs/0009 RF-9)
+  await choose('Modelo', '75 gal · 25 × 39 pulg.')
+  expect(
+    screen.getByText('Cilíndrico, horizontal · 75 gal · 25 × 39 pulg.')
+  ).toBeInTheDocument()
+
+  await choose('¿Cómo lo describes?', 'Con sus medidas')
+  expect(screen.getByLabelText('Diámetro')).toHaveValue('25')
   expect(screen.getByLabelText('Capacidad')).toHaveValue('75')
 
-  type('Forma', 'd_flat_side')
+  await choose('Forma', 'En "D", lado plano contra el chasis')
   type('Alto', '24')
   type('Ancho', '30')
   type('Largo', '48')
@@ -189,7 +197,7 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
   ).toBeInTheDocument()
 
   type('Capacidad', '135')
-  type('Pertenece a', 'truck:truck-1')
+  await choose('Pertenece a', 'Camión · Unidad 12')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
 
   await waitFor(() => {
@@ -280,7 +288,9 @@ test('a truck whose driver left is saved unassigned', async () => {
     tanks: [tank()],
   })
   renderAt('/flota/camiones/truck-1')
-  await screen.findByText('Luis (Dueño)')
+  await waitFor(() => {
+    expect(useFleetStore.getState().members).toHaveLength(1)
+  })
   fireEvent.click(
     await screen.findByRole('button', { name: 'Guardar cambios' })
   )
@@ -291,4 +301,140 @@ test('a truck whose driver left is saved unassigned', async () => {
       expect.objectContaining({ assignedDriverUid: null })
     )
   })
+})
+
+describe('simpler forms (backend specs/0009)', () => {
+  // CA-3
+  test('a new truck shows the essentials; saving with only the name works', async () => {
+    renderAt('/flota/camiones/nuevo')
+    const form = await screen.findByRole('form', { name: 'Datos del camión' })
+
+    for (const label of [
+      'Nombre o número de unidad',
+      'Placa (opcional)',
+      'Marca (opcional)',
+      'Modelo (opcional)',
+      'Año (opcional)',
+      'Color (opcional)',
+    ]) {
+      expect(within(form).getByLabelText(label)).toBeVisible()
+    }
+    expect(within(form).getByLabelText('Odómetro (opcional)')).not.toBeVisible()
+    const more = within(form).getByRole('button', { name: 'Ver más detalles' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+
+    type('Nombre o número de unidad', 'Unidad 30')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalled()
+    })
+  })
+
+  // CA-3: what is kept behind the button is counted
+  test('editing says how many details it keeps', async () => {
+    renderAt('/flota/camiones/truck-1')
+    expect(
+      await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
+    ).toBeInTheDocument()
+  })
+
+  // CA-4 (RF-6)
+  test('an error behind the button opens it and takes the user there', async () => {
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
+    type('Odómetro (opcional)', 'mucho')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Odómetro (opcional)')).toHaveFocus()
+    })
+    expect(
+      screen.getByRole('button', { name: 'Ocultar detalles' })
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(api.updateFleetItem).not.toHaveBeenCalled()
+  })
+
+  // CA-2 (RF-3)
+  test('a color is found by typing, with "Otro" to write one in', async () => {
+    renderAt('/flota/camiones/nuevo')
+    const color = await screen.findByLabelText('Color (opcional)')
+    color.focus()
+    fireEvent.change(color, { target: { value: 'az' } })
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole('option').map(option => option.textContent)
+      ).toEqual(['Azul'])
+    })
+    fireEvent.click(screen.getByRole('option', { name: 'Azul' }))
+    expect(color).toHaveValue('Azul')
+
+    await choose('Color (opcional)', 'Otro')
+    expect(screen.getByLabelText('¿Qué color?')).toBeInTheDocument()
+  })
+
+  // CA-5
+  test('the reefer consumption is a detail, only for reefers', async () => {
+    renderAt('/flota/remolques/trailer-1')
+    expect(
+      await screen.findByLabelText('Consumo del equipo de frío (opcional)')
+    ).not.toBeVisible()
+    await choose('Tipo de remolque', 'Seco (caja cerrada)')
+    expect(
+      screen.queryByLabelText('Consumo del equipo de frío (opcional)')
+    ).toBeNull()
+    expect(screen.getByLabelText('Largo (opcional)')).toBeVisible()
+  })
+
+  // CA-6
+  test('a tank opens the way it is described, and a model needs choosing', async () => {
+    renderAt('/flota/tanques/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre del tanque')
+        .then(() => 'Nombre del tanque'),
+      'Tanque 3'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+    expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+
+    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'tanks',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({
+          templateId: 'cyl-75-25x39',
+          capacityGal: 75,
+          dimensions: { diameterIn: 25, lengthIn: 39 },
+        })
+      )
+    })
+  })
+
+  test('a tank measured by hand opens with its measures', async () => {
+    renderAt('/flota/tanques/tank-1')
+    expect(
+      within(
+        await screen.findByRole('group', { name: '¿Cómo lo describes?' })
+      ).getByRole('button', { name: 'Con sus medidas' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Capacidad')).toBeVisible()
+  })
+})
+
+// CA-1 (RF-1): no screen opens the system picker
+test('no native select is left in the app', () => {
+  const sources = import.meta.glob<string>('/src/**/*.tsx', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  })
+  const native = Object.entries(sources)
+    .filter(([path]) => !path.includes('.test.'))
+    .filter(([, source]) => /NativeSelect|<select[\s>]/.test(source))
+    .map(([path]) => path)
+  expect(native).toEqual([])
 })

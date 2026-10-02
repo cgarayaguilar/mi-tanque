@@ -11,6 +11,7 @@ import type { Account as AccountData } from 'services/session'
 import type { TeamMember } from 'services/team'
 import { useSessionStore } from 'store/session'
 import type { Role } from 'utils/roles'
+import { choose } from '../../testing/choose'
 
 const sessionApi = vi.hoisted(() => ({
   callAccount: vi.fn(() => Promise.resolve({ ok: true })),
@@ -131,9 +132,11 @@ test('a supervisor manages only drivers and viewers, and invites only those (RF-
     list.getByRole('button', { name: 'Opciones de Dan' })
   ).toBeInTheDocument()
 
-  const select = screen.getByLabelText('Invitar como')
+  const roles = screen.getByRole('group', { name: 'Invitar como' })
   expect(
-    [...(select as HTMLSelectElement).options].map(option => option.text)
+    within(roles)
+      .getAllByRole('button')
+      .map(option => option.textContent)
   ).toEqual(['Chofer', 'Lectura'])
 
   // Revokes the driver's link, not the supervisor's
@@ -149,9 +152,7 @@ test('creating a link shows it once, to copy or share (RF-1, RF-2)', async () =>
   })
   renderAs('ana', 'owner')
   await members()
-  fireEvent.change(screen.getByLabelText('Invitar como'), {
-    target: { value: 'supervisor' },
-  })
+  await choose('Invitar como', 'Supervisor')
   fireEvent.click(screen.getByRole('button', { name: 'Crear enlace' }))
 
   const dialog = await screen.findByRole('dialog', {
@@ -304,9 +305,7 @@ describe('organizations and the account (RF-13, RF-14)', () => {
     fireEvent.change(within(dialog).getByLabelText('Nombre'), {
       target: { value: 'Transportes Ana' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Moneda'), {
-      target: { value: 'GTQ' },
-    })
+    await choose('Moneda', 'GTQ · Quetzal', dialog)
     fireEvent.click(within(dialog).getByRole('button', { name: 'Crear' }))
     await waitFor(() => {
       expect(sessionApi.callAccount).toHaveBeenCalledWith({

@@ -11,6 +11,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
+import { choose } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -67,9 +68,7 @@ const type = (label: string, value: string) => {
 const openRefuel = async () => {
   window.history.pushState({}, '', '/')
   render(<App />)
-  fireEvent.change(await screen.findByLabelText('Tanque'), {
-    target: { value: 'tank-1' },
-  })
+  await choose('Tanque', 'Tanque izquierdo')
   fireEvent.click(screen.getByRole('button', { name: 'Rellenar' }))
   return screen.findByRole('form', { name: 'Nuevo relleno' })
 }
@@ -93,7 +92,7 @@ afterEach(() => {
 test('a truck refuel saves the amounts, the levels and the truck totals (CA-1, RF-9)', async () => {
   await openRefuel()
   // The organization's currency is proposed
-  expect(screen.getByLabelText('Moneda')).toHaveValue('NIO')
+  expect(screen.getByLabelText('Moneda')).toHaveValue('NIO · Córdoba')
   type('Cantidad echada', '50')
   type('Precio', '30')
   type('Odómetro (opcional)', '120600')

@@ -3,6 +3,7 @@ import { sileo } from 'sileo'
 import App from '../../App'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
+import { choose } from '../../testing/choose'
 
 const tank = { capacity: 50, diameter: 25, length: 26 }
 
@@ -58,7 +59,7 @@ test('computes live and saves the refuel on this phone (CA-1, CA-2)', async () =
   await openRefuel()
   type('Cantidad echada', '50')
   type('Precio', '30')
-  type('Moneda', 'NIO')
+  await choose('Moneda', 'NIO · Córdoba')
   type('Gasolinera (opcional)', 'Puma Km 7')
 
   expect(screen.getByText('13.21 gal')).toBeInTheDocument()
@@ -95,11 +96,11 @@ test('the invoice total can be corrected, and inches give the levels (RF-2, RF-3
   await openRefuel()
   type('Cantidad echada', '50')
   type('Precio', '30')
-  type('Moneda', 'NIO')
+  await choose('Moneda', 'NIO · Córdoba')
   fireEvent.click(screen.getByRole('button', { name: 'Corregir total' }))
-  type('Total de la factura', '1,499.50')
-  type('Antes', '5')
-  type('Después', '15')
+  type('Total de la factura (opcional)', '1,499.50')
+  type('Antes (opcional)', '5')
+  type('Después (opcional)', '15')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))
   await waitFor(async () => {
     expect(await db.refuels.count()).toBe(1)

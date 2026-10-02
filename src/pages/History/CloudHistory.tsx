@@ -9,14 +9,10 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import FormControl from '@mui/material/FormControl'
-import FormLabel from '@mui/material/FormLabel'
 import IconButton from '@mui/material/IconButton'
 import LinearProgress from '@mui/material/LinearProgress'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
-import NativeSelect from '@mui/material/NativeSelect'
-import OutlinedInput from '@mui/material/OutlinedInput'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -33,7 +29,7 @@ import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import CloudRefuelHistory from 'pages/History/CloudRefuelHistory'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
-import SelectField from 'components/SelectField'
+import { AutocompleteBase } from 'components/AutocompleteField'
 import Stat from 'components/Stat'
 import { KM_PER_MILE, type FleetTank } from 'schemas/fleet'
 import {
@@ -465,25 +461,18 @@ function EditDialog({
           }}
           sx={{ display: 'flex', flexDirection: 'column', gap: 4, pt: 2 }}
         >
-          <FormControl fullWidth>
-            <FormLabel htmlFor="editTank">Tanque</FormLabel>
-            <NativeSelect
-              input={<OutlinedInput />}
-              value={tankId}
-              inputProps={{ id: 'editTank' }}
-              onChange={event => {
-                setTankId(event.target.value)
-              }}
-            >
-              {options.map(item => (
-                <option key={item.id} value={item.id}>
-                  {[item.name, equipmentNameOf(item)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </option>
-              ))}
-            </NativeSelect>
-          </FormControl>
+          <AutocompleteBase
+            id="editTank"
+            label="Tanque"
+            options={options.map(item => ({
+              value: item.id,
+              label: [item.name, equipmentNameOf(item)]
+                .filter(Boolean)
+                .join(' · '),
+            }))}
+            value={tankId}
+            onChange={setTankId}
+          />
           <NumberField
             id="editInches"
             label="Pulgadas de combustible"
@@ -696,18 +685,13 @@ export default function CloudHistory() {
           />
         </Box>
         <Box sx={{ mb: 6 }}>
-          <SelectField
+          <AutocompleteBase
             id="historyEquipment"
             label="Equipo"
             options={equipmentOptions}
-            registration={{
-              name: 'equipment',
-              ref: () => undefined,
-              onBlur: () => Promise.resolve(),
-              onChange: event => {
-                const value = (event.target as HTMLSelectElement).value
-                return history.chooseEquipment(value || null)
-              },
+            value={history.equipmentId ?? ''}
+            onChange={value => {
+              void history.chooseEquipment(value || null)
             }}
           />
         </Box>

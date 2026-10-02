@@ -51,7 +51,7 @@ test('a phone user is asked their name; the organization name follows it (RF-7)'
     'Flota de Juan'
   )
   // Currency from the phone's country
-  expect(screen.getByLabelText('Moneda')).toHaveValue('NIO')
+  expect(screen.getByLabelText('Moneda')).toHaveValue('NIO · Córdoba')
 })
 
 test('creates the organization with the values and goes home', async () => {
@@ -86,7 +86,9 @@ test('a Google user is not asked their name and starts with USD', async () => {
     'Flota de Ana'
   )
   expect(screen.queryByLabelText('¿Cómo te llamas?')).toBeNull()
-  expect(screen.getByLabelText('Moneda')).toHaveValue('USD')
+  expect(screen.getByLabelText('Moneda')).toHaveValue(
+    'USD · Dólar estadounidense'
+  )
 })
 
 test('a phone user cannot skip the name', async () => {

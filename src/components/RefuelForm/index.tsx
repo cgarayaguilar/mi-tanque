@@ -7,7 +7,8 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto'
 import NumberField from 'components/NumberField'
-import SelectField from 'components/SelectField'
+import AutocompleteField from 'components/AutocompleteField'
+import ChoiceButtons from 'components/ChoiceButtons'
 import Stat from 'components/Stat'
 import TextField from 'components/TextField'
 import { CURRENCY_OPTIONS, type Currency } from 'schemas/account'
@@ -60,8 +61,8 @@ const UNIT_OPTIONS = (['liter', 'gallon'] as const).map(value => ({
 }))
 
 const PRICE_UNIT_OPTIONS = [
-  { value: 'liter', label: 'por litro' },
-  { value: 'gallon', label: 'por galón' },
+  { value: 'liter', label: 'litro' },
+  { value: 'gallon', label: 'galón' },
 ]
 
 export const money = (currency: string, amount: number) =>
@@ -227,11 +228,12 @@ export default function RefuelForm({
           error={errors.quantity?.message}
           registration={register('quantity')}
         />
-        <SelectField
+        <ChoiceButtons
           id="refuelQuantityUnit"
           label="Unidad"
           options={UNIT_OPTIONS}
-          registration={register('quantityUnit')}
+          control={control}
+          name="quantityUnit"
         />
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 2 }}>
@@ -244,23 +246,22 @@ export default function RefuelForm({
           error={errors.price?.message}
           registration={register('price')}
         />
-        <SelectField
+        <ChoiceButtons
           id="refuelPriceUnit"
           label="Por"
           options={PRICE_UNIT_OPTIONS}
-          registration={register('priceUnit')}
+          control={control}
+          name="priceUnit"
         />
       </Box>
-      <SelectField
+      <AutocompleteField
         id="refuelCurrency"
         label="Moneda"
-        options={
-          defaultCurrency === ''
-            ? [{ value: '', label: 'Elige la moneda' }, ...CURRENCY_OPTIONS]
-            : CURRENCY_OPTIONS
-        }
+        placeholder="Elige la moneda"
+        options={CURRENCY_OPTIONS}
         error={errors.currency?.message}
-        registration={register('currency')}
+        control={control}
+        name="currency"
       />
 
       <Box
@@ -302,7 +303,7 @@ export default function RefuelForm({
       {correctingTotal ? (
         <NumberField
           id="refuelTotal"
-          label="Total de la factura"
+          label="Total de la factura (opcional)"
           unit={currency || '—'}
           placeholder={live ? formatNumber(live.total, 2) : 'Ej. 1500'}
           hint="Déjalo vacío para usar el total calculado."
@@ -326,14 +327,14 @@ export default function RefuelForm({
         component="p"
         sx={{ color: 'text.secondary', mt: 2 }}
       >
-        Nivel del tanque (opcional)
+        Nivel del tanque
       </Typography>
       <Box
         sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}
       >
         <NumberField
           id="refuelInchesBefore"
-          label="Antes"
+          label="Antes (opcional)"
           unit="pulg."
           placeholder="Ej. 6"
           hint=""
@@ -342,7 +343,7 @@ export default function RefuelForm({
         />
         <NumberField
           id="refuelInchesAfter"
-          label="Después"
+          label="Después (opcional)"
           unit="pulg."
           placeholder="Ej. 20"
           hint=""

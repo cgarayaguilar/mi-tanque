@@ -26,7 +26,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import ShareIcon from '@mui/icons-material/Share'
 import ConfirmDialog from 'components/ConfirmDialog'
-import SelectField from 'components/SelectField'
+import ChoiceButtons from 'components/ChoiceButtons'
 import { useLoad } from 'hooks/useLoad'
 import { inviteFormSchema, type InviteFormValues } from 'schemas/team'
 import {
@@ -289,8 +289,8 @@ function InviteForm({
     expiresAt: Date
   } | null>(null)
   const {
-    register,
     handleSubmit,
+    control,
     formState: { isSubmitting },
   } = useForm<InviteFormValues>({
     resolver: zodResolver(inviteFormSchema),
@@ -323,12 +323,13 @@ function InviteForm({
       }}
       sx={{ mt: 4 }}
     >
-      <SelectField
+      <ChoiceButtons
         id="inviteRole"
         label="Invitar como"
         options={roles.map(role => ({ value: role, label: ROLE_LABELS[role] }))}
         hint="Crea un enlace para una persona; vence en 7 días."
-        registration={register('role')}
+        control={control}
+        name="role"
       />
       <Button
         type="submit"

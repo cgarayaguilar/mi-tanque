@@ -120,6 +120,55 @@ const createMuiTheme = (mode: ColorMode): Theme => {
           },
         },
       },
+      // Buttons side by side for 2–3 choices (specs/0009 RF-1)
+      MuiToggleButton: {
+        styleOverrides: {
+          root: {
+            ...typeScale.button,
+            textTransform: 'none',
+            minHeight: controlHeight.input,
+            color: color.body,
+            borderColor: color.controlBorder,
+            '&.Mui-selected, &.Mui-selected:hover': {
+              backgroundColor: color.primary,
+              color: color.onPrimary,
+            },
+          },
+        },
+      },
+      // Material menus instead of the system picker (specs/0009 RF-1)
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            border: `1px solid ${color.hairline}`,
+            borderRadius: radius.md,
+            marginTop: space.xxs,
+          },
+        },
+      },
+      MuiMenuItem: {
+        styleOverrides: {
+          root: { ...typeScale.bodyMd, minHeight: controlHeight.input },
+        },
+      },
+      MuiAutocomplete: {
+        styleOverrides: {
+          paper: {
+            border: `1px solid ${color.hairline}`,
+            borderRadius: radius.md,
+            marginTop: space.xxs,
+          },
+          option: { ...typeScale.bodyMd, minHeight: controlHeight.input },
+          noOptions: typeScale.bodySm,
+          // The field keeps the 44px of the other inputs
+          inputRoot: {
+            '&.MuiOutlinedInput-root': { padding: 0, paddingRight: 56 },
+            '&.MuiOutlinedInput-root .MuiAutocomplete-input': {
+              padding: `${String((controlHeight.input - typeScale.bodyMd.fontSize * 1.4375) / 2)}px ${String(space.base)}px`,
+            },
+          },
+        },
+      },
       MuiInputAdornment: {
         styleOverrides: { root: { color: color.muted } },
       },

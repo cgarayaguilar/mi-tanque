@@ -1,63 +1,91 @@
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormLabel from '@mui/material/FormLabel'
-import NativeSelect from '@mui/material/NativeSelect'
+import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
-import type { UseFormRegisterReturn } from 'react-hook-form'
+import Select from '@mui/material/Select'
+import {
+  Controller,
+  type Control,
+  type FieldPath,
+  type FieldValues,
+} from 'react-hook-form'
 
 export interface SelectOption {
   value: string
   label: string
 }
 
-interface SelectFieldProps {
+export interface ChoiceFieldProps<T extends FieldValues> {
   id: string
   label: string
   options: readonly SelectOption[]
+  control: Control<T>
+  name: FieldPath<T>
   hint?: string
   error?: string | undefined
-  registration: UseFormRegisterReturn
   disabled?: boolean
+  /** After the form's value changes (e.g. to fill other fields). */
+  onChange?: (value: string) => void
 }
 
 /**
- * A native select: on a phone it opens the system picker, which is easier
- * one-handed than a menu (DESIGN.md, Campo de selección).
+ * A short fixed list (4–7 options): Material's menu, the same on every phone,
+ * without the keyboard (backend specs/0009 RF-1, DESIGN.md).
  */
-export default function SelectField({
+export default function SelectField<T extends FieldValues>({
   id,
   label,
   options,
+  control,
+  name,
   hint,
   error,
-  registration,
   disabled = false,
-}: SelectFieldProps) {
-  const { ref, ...field } = registration
+  onChange,
+}: ChoiceFieldProps<T>) {
+  const labelId = `${id}-label`
   const helpId = `${id}-help`
   const help = error ?? hint
 
   return (
-    <FormControl fullWidth error={error !== undefined} disabled={disabled}>
-      <FormLabel htmlFor={id}>{label}</FormLabel>
-      <NativeSelect
-        input={<OutlinedInput />}
-        inputRef={ref}
-        {...field}
-        inputProps={{
-          id,
-          'aria-describedby': help === undefined ? undefined : helpId,
-        }}
-      >
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </NativeSelect>
-      {help !== undefined && (
-        <FormHelperText id={helpId}>{help}</FormHelperText>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormControl
+          fullWidth
+          error={error !== undefined}
+          disabled={disabled || field.disabled}
+        >
+          <FormLabel id={labelId}>{label}</FormLabel>
+          <Select
+            id={id}
+            labelId={labelId}
+            value={field.value ?? ''}
+            displayEmpty
+            input={<OutlinedInput />}
+            inputRef={field.ref}
+            onBlur={field.onBlur}
+            onChange={event => {
+              field.onChange(event.target.value)
+              onChange?.(event.target.value)
+            }}
+            SelectDisplayProps={{
+              'aria-describedby': help === undefined ? undefined : helpId,
+            }}
+          >
+            {options.map(option => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+          {help !== undefined && (
+            <FormHelperText id={helpId}>{help}</FormHelperText>
+          )}
+        </FormControl>
       )}
-    </FormControl>
+    />
   )
 }
