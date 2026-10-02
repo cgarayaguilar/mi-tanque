@@ -90,11 +90,15 @@ export default function ModelPicker({
               height={36}
             />
           </Box>
-          <Typography variant="subtitle1" component="p" sx={{ flexGrow: 1 }}>
-            {formatNumber(chosen.capacity)} gal · Ø{' '}
-            {formatNumber(chosen.diameter)} × {formatNumber(chosen.length)}{' '}
-            pulg.
-          </Typography>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="subtitle1" component="p">
+              {formatNumber(chosen.capacity)} gal
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Ø {formatNumber(chosen.diameter)} × {formatNumber(chosen.length)}{' '}
+              pulg.
+            </Typography>
+          </Box>
           <Button
             id={id}
             ref={buttonRef}
