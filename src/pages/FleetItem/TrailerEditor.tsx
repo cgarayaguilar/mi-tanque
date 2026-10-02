@@ -23,6 +23,9 @@ import { useFleetStore } from 'store/fleet'
 import type { FleetSection } from 'utils/fleetSections'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
+import DateField from 'components/DateField'
+import InsuranceChip from 'components/InsuranceChip'
+import { insuranceNotice } from 'utils/insurance'
 
 interface Props {
   section: FleetSection
@@ -59,6 +62,10 @@ export default function TrailerEditor({
   })
   const values = useWatch({ control })
   const trailerType = values.trailerType
+  // The same notice as the fleet card (backend specs/0011 RF-5)
+  const notice = trailer
+    ? insuranceNotice(trailer.insuranceExpiresOn, new Date(), trailer.archived)
+    : null
   const details = useMoreDetails<TrailerFormValues>(DETAILS, setFocus)
 
   const onSubmit = (values: TrailerFormValues) => {
@@ -103,6 +110,7 @@ export default function TrailerEditor({
         }}
       >
         <Stack spacing={5}>
+          {notice && <InsuranceChip notice={notice} />}
           <TextField
             id="name"
             label="Nombre o número de unidad"
@@ -185,6 +193,15 @@ export default function TrailerEditor({
             isOther={values.colorSwatch === 'other'}
             otherRegistration={register('colorOther')}
             otherError={errors.colorOther?.message}
+            disabled={!canWrite}
+          />
+          <DateField
+            id="insuranceExpiresOn"
+            label="Vencimiento del seguro (opcional)"
+            hint="Te avisamos en Flota un mes antes."
+            error={errors.insuranceExpiresOn?.message}
+            control={control}
+            name="insuranceExpiresOn"
             disabled={!canWrite}
           />
           <MoreDetails

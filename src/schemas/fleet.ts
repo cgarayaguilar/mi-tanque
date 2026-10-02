@@ -7,6 +7,7 @@ import {
 } from 'utils/tankVolume'
 import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
+import { isPlainDate } from 'utils/plainDate'
 
 // Same lists and limits as solocamioneros-backend/firestore.rules (specs/0003)
 
@@ -92,6 +93,8 @@ interface VehicleFields {
   year: number | null
   color: VehicleColor | null
   vin: string | null
+  /** The insurance's expiry, 'YYYY-MM-DD' (backend specs/0011). */
+  insuranceExpiresOn: string | null
 }
 
 export interface Truck extends FleetItemBase, VehicleFields {
@@ -204,6 +207,12 @@ const vehicleFields = {
   year: optionalYear,
   vin: optionalText(FLEET_LIMITS.vin),
   description: optionalText(FLEET_LIMITS.description),
+  // '' or 'YYYY-MM-DD', from the date picker (specs/0011 RF-3)
+  insuranceExpiresOn: z.string().check(
+    z.refine(value => value === '' || isPlainDate(value), {
+      error: 'Escribe una fecha válida',
+    })
+  ),
   ...colorFields,
 }
 
@@ -393,6 +402,7 @@ const vehicleFromForm = (values: TruckFormValues | TrailerFormValues) => ({
   color: colorFrom(values.colorSwatch, values.colorOther),
   vin: textOrNull(values.vin),
   description: textOrNull(values.description),
+  insuranceExpiresOn: values.insuranceExpiresOn || null,
 })
 
 const vehicleToForm = (item: Truck | Trailer) => ({
@@ -403,6 +413,7 @@ const vehicleToForm = (item: Truck | Trailer) => ({
   year: item.year === null ? '' : String(item.year),
   vin: item.vin ?? '',
   description: item.description ?? '',
+  insuranceExpiresOn: item.insuranceExpiresOn ?? '',
   ...colorToForm(item.color),
 })
 
@@ -444,6 +455,7 @@ export const truckToForm = (
           description: '',
           colorSwatch: '',
           colorOther: '',
+          insuranceExpiresOn: '',
         }),
     efficiency: show(
       truck?.fuelEfficiencyKmPerGal == null
@@ -483,6 +495,7 @@ export const trailerToForm = (trailer: Trailer | null): TrailerFormValues => ({
         description: '',
         colorSwatch: '',
         colorOther: '',
+        insuranceExpiresOn: '',
       }),
   trailerType: trailer?.trailerType ?? 'dry',
   trailerTypeOther: trailer?.trailerTypeOther ?? '',

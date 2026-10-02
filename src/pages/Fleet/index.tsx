@@ -45,6 +45,8 @@ import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import InsuranceChip from 'components/InsuranceChip'
+import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
 
 const CARD_HEIGHT = 88
 
@@ -54,6 +56,8 @@ interface CardProps {
   title: string
   lines: (string | null)[]
   archived: boolean
+  /** The insurance's notice, if it is due soon (backend specs/0011 RF-4). */
+  notice?: InsuranceNotice | null
   onClick: () => void
 }
 
@@ -63,12 +67,13 @@ function FleetCard({
   title,
   lines,
   archived,
+  notice = null,
   onClick,
 }: CardProps) {
   return (
     <ButtonBase
       onClick={onClick}
-      aria-label={label}
+      aria-label={notice ? `${label}, ${notice.text}` : label}
       sx={{
         width: '100%',
         display: 'flex',
@@ -108,6 +113,11 @@ function FleetCard({
             {line}
           </Typography>
         ))}
+        {notice && (
+          <Box sx={{ mt: 1 }}>
+            <InsuranceChip notice={notice} />
+          </Box>
+        )}
       </Box>
       {archived && <Chip label="Archivado" size="small" />}
     </ButtonBase>
@@ -136,6 +146,7 @@ function FleetScreen() {
   const role = useSessionStore(selectActiveRole)
   const { status, trucks, trailers, tanks, load } = useFleetStore()
   const distanceUnit = useDistanceUnit()
+  const today = new Date()
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const query = useDeferredValue(search.trim().toLowerCase())
@@ -209,6 +220,11 @@ function FleetScreen() {
                     .join(' · '),
                 ]}
                 archived={truck.archived}
+                notice={insuranceNotice(
+                  truck.insuranceExpiresOn,
+                  today,
+                  truck.archived
+                )}
                 onClick={() => {
                   open(truck.id)
                 }}
@@ -235,6 +251,11 @@ function FleetScreen() {
                     : 'Sin enganchar',
                 ]}
                 archived={trailer.archived}
+                notice={insuranceNotice(
+                  trailer.insuranceExpiresOn,
+                  today,
+                  trailer.archived
+                )}
                 onClick={() => {
                   open(trailer.id)
                 }}

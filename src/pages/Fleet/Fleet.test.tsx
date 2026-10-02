@@ -5,9 +5,11 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
+import { addDays } from 'date-fns'
 import App from '../../App'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
+import { toPlainDate } from 'utils/plainDate'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
@@ -180,4 +182,33 @@ test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
   expect(
     await screen.findByRole('button', { name: 'Tanque Tanque izquierdo' })
   ).toHaveTextContent('70 % · 84 gal · hace 2 h')
+})
+
+// specs/0011 CA-4: the insurance notice on the cards
+test('trucks and trailers say when their insurance is due, not when archived', async () => {
+  const inFiveDays = toPlainDate(addDays(new Date(), 5))
+  api.readFleet.mockResolvedValue({
+    trucks: [
+      truck({ id: 't1', name: 'Unidad 1', insuranceExpiresOn: inFiveDays }),
+      truck({
+        id: 't2',
+        name: 'Unidad 2',
+        insuranceExpiresOn: '2020-01-01',
+        archived: true,
+      }),
+    ],
+    trailers: [trailer({ insuranceExpiresOn: '2020-01-01' })],
+    tanks: [],
+  })
+  renderAt('/flota')
+
+  expect(
+    await screen.findByRole('button', {
+      name: 'Camión Unidad 1, Seguro vence en 5 días',
+    })
+  ).toBeInTheDocument()
+  expect(screen.queryByText('Seguro vencido')).toBeNull()
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Remolques' }))
+  expect(await screen.findByText('Seguro vencido')).toBeInTheDocument()
 })

@@ -43,6 +43,8 @@ const vehicle = {
   year: nullableNumber,
   color,
   vin: nullableString,
+  // 'YYYY-MM-DD'; documents from before specs/0011 lack it
+  insuranceExpiresOn: z._default(z.nullable(z.string()), null),
 }
 const truckSchema = z.object({
   ...vehicle,

@@ -108,6 +108,7 @@ describe('trailers (RF-6)', () => {
     description: '',
     colorSwatch: '',
     colorOther: '',
+    insuranceExpiresOn: '',
     trailerType: 'reefer' as const,
     trailerTypeOther: '',
     lengthFt: '53',
