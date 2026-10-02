@@ -97,7 +97,12 @@ export const sendPhoneCode = async (
   container: HTMLElement
 ): Promise<PhoneVerification> => {
   const { auth } = await loadFirebase()
-  const verifier = new RecaptchaVerifier(auth, container, { size: 'invisible' })
+  // A fresh element on every send: reCAPTCHA renders once per element, and
+  // clear() leaves an invisible widget's element taken, so "Resend code" or
+  // another number failed with "already been rendered in this element"
+  const host = document.createElement('div')
+  container.replaceChildren(host)
+  const verifier = new RecaptchaVerifier(auth, host, { size: 'invisible' })
   try {
     const confirmation = await signInWithPhoneNumber(auth, e164, verifier)
     return {
