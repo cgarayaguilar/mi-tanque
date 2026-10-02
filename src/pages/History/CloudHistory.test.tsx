@@ -261,6 +261,37 @@ test('correcting a measurement of a tank off its truck keeps its odometer', asyn
   })
 })
 
+// Measuring no longer asks for the odometer: it is added here, in the
+// organization's unit (specs/0010 CA-3)
+test('editing adds the odometer in the organization unit', async () => {
+  useSessionStore.setState(state => ({
+    organization: state.organization && {
+      ...state.organization,
+      distanceUnit: 'mi',
+    },
+  }))
+  historyApi.readHistoryPage.mockResolvedValue({
+    items: [cloudMeasurement({ odometerKm: null })],
+    cursor: null,
+  })
+  renderHistory()
+  await openOptions('Editar')
+
+  const dialog = screen.getByRole('dialog', { name: 'Corregir medición' })
+  fireEvent.change(within(dialog).getByLabelText('Odómetro (opcional)'), {
+    target: { value: '100000' },
+  })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+
+  await waitFor(() => {
+    expect(historyApi.updateCloudMeasurement).toHaveBeenCalledWith(
+      'm-1',
+      'luis',
+      expect.objectContaining({ odometerKm: 160934 })
+    )
+  })
+})
+
 test('editing recomputes with the chosen tank and saves without waiting (RF-12, CA-7)', async () => {
   historyApi.readHistoryPage.mockResolvedValue({
     items: [cloudMeasurement()],

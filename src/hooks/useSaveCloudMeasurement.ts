@@ -33,11 +33,7 @@ export const useSaveCloudMeasurement = (
   const savingRef = useRef(false)
   const repeated = useRef(createRepeatGuard()).current
 
-  return (
-    tank: FleetTank,
-    reading: CloudReading,
-    odometerKm: number | null
-  ) => {
+  return (tank: FleetTank, reading: CloudReading) => {
     if (savingRef.current || !user || !orgId) return
     // Regression: a second tap saved a second measurement
     if (repeated(`${tank.id}|${String(reading.inches)}`)) return
@@ -59,7 +55,9 @@ export const useSaveCloudMeasurement = (
       userName: authorName(userName),
       takenAt,
       reading,
-      odometerKm,
+      // Not asked when measuring (it took room and was rarely typed): it can
+      // be added later by editing the measurement in the history
+      odometerKm: null,
     }).catch((error: unknown) => {
       reportError(error, { operation: 'createCloudMeasurement' })
       if (recoverFromLostPermission(error)) return
