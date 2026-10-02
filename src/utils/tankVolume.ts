@@ -117,3 +117,11 @@ export const gallonsAt = (geometry: TankGeometry, inches: number): number => {
 /** Gallons in the full tank, from its dimensions. */
 export const fullVolumeGallons = (geometry: TankGeometry): number =>
   gallonsAt(geometry, maxFuelHeight(geometry))
+
+// A capacity this far from the geometry suggests a measuring mistake
+// (specs/0003 RF-10, shown by the preview of specs/0013 RF-8)
+export const CAPACITY_TOLERANCE = 0.15
+
+/** Whether the stated capacity agrees with the volume the measures give. */
+export const capacityMatches = (volume: number, capacity: number) =>
+  Math.abs(capacity - volume) / volume <= CAPACITY_TOLERANCE

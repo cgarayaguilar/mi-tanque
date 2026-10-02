@@ -181,8 +181,14 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
   )
   // A new tank starts from a model (backend specs/0009 RF-9)
   await choose('Modelo', '75 gal · 25 × 39 pulg.')
+  // specs/0013 RF-9: the model's tank, drawn to scale
   expect(
-    screen.getByText('Cilíndrico, horizontal · 75 gal · 25 × 39 pulg.')
+    screen.getByRole('img', {
+      name: /^Cilindro acostado: 25 pulgadas de diámetro, 39 de largo; caben unos \d+ galones$/,
+    })
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText('Coincide con la capacidad (75 gal).')
   ).toBeInTheDocument()
 
   await choose('¿Cómo lo describes?', 'Con sus medidas')
@@ -194,16 +200,23 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
   type('Ancho', '30')
   type('Largo', '48')
 
+  // specs/0013 RF-8: the preview compares the measures with the capacity
   expect(
-    await screen.findByText('Según las medidas caben unos 137 galones.')
+    await screen.findByText('Caben unos 137 gal según las medidas.')
   ).toBeInTheDocument()
   expect(
     screen.getByText(
-      'Las medidas dan unos 137 galones. Revisa las medidas o la capacidad.'
+      'La capacidad dice 75 gal. Revisa las medidas o la capacidad.'
     )
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('img', { name: /^Tanque en "D" de lado plano acostado/ })
   ).toBeInTheDocument()
 
   type('Capacidad', '135')
+  expect(
+    screen.getByText('Coincide con la capacidad (135 gal).')
+  ).toBeInTheDocument()
   await choose('Pertenece a', 'Camión · Unidad 12')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
 
@@ -559,4 +572,36 @@ test('no native select is left in the app', () => {
     .filter(([, source]) => /NativeSelect|<select[\s>]/.test(source))
     .map(([path]) => path)
   expect(native).toEqual([])
+})
+
+// specs/0013 CA-1, CA-2, CA-3: the measures share a row, each one explained
+test('each measure has its ⓘ and the guide shows how to measure', async () => {
+  renderAt('/flota/tanques/nuevo')
+  await choose('¿Cómo lo describes?', 'Con sus medidas')
+  await choose('Forma', 'En "D", lado plano contra el chasis')
+
+  // Alto, ancho y largo in one row
+  const row = screen.getByLabelText('Alto').closest('.MuiFormControl-root')
+    ?.parentElement as HTMLElement
+  expect(within(row).getByLabelText('Ancho')).toBeInTheDocument()
+  expect(within(row).getByLabelText('Largo')).toBeInTheDocument()
+
+  fireEvent.mouseOver(screen.getByRole('button', { name: '¿Qué es el ancho?' }))
+  expect(
+    await screen.findByRole('tooltip', {
+      name: /Del lado plano al punto más saliente de la curva/,
+    })
+  ).toBeInTheDocument()
+
+  fireEvent.click(
+    screen.getByRole('button', { name: '¿Cómo medir mi tanque?' })
+  )
+  const guide = await screen.findByRole('dialog', {
+    name: 'Cómo medir tu tanque',
+  })
+  expect(within(guide).getByText(/Usa una cinta métrica/)).toBeInTheDocument()
+  fireEvent.click(within(guide).getByRole('button', { name: 'Entendido' }))
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
 })

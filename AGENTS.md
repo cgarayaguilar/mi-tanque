@@ -119,6 +119,11 @@ en cada push y PR.
   "C$9,274.26 NIO"; `unitPrice`/`unitPrices` para precios por galón y litro). Nombre, símbolo y
   países de cada moneda viven en `CURRENCY_DETAILS` (`schemas/account`). Litros se escribe
   completo, nunca "L" (es el símbolo del lempira). El CSV no lleva símbolos.
+- **Formulario de tanque (specs/0013):** capacidad primero y las medidas en una fila; cada medida
+  con su ⓘ (`MeasureHelp`, textos en `utils/measureHelp`) y la guía `MeasureGuide`. La vista
+  previa `TankPreview` dibuja el tanque en 3D a escala con `utils/tankProjection` (pura, con tests
+  de proporciones) y compara el volumen con la capacidad (`capacityMatches` de `utils/tankVolume`).
+  La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
