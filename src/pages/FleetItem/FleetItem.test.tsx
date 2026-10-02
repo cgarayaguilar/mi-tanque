@@ -361,6 +361,22 @@ describe('simpler forms (backend specs/0009)', () => {
     expect(api.updateFleetItem).not.toHaveBeenCalled()
   })
 
+  // Audit 2026-10-02: the hidden field took the focus from the visible one
+  test('a visible error keeps the focus; the details open anyway', async () => {
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
+    type('Nombre o número de unidad', '')
+    type('Odómetro (opcional)', 'mucho')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Nombre o número de unidad')).toHaveFocus()
+    })
+    expect(
+      screen.getByRole('button', { name: 'Ocultar detalles' })
+    ).toBeInTheDocument()
+  })
+
   // CA-2 (RF-3)
   test('a color is found by typing, with "Otro" to write one in', async () => {
     renderAt('/flota/camiones/nuevo')
@@ -377,6 +393,63 @@ describe('simpler forms (backend specs/0009)', () => {
 
     await choose('Color (opcional)', 'Otro')
     expect(screen.getByLabelText('¿Qué color?')).toBeInTheDocument()
+  })
+
+  // Audit 2026-10-02: a value left in a field that hides blocked the save
+  // with no visible error
+  test('a reefer consumption left behind does not block a dry trailer', async () => {
+    renderAt('/flota/remolques/trailer-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Ver más detalles/ })
+    )
+    type('Consumo del equipo de frío (opcional)', '9')
+    await choose('Tipo de remolque', 'Seco (caja cerrada)')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'trailers',
+        'trailer-1',
+        expect.objectContaining({
+          trailerType: 'dry',
+          reeferConsumptionGalPerHour: null,
+        })
+      )
+    })
+  })
+
+  // Audit 2026-10-02: in miles, saving without touching the odometer moved it
+  test('an untouched odometer keeps its stored kilometers in miles', async () => {
+    useSessionStore.setState(state => ({
+      organization: state.organization && {
+        ...state.organization,
+        distanceUnit: 'mi',
+      },
+    }))
+    api.readFleet.mockResolvedValue({
+      trucks: [truck({ odometerKm: 102, fuelEfficiencyKmPerGal: 9.5 })],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+    renderAt('/flota/camiones/truck-1')
+    type(
+      await screen
+        .findByLabelText('Placa (opcional)')
+        .then(() => 'Placa (opcional)'),
+      'M 1'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'truck-1',
+        expect.objectContaining({
+          odometerKm: 102,
+          fuelEfficiencyKmPerGal: 9.5,
+        })
+      )
+    })
   })
 
   // CA-5
@@ -418,6 +491,48 @@ describe('simpler forms (backend specs/0009)', () => {
           dimensions: { diameterIn: 25, lengthIn: 39 },
         })
       )
+    })
+  })
+
+  // Audit 2026-10-02: a model with a capacity edited by hand opened as the
+  // model, and going back to it reset the capacity without a word
+  test('a tank whose capacity was edited is no longer its model', async () => {
+    api.readFleet.mockResolvedValue({
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [
+        tank({
+          shape: 'cylinder',
+          dimensions: { diameterIn: 25, lengthIn: 39 },
+          capacityGal: 70,
+          templateId: 'cyl-75-25x39',
+        }),
+      ],
+    })
+    renderAt('/flota/tanques/tank-1')
+    expect(
+      within(
+        await screen.findByRole('group', { name: '¿Cómo lo describes?' })
+      ).getByRole('button', { name: 'Con sus medidas' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Capacidad')).toHaveValue('70')
+  })
+
+  // Audit 2026-10-02: the message stayed after choosing a model
+  test('"Elige un modelo" goes away once one is chosen', async () => {
+    renderAt('/flota/tanques/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre del tanque')
+        .then(() => 'Nombre del tanque'),
+      'Tanque 4'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+    expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
+
+    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    await waitFor(() => {
+      expect(screen.queryByText('Elige un modelo')).toBeNull()
     })
   })
 

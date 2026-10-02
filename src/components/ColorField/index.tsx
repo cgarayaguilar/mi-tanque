@@ -8,7 +8,7 @@ import Stack from '@mui/material/Stack'
 import AutocompleteField from 'components/AutocompleteField'
 import ColorDot from 'components/ColorDot'
 import TextField from 'components/TextField'
-import { COLOR_SWATCHES, type Swatch } from 'schemas/fleet'
+import { COLOR_SWATCHES, FLEET_LIMITS, type Swatch } from 'schemas/fleet'
 
 interface ColorFieldProps<T extends FieldValues> {
   control: Control<T>
@@ -56,6 +56,7 @@ export default function ColorField<T extends FieldValues>({
           id="colorOther"
           label="¿Qué color?"
           placeholder="Rojo vino"
+          maxLength={FLEET_LIMITS.colorLabel}
           error={otherError}
           registration={otherRegistration}
           disabled={disabled}

@@ -29,6 +29,8 @@ interface AutocompleteBaseProps {
 // Stable: a new function each render makes the Autocomplete put the chosen
 // label back over what is being typed
 const labelOf = (option: SelectOption) => option.label
+// By value: two options may read the same (two "Flota de Juan")
+const keyOf = (option: SelectOption) => option.value
 const sameOption = (option: SelectOption, chosen: SelectOption) =>
   option.value === chosen.value
 
@@ -69,6 +71,7 @@ export function AutocompleteBase({
         disableClearable
         disabled={disabled}
         getOptionLabel={labelOf}
+        getOptionKey={keyOf}
         isOptionEqualToValue={sameOption}
         noOptionsText="Sin resultados"
         openText="Abrir"

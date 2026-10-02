@@ -194,9 +194,34 @@ const optionalYear = z.string().check(
   )
 )
 
+/**
+ * A field shown only in some cases, checked only then: a value left behind
+ * when it hides (a reefer's consumption, then "Seco") blocked the save with
+ * no visible error (audit 2026-10-02). What is saved already drops it.
+ */
+const checkWhen = <T extends Record<string, unknown>>(
+  applies: (values: T) => boolean,
+  field: keyof T & string,
+  schema: z.ZodMiniType
+) =>
+  z.superRefine<T>((values, ctx) => {
+    if (!applies(values)) return
+    const result = schema.safeParse(values[field])
+    if (result.success) return
+    for (const issue of result.error.issues) {
+      ctx.issues.push({
+        code: 'custom',
+        input: values[field],
+        path: [field],
+        message: issue.message,
+      })
+    }
+  })
+
 const colorFields = {
   colorSwatch: z.string(),
-  colorOther: optionalText(FLEET_LIMITS.colorLabel),
+  // Checked only with "Otro" (checkWhen)
+  colorOther: z.string(),
 }
 
 const vehicleFields = {
@@ -215,6 +240,12 @@ const vehicleFields = {
   ),
   ...colorFields,
 }
+
+const otherColorFits = checkWhen<{ colorSwatch: string; colorOther: string }>(
+  values => values.colorSwatch === 'other',
+  'colorOther',
+  optionalText(FLEET_LIMITS.colorLabel)
+)
 
 const otherColorNeedsName = z.refine<{
   colorSwatch: string
@@ -235,28 +266,36 @@ export const truckFormSchema = z
     odometer: optionalDecimal(0, FLEET_LIMITS.odometerMax, ''),
     assignedDriverUid: z.string(),
   })
-  .check(otherColorNeedsName)
+  .check(otherColorNeedsName, otherColorFits)
 export type TruckFormValues = z.infer<typeof truckFormSchema>
 
 export const trailerFormSchema = z
   .object({
     ...vehicleFields,
     trailerType: z.enum(['dry', 'reefer', 'tanker', 'flatbed', 'other']),
-    trailerTypeOther: optionalText(FLEET_LIMITS.trailerTypeOther),
+    // Checked only for that type (checkWhen)
+    trailerTypeOther: z.string(),
     lengthFt: optionalDecimal(
       FLEET_LIMITS.lengthFt.min,
       FLEET_LIMITS.lengthFt.max,
       'pies'
     ),
-    reeferConsumption: optionalDecimal(
-      FLEET_LIMITS.reefer.min,
-      FLEET_LIMITS.reefer.max,
-      'gal/h'
-    ),
+    reeferConsumption: z.string(),
     hitchedTruckId: z.string(),
   })
   .check(
     otherColorNeedsName,
+    otherColorFits,
+    checkWhen<{ trailerType: string; trailerTypeOther: string }>(
+      values => values.trailerType === 'other',
+      'trailerTypeOther',
+      optionalText(FLEET_LIMITS.trailerTypeOther)
+    ),
+    checkWhen<{ trailerType: string; reeferConsumption: string }>(
+      values => values.trailerType === 'reefer',
+      'reeferConsumption',
+      optionalDecimal(FLEET_LIMITS.reefer.min, FLEET_LIMITS.reefer.max, 'gal/h')
+    ),
     z.refine(
       values =>
         values.trailerType !== 'other' || values.trailerTypeOther.trim() !== '',
@@ -413,7 +452,12 @@ const vehicleToForm = (item: Truck | Trailer) => ({
   year: item.year === null ? '' : String(item.year),
   vin: item.vin ?? '',
   description: item.description ?? '',
-  insuranceExpiresOn: item.insuranceExpiresOn ?? '',
+  // A stored date that does not exist (e.g. 2026-02-30, written outside the
+  // app) would leave the field looking empty but unsaveable (audit 2026-10-02)
+  insuranceExpiresOn:
+    item.insuranceExpiresOn && isPlainDate(item.insuranceExpiresOn)
+      ? item.insuranceExpiresOn
+      : '',
   ...colorToForm(item.color),
 })
 

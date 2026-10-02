@@ -253,3 +253,21 @@ describe('tanks (RF-8)', () => {
     expect(equipmentFromValue('garbage')).toEqual({ kind: 'none', id: null })
   })
 })
+
+// Audit 2026-10-02: a stored date that does not exist (written outside the
+// app) left the field empty-looking but unsaveable
+test('an impossible stored insurance date opens empty', () => {
+  const truck: Truck = {
+    id: 't1',
+    orgId: 'org',
+    archived: false,
+    photoPath: null,
+    ...truckFromForm({ ...truckForm, name: 'U' }, 'km'),
+    insuranceExpiresOn: '2026-02-30',
+  }
+  expect(truckToForm(truck, 'km').insuranceExpiresOn).toBe('')
+  expect(
+    truckToForm({ ...truck, insuranceExpiresOn: '2026-11-15' }, 'km')
+      .insuranceExpiresOn
+  ).toBe('2026-11-15')
+})

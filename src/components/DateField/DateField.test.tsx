@@ -48,3 +48,14 @@ test('clearing the date stores nothing', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Limpiar valor' }))
   expect(onValue).toHaveBeenLastCalledWith('')
 })
+
+// Audit 2026-10-02: a pasted date the picker could not read erased the saved
+// one without a word
+test('a pasted date that cannot be read is a mistake, not a cleared date', () => {
+  const onValue = vi.fn()
+  render(<Form initial="2026-11-10" onValue={onValue} />)
+  fireEvent.change(screen.getByLabelText('Vencimiento del seguro (opcional)'), {
+    target: { value: '31/02/2026' },
+  })
+  expect(onValue).not.toHaveBeenLastCalledWith('')
+})

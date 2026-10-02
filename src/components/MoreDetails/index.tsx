@@ -70,7 +70,12 @@ export const useMoreDetails = <T extends FieldValues>(
     const first = hidden.find(name => name in errors)
     if (first === undefined) return
     setOpen(true)
-    // After the section opens: a closed one cannot take the focus
+    // A visible field with an error keeps the focus React Hook Form gave
+    // it (audit 2026-10-02); otherwise, once the section opens, go there
+    const visibleError = Object.keys(errors).some(
+      name => !(hidden as readonly string[]).includes(name)
+    )
+    if (visibleError) return
     setTimeout(() => {
       setFocus(first)
     }, 0)

@@ -12,6 +12,7 @@ import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
 import {
+  FLEET_LIMITS,
   TRAILER_TYPES,
   trailerFormSchema,
   trailerFromForm,
@@ -134,6 +135,7 @@ export default function TrailerEditor({
               id="trailerTypeOther"
               label="¿Qué tipo?"
               placeholder="Jaula ganadera"
+              maxLength={FLEET_LIMITS.trailerTypeOther}
               error={errors.trailerTypeOther?.message}
               registration={register('trailerTypeOther')}
             />

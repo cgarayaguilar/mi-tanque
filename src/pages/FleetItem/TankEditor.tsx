@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
@@ -81,10 +81,23 @@ const templateOf = (values: TankFormValues) => {
     values.shape === 'cylinder' &&
     values.orientation === 'horizontal' &&
     parseDecimal(values.diameter) === template.diameterIn &&
-    parseDecimal(values.length) === template.lengthIn
+    parseDecimal(values.length) === template.lengthIn &&
+    // A capacity edited by hand is no longer the model (audit 2026-10-02)
+    parseDecimal(values.capacity) === template.capacityGal
     ? template
     : null
 }
+
+// Shown only "Con sus medidas"
+const MEASURES = [
+  'shape',
+  'orientation',
+  'diameter',
+  'height',
+  'width',
+  'length',
+  'capacity',
+] as const
 
 export default function TankEditor({
   section,
@@ -133,6 +146,41 @@ export default function TankEditor({
     setValue('diameter', formatNumber(template.diameterIn))
     setValue('length', formatNumber(template.lengthIn))
     setValue('capacity', formatNumber(template.capacityGal))
+  }
+
+  // From a model, the model is the one thing to choose. Inside handleSubmit,
+  // so choosing one clears the message (audit 2026-10-02)
+  const askForModel = () => {
+    setError('templateId', { message: 'Elige un modelo' })
+    setFocus('templateId')
+  }
+
+  const onValid = (formValues: TankFormValues) => {
+    if (describe === 'template' && !template) {
+      askForModel()
+      return
+    }
+    onSubmit(formValues)
+  }
+
+  const onInvalid = (formErrors: FieldErrors<TankFormValues>) => {
+    if (describe === 'template') {
+      if (!template) {
+        askForModel()
+        return
+      }
+      // The model's measures failed (e.g. a capacity the rules refuse): an
+      // error on a hidden field left Guardar doing nothing; show the measures
+      const hidden = MEASURES.find(name => name in formErrors)
+      if (hidden) {
+        setDescribe('measures')
+        setTimeout(() => {
+          setFocus(hidden)
+        }, 0)
+        return
+      }
+    }
+    details.onInvalid(formErrors)
   }
 
   const onSubmit = (formValues: TankFormValues) => {
@@ -186,14 +234,7 @@ export default function TankEditor({
         noValidate
         aria-label="Datos del tanque"
         onSubmit={event => {
-          // From a model: the model is the one thing to choose
-          if (describe === 'template' && !template) {
-            event.preventDefault()
-            setError('templateId', { message: 'Elige un modelo' })
-            setFocus('templateId')
-            return
-          }
-          void handleSubmit(onSubmit, details.onInvalid)(event)
+          void handleSubmit(onValid, onInvalid)(event)
         }}
       >
         <Stack spacing={5}>

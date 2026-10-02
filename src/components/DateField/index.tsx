@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useForkRef } from '@mui/material/utils'
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormLabel from '@mui/material/FormLabel'
@@ -26,6 +27,10 @@ const localeText = Object.fromEntries(
     esES.components.MuiLocalizationProvider.defaultProps.localeText
   ).filter(([, text]) => text !== undefined)
 ) as PickersInputLocaleText<Date>
+
+// The range the rules accept (backend specs/0011 RF-2)
+const MIN_DATE = new Date(2000, 0, 1)
+const MAX_DATE = new Date(2100, 11, 31)
 
 interface DateFieldProps<T extends FieldValues> {
   id: string
@@ -62,20 +67,41 @@ function Picker({
   disabled,
 }: PickerProps) {
   const [draft, setDraft] = useState<Date | null>(() => fromPlainDate(value))
+  const input = useRef<HTMLInputElement>(null)
+  const clearing = useRef(false)
+  const ref = useForkRef(inputRef, input)
   return (
     <DesktopDatePicker
       value={draft}
       format="dd/MM/yyyy"
+      minDate={MIN_DATE}
+      maxDate={MAX_DATE}
       disabled={disabled}
-      inputRef={inputRef}
+      inputRef={ref}
       onChange={date => {
         setDraft(date)
+        // A pasted date the picker cannot read comes as empty: with digits
+        // still in the field it is a mistake, not a cleared date (audit
+        // 2026-10-02)
+        const typed = !clearing.current && /\d/.test(input.current?.value ?? '')
+        clearing.current = false
         onChange(
-          date === null ? '' : isValid(date) ? toPlainDate(date) : 'invalid'
+          date === null
+            ? typed
+              ? 'invalid'
+              : ''
+            : isValid(date)
+              ? toPlainDate(date)
+              : 'invalid'
         )
       }}
       slotProps={{
-        field: { clearable: true },
+        field: {
+          clearable: true,
+          onClear: () => {
+            clearing.current = true
+          },
+        },
         textField: {
           id,
           fullWidth: true,
