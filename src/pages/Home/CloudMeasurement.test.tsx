@@ -231,6 +231,23 @@ test('each save is a new intent; a reefer tank uses the hitched truck (CA-2)', a
   expect(screen.queryByLabelText('Odómetro (opcional)')).toBeNull()
 })
 
+// Regression: the first save is not awaited, so a quick second tap on
+// "Calcular" saved the same measurement twice (ADR 0003)
+test('a double tap saves one measurement', async () => {
+  renderHome()
+  fireEvent.change(await screen.findByLabelText('Equipo'), {
+    target: { value: 'trailer:trailer-1' },
+  })
+  measure('10')
+  await waitFor(() => {
+    expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(1)
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Calcular' }))
+  await new Promise(resolve => setTimeout(resolve, 50))
+
+  expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledTimes(1)
+})
+
 test('an individual tank has no estimate', async () => {
   renderHome()
   fireEvent.change(await screen.findByLabelText('Equipo'), {

@@ -7,6 +7,7 @@ import {
 import type { FuelReading, Tank } from 'types'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
+import { createRepeatGuard } from 'utils/repeatGuard'
 
 const NO_LOCATION = 'Sin ubicación'
 
@@ -54,9 +55,12 @@ export const useSaveMeasurement = (): ((
   const [intentId, setIntentId] = useState(() => crypto.randomUUID())
   // Blocks a second save before React re-renders the disabled button (§8.6)
   const savingRef = useRef(false)
+  const repeated = useRef(createRepeatGuard()).current
 
   return async (tank, reading) => {
     if (savingRef.current) return false
+    // A double tap once the first save is done is not a new measurement
+    if (repeated(`${String(tank.id)}|${String(reading.inches)}`)) return false
     savingRef.current = true
     const date = new Date()
 

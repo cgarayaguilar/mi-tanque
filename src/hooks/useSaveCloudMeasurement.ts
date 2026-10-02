@@ -11,6 +11,7 @@ import { getCurrentPosition } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
 import { authorName } from 'utils/personName'
+import { createRepeatGuard } from 'utils/repeatGuard'
 
 /**
  * Saves a fleet tank's measurement (backend specs/0004 RF-4, RF-5): written
@@ -28,6 +29,7 @@ export const useSaveCloudMeasurement = (
   // One id per measurement: a retry of the same save cannot duplicate it
   const [intentId, setIntentId] = useState(() => crypto.randomUUID())
   const savingRef = useRef(false)
+  const repeated = useRef(createRepeatGuard()).current
 
   return (
     tank: FleetTank,
@@ -35,6 +37,8 @@ export const useSaveCloudMeasurement = (
     odometerKm: number | null
   ) => {
     if (savingRef.current || !user || !orgId) return
+    // Regression: a second tap saved a second measurement
+    if (repeated(`${tank.id}|${String(reading.inches)}`)) return
     savingRef.current = true
     const id = intentId
     const equipment: MeasurementEquipment =
