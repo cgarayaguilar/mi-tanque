@@ -110,6 +110,12 @@ en cada push y PR.
   (`useMoreDetails` abre la sección y enfoca el campo si falla al guardar). Toda etiqueta opcional
   termina en "(opcional)". En los tests, `choose(label, opción)` de `src/testing/choose` elige en
   cualquiera de los tres.
+- **Unidad de distancia (specs/0010):** es de la organización (`organization.distanceUnit`); úsala
+  con `useDistanceUnit()` (o `useOrganizationDistanceUnit()` donde no se cargó la flota). Sin unidad
+  guardada sale de la mayoría de los camiones (`utils/distanceUnit`). El rendimiento y el odómetro se
+  guardan siempre en km.
+- **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
+  `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
