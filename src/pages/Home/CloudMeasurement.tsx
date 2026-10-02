@@ -37,6 +37,7 @@ import {
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 const NOT_MEASURED = '—'
 const INDIVIDUAL = 'none'
@@ -73,7 +74,7 @@ function CloudResults({
   reading: CloudReading | null
   truck: Truck | null
 }) {
-  const unit = truck?.distanceUnit ?? 'km'
+  const unit = useDistanceUnit()
   const range = reading?.estimate
     ? unit === 'mi'
       ? `${formatNumber(Math.round(reading.estimate.miles))} mi (${formatNumber(Math.round(reading.estimate.km))} km)`
@@ -150,7 +151,7 @@ function MeasureForm({
 }) {
   const [reading, setReading] = useState<CloudReading | null>(null)
   const maxInches = maxInchesFor(tank)
-  const odometerUnit = truck?.distanceUnit ?? 'km'
+  const odometerUnit = useDistanceUnit()
   const asksOdometer = tank.equipment.kind === 'truck' && truck !== null
   const {
     register,

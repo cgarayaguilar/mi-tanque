@@ -3,6 +3,7 @@ import {
   TRAILER_TYPES,
   type FleetTank,
   type Trailer,
+  type DistanceUnit,
   type Truck,
 } from 'schemas/fleet'
 import { formatNumber } from 'utils/formatNumber'
@@ -18,9 +19,8 @@ export const trailerTypeLabel = (trailer: Trailer) =>
     ? (trailer.trailerTypeOther ?? 'Otro')
     : (TRAILER_TYPES.find(type => type.id === trailer.trailerType)?.label ?? '')
 
-/** Efficiency and odometer in the truck's own unit (specs/0003 RF-5). */
-export const truckFigures = (truck: Truck) => {
-  const unit = truck.distanceUnit
+/** Efficiency and odometer in the organization's unit (backend specs/0010). */
+export const truckFigures = (truck: Truck, unit: DistanceUnit) => {
   const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
   return {
     efficiency:

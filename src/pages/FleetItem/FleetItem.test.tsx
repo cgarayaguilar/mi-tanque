@@ -69,7 +69,14 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// The organization reads miles (backend specs/0010 CA-3)
 test('a new truck in miles is saved in kilometers and the list opens (CA-2)', async () => {
+  useSessionStore.setState(state => ({
+    organization: state.organization && {
+      ...state.organization,
+      distanceUnit: 'mi',
+    },
+  }))
   renderAt('/flota/camiones/nuevo')
 
   type(
@@ -80,7 +87,7 @@ test('a new truck in miles is saved in kilometers and the list opens (CA-2)', as
   )
   await choose('Color (opcional)', 'Azul')
   fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
-  await choose('Unidad de distancia', 'Millas')
+  expect(screen.getByText('mi/gal')).toBeInTheDocument()
   type('Rendimiento (opcional)', '6')
   type('Odómetro (opcional)', '100000')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))

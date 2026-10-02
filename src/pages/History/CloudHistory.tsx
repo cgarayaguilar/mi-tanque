@@ -57,6 +57,7 @@ import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
 import { equipmentLabel } from 'hooks/equipmentLabel'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -373,7 +374,7 @@ function EditDialog({
     item => !item.archived || item.id === measurement.tankId
   )
   const truck = tank ? rangeTruckFor(tank, trucks, trailers) : null
-  const unit = truck?.distanceUnit ?? 'km'
+  const unit = useDistanceUnit()
   const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
   const {
     register,

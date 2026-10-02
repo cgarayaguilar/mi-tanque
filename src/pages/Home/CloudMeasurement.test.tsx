@@ -327,3 +327,25 @@ test('a save refused because the role changed reloads the account instead of bla
     expect(sessionApi.readAccount).toHaveBeenCalledWith('luis')
   })
 })
+
+// specs/0010 CA-3: the odometer is asked in the organization's unit
+test('with the organization in miles the odometer is typed in miles', async () => {
+  useSessionStore.setState(state => ({
+    organization: state.organization && {
+      ...state.organization,
+      distanceUnit: 'mi',
+    },
+  }))
+  renderHome()
+  await choose('Tanque', 'Tanque izquierdo')
+  fireEvent.change(screen.getByLabelText('Odómetro (opcional)'), {
+    target: { value: '100000' },
+  })
+  measure('12')
+
+  await waitFor(() => {
+    expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+      expect.objectContaining({ odometerKm: 160934 })
+    )
+  })
+})

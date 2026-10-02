@@ -11,6 +11,7 @@ import { geometryOf, maxInchesFor } from 'utils/measurementMath'
 import { truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 /** A refuel of a fleet tank (backend specs/0006 RF-1–RF-6). */
 export default function CloudRefuel({
@@ -31,6 +32,7 @@ export default function CloudRefuel({
     state => state.organization?.defaultCurrency ?? 'USD'
   )
   const role = useSessionStore(selectActiveRole)
+  const distanceUnit = useDistanceUnit()
   const save = useSaveCloudRefuel(equipmentName)
   const [saved, setSaved] = useState<RefuelValues | null>(null)
   const stations = useLoad(orgId, () =>
@@ -66,7 +68,7 @@ export default function CloudRefuel({
         stations={stations.value ?? []}
         odometer={
           truck && onTruck
-            ? { unit: truck.distanceUnit, truckName: truck.name }
+            ? { unit: distanceUnit, truckName: truck.name }
             : null
         }
         allowsPhoto

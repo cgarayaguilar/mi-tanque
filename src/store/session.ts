@@ -76,6 +76,7 @@ interface SessionState extends SessionData {
   updateOrganization: (changes: {
     name?: string
     defaultCurrency?: Currency
+    distanceUnit?: 'km' | 'mi'
   }) => Promise<void>
   /**
    * 'pendingWrites' when local changes have not reached the server yet; call

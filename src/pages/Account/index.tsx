@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import { useOrganizationDistanceUnit } from 'hooks/useDistanceUnit'
 import { useImportLocalData } from 'hooks/useImportLocalData'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -25,9 +26,9 @@ import TeamSection from 'pages/Account/TeamSection'
 import {
   CURRENCY_NAMES,
   CURRENCY_OPTIONS,
-  organizationFormSchema,
+  organizationSettingsSchema,
   profileFormSchema,
-  type OrganizationFormValues,
+  type OrganizationSettingsValues,
   type ProfileFormValues,
 } from 'schemas/account'
 import { warmUpAccount } from 'services/session'
@@ -36,6 +37,8 @@ import { radius } from 'theme/tokens'
 import { authErrorMessage } from 'utils/authErrors'
 import { reportError } from 'utils/reportError'
 import { canEditOrganization, canWriteFleet, ROLE_LABELS } from 'utils/roles'
+import ChoiceButtons from 'components/ChoiceButtons'
+import { DISTANCE_UNIT_OPTIONS } from 'utils/distanceUnit'
 
 const failed = (operation: string, title: string) => (error: unknown) => {
   reportError(error, { operation })
@@ -161,26 +164,38 @@ function OrganizationSwitcher() {
 function OrganizationForm() {
   const organization = useSessionStore(state => state.organization)
   const updateOrganization = useSessionStore(state => state.updateOrganization)
+  const distanceUnit = useOrganizationDistanceUnit()
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors, isSubmitting, isDirty, dirtyFields },
-  } = useForm<OrganizationFormValues>({
-    resolver: zodResolver(organizationFormSchema),
+  } = useForm<OrganizationSettingsValues>({
+    resolver: zodResolver(organizationSettingsSchema),
     defaultValues: {
       name: organization?.name ?? '',
       defaultCurrency: organization?.defaultCurrency ?? 'USD',
+      distanceUnit,
     },
   })
 
-  const onSubmit = async (values: OrganizationFormValues) => {
+  // Without a saved unit it comes from the trucks, which load after the form
+  // (specs/0010 RF-3): follow them until the user picks one
+  useEffect(() => {
+    if (!dirtyFields.distanceUnit) setValue('distanceUnit', distanceUnit)
+  }, [distanceUnit, dirtyFields.distanceUnit, setValue])
+
+  const onSubmit = async (values: OrganizationSettingsValues) => {
     try {
       await updateOrganization({
         ...(dirtyFields.name && { name: values.name }),
         ...(dirtyFields.defaultCurrency && {
           defaultCurrency: values.defaultCurrency,
+        }),
+        ...(dirtyFields.distanceUnit && {
+          distanceUnit: values.distanceUnit,
         }),
       })
       reset(values)
@@ -216,6 +231,14 @@ function OrganizationForm() {
           control={control}
           name="defaultCurrency"
         />
+        <ChoiceButtons
+          id="distanceUnit"
+          label="Unidad de distancia"
+          options={DISTANCE_UNIT_OPTIONS}
+          hint="Para el rendimiento, el odómetro y el alcance de toda la flota."
+          control={control}
+          name="distanceUnit"
+        />
       </Stack>
       <Button
         type="submit"
@@ -233,6 +256,7 @@ function OrganizationForm() {
 function OrganizationSection() {
   const organization = useSessionStore(state => state.organization)
   const role = useSessionStore(selectActiveRole)
+  const distanceUnit = useOrganizationDistanceUnit()
 
   return (
     <Section id="organization-title" title="Organización">
@@ -256,6 +280,11 @@ function OrganizationSection() {
               label="Moneda"
               value={organization.defaultCurrency}
               caption={CURRENCY_NAMES[organization.defaultCurrency]}
+            />
+            <Stat
+              size="small"
+              label="Distancias"
+              value={distanceUnit === 'mi' ? 'Millas' : 'Kilómetros'}
             />
           </Stack>
         )

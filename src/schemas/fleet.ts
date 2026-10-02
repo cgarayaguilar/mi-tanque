@@ -218,7 +218,6 @@ const otherColorNeedsName = z.refine<{
 export const truckFormSchema = z
   .object({
     ...vehicleFields,
-    distanceUnit: z.enum(['km', 'mi']),
     efficiency: optionalDecimal(
       FLEET_LIMITS.efficiency.min,
       FLEET_LIMITS.efficiency.max,
@@ -407,14 +406,18 @@ const vehicleToForm = (item: Truck | Trailer) => ({
   ...colorToForm(item.color),
 })
 
-/** Truck fields from the form, normalized to km (specs/0003 RF-5). */
-export const truckFromForm = (values: TruckFormValues) => {
-  const toKm = values.distanceUnit === 'mi' ? KM_PER_MILE : 1
+/**
+ * Truck fields from the form, typed in the organization's unit and stored in
+ * km (specs/0003 RF-5). The truck keeps that unit in `distanceUnit`, which
+ * the rules still ask for (backend specs/0010 RF-4).
+ */
+export const truckFromForm = (values: TruckFormValues, unit: DistanceUnit) => {
+  const toKm = unit === 'mi' ? KM_PER_MILE : 1
   const efficiency = decimalOrNull(values.efficiency)
   const odometer = decimalOrNull(values.odometer)
   return {
     ...vehicleFromForm(values),
-    distanceUnit: values.distanceUnit,
+    distanceUnit: unit,
     fuelEfficiencyKmPerGal: efficiency === null ? null : efficiency * toKm,
     // Whole kilometers: an odometer has no use for fractions
     odometerKm: odometer === null ? null : Math.round(odometer * toKm),
@@ -422,32 +425,11 @@ export const truckFromForm = (values: TruckFormValues) => {
   }
 }
 
-/**
- * Efficiency and odometer as typed, in the other distance unit. Switching
- * km and mi used to keep the numbers, so an odometer of 160,934 km saved as
- * 160,934 mi (259,000 km) (audit 2026-10-01).
- */
-export const convertDistanceFields = (
-  values: { efficiency: string; odometer: string },
-  from: DistanceUnit,
-  to: DistanceUnit
-): { efficiency: string; odometer: string } => {
-  if (from === to) return values
-  const factor = to === 'mi' ? 1 / KM_PER_MILE : KM_PER_MILE
-  const convert = (text: string, round: (value: number) => number) => {
-    const value = decimalOrNull(text)
-    return value === null || Number.isNaN(value)
-      ? text
-      : formatEditable(round(value * factor))
-  }
-  return {
-    efficiency: convert(values.efficiency, v => Math.round(v * 100) / 100),
-    odometer: convert(values.odometer, Math.round),
-  }
-}
-
-export const truckToForm = (truck: Truck | null): TruckFormValues => {
-  const unit = truck?.distanceUnit ?? 'km'
+/** The truck back in the form, in the organization's unit. */
+export const truckToForm = (
+  truck: Truck | null,
+  unit: DistanceUnit
+): TruckFormValues => {
   const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
   return {
     ...(truck
@@ -463,7 +445,6 @@ export const truckToForm = (truck: Truck | null): TruckFormValues => {
           colorSwatch: '',
           colorOther: '',
         }),
-    distanceUnit: unit,
     efficiency: show(
       truck?.fuelEfficiencyKmPerGal == null
         ? null

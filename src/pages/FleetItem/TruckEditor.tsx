@@ -9,17 +9,15 @@ import MoreDetails, {
 } from 'components/MoreDetails'
 import NumberField from 'components/NumberField'
 import AutocompleteField from 'components/AutocompleteField'
-import ChoiceButtons from 'components/ChoiceButtons'
 import TextField from 'components/TextField'
 import {
-  convertDistanceFields,
   truckFormSchema,
   truckFromForm,
   truckToForm,
-  type DistanceUnit,
   type Truck,
   type TruckFormValues,
 } from 'schemas/fleet'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 import { useFleetStore } from 'store/fleet'
 import { ROLE_LABELS } from 'utils/roles'
 import type { FleetSection } from 'utils/fleetSections'
@@ -38,7 +36,6 @@ const FORM_ID = 'truck-form'
 
 // Behind "Ver más detalles" (backend specs/0009 RF-7)
 const DETAILS = [
-  'distanceUnit',
   'efficiency',
   'odometer',
   'assignedDriverUid',
@@ -55,21 +52,20 @@ export default function TruckEditor({
 }: Props) {
   const members = useFleetStore(state => state.members)
   const saveItem = useSaveFleetItem(section)
+  // Typed and shown in the organization's unit (backend specs/0010 RF-4)
+  const unit = useDistanceUnit()
   const {
     register,
     handleSubmit,
     control,
-    getValues,
-    setValue,
     setFocus,
     formState: { errors, isSubmitting },
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckFormSchema),
-    defaultValues: truckToForm(truck),
+    defaultValues: truckToForm(truck, unit),
     disabled: !canWrite,
   })
   const values = useWatch({ control })
-  const unit = values.distanceUnit ?? 'km'
   const details = useMoreDetails<TruckFormValues>(DETAILS, setFocus)
 
   const onSubmit = (values: TruckFormValues) => {
@@ -81,7 +77,8 @@ export default function TruckEditor({
       values.assignedDriverUid !== '' &&
       !members.some(member => member.uid === values.assignedDriverUid)
     const fields = truckFromForm(
-      gone ? { ...values, assignedDriverUid: '' } : values
+      gone ? { ...values, assignedDriverUid: '' } : values,
+      unit
     )
     saveItem(
       {
@@ -181,28 +178,6 @@ export default function TruckEditor({
               values.description,
             ])}
           >
-            <ChoiceButtons
-              id="distanceUnit"
-              label="Unidad de distancia"
-              options={[
-                { value: 'km', label: 'Kilómetros' },
-                { value: 'mi', label: 'Millas' },
-              ]}
-              hint="Para el rendimiento y el odómetro de este camión."
-              control={control}
-              name="distanceUnit"
-              disabled={!canWrite}
-              // The numbers typed follow the unit (`unit` is still the old one)
-              onChange={next => {
-                const converted = convertDistanceFields(
-                  getValues(),
-                  unit,
-                  next as DistanceUnit
-                )
-                setValue('efficiency', converted.efficiency)
-                setValue('odometer', converted.odometer)
-              }}
-            />
             <NumberField
               id="efficiency"
               label="Rendimiento (opcional)"
@@ -217,7 +192,7 @@ export default function TruckEditor({
               label="Odómetro (opcional)"
               unit={unit}
               placeholder="Ej. 120000"
-              hint="El kilometraje o millaje actual."
+              hint={`El ${unit === 'mi' ? 'millaje' : 'kilometraje'} actual. La unidad se cambia en Mi cuenta.`}
               error={errors.odometer?.message}
               registration={register('odometer')}
             />

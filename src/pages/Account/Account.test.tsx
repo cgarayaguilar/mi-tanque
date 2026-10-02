@@ -21,6 +21,11 @@ const api = vi.hoisted(() => ({
   signOutAndClear: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/session', () => api)
+// Mi cuenta reads the trucks for an organization without a saved unit
+vi.mock('services/fleet', () => ({
+  readFleet: () => Promise.resolve({ trucks: [], trailers: [], tanks: [] }),
+  readMembers: () => Promise.resolve([]),
+}))
 
 // Mi cuenta → Equipo reads the team (specs/0005); not under test here
 vi.mock('services/team', () => ({
@@ -85,16 +90,33 @@ test('the owner renames the organization (specs/0002 CA-6)', async () => {
   })
 })
 
-test.each<Role>(['supervisor', 'driver', 'viewer'])(
+test.each<Role>(['driver', 'viewer'])(
   'a %s sees the organization without editing it',
   async role => {
     renderAccount(account(role))
 
     const section = await screen.findByRole('region', { name: 'Organización' })
     expect(within(section).getByText('Flota de Ana')).toBeInTheDocument()
+    expect(within(section).getByText('Kilómetros')).toBeInTheDocument()
     expect(within(section).queryByRole('textbox')).toBeNull()
   }
 )
+
+// specs/0010 RF-2, RF-6: supervisors run the fleet's settings too
+test('a supervisor changes the distance unit', async () => {
+  renderAccount(account('supervisor'))
+
+  await choose('Unidad de distancia', 'Millas')
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+  await waitFor(() => {
+    expect(api.callAccount).toHaveBeenCalledWith({
+      action: 'updateOrganization',
+      orgId: 'org-a',
+      distanceUnit: 'mi',
+    })
+  })
+})
 
 test('changing the name saves it', async () => {
   renderAccount(account('owner'))

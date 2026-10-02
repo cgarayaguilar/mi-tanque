@@ -9,9 +9,12 @@ export const ROLE_LABELS: Record<Role, string> = {
   viewer: 'Lectura',
 }
 
-/** The single check for editing the organization itself (§5.3). */
+/**
+ * The single check for editing the organization itself (§5.3): its name,
+ * currency and distance unit, by owners and supervisors (specs/0010 RF-2).
+ */
 export const canEditOrganization = (role: Role | null | undefined) =>
-  role === 'owner'
+  role === 'owner' || role === 'supervisor'
 
 /** Owner, supervisor and driver manage the fleet; Lectura only reads (specs/0003). */
 export const canWriteFleet = (role: Role | null | undefined) =>

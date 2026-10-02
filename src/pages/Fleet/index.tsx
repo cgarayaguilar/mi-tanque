@@ -44,6 +44,7 @@ import {
 import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 const CARD_HEIGHT = 88
 
@@ -134,6 +135,7 @@ function FleetScreen() {
   const orgId = useSessionStore(state => state.organization?.id ?? null)
   const role = useSessionStore(selectActiveRole)
   const { status, trucks, trailers, tanks, load } = useFleetStore()
+  const distanceUnit = useDistanceUnit()
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const query = useDeferredValue(search.trim().toLowerCase())
@@ -185,7 +187,7 @@ function FleetScreen() {
       ? visible(trucks, (t: Truck) =>
           matches(query, t.name, t.plate, t.brand, t.model, t.color?.label)
         ).map(truck => {
-          const { efficiency, odometer } = truckFigures(truck)
+          const { efficiency, odometer } = truckFigures(truck, distanceUnit)
           const tankCount = tanksPerTruck.get(truck.id) ?? 0
           return {
             id: truck.id,

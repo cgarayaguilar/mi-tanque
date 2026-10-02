@@ -107,3 +107,13 @@ export const organizationFormSchema = z.object({
   defaultCurrency: currencySchema,
 })
 export type OrganizationFormValues = z.infer<typeof organizationFormSchema>
+
+/** Mi cuenta → Organización: also the distance unit (backend specs/0010). */
+export const organizationSettingsSchema = z.object({
+  name: organizationNameSchema,
+  defaultCurrency: currencySchema,
+  distanceUnit: z.enum(['km', 'mi']),
+})
+export type OrganizationSettingsValues = z.infer<
+  typeof organizationSettingsSchema
+>

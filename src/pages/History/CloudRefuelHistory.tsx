@@ -31,6 +31,7 @@ import { geometryOf, maxInchesFor } from 'utils/measurementMath'
 import { truckEfficiency, truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 const placeText = (refuel: CloudRefuel): string | null => {
   if (refuel.place) {
@@ -58,6 +59,7 @@ export default function CloudRefuelHistory({
   const role = useSessionStore(selectActiveRole)
   const refuels = useCloudRefuelsStore()
   const { trucks, tanks } = useFleetStore()
+  const distanceUnit = useDistanceUnit()
   const { load } = refuels
 
   // By value: the parent builds a new period object on every render
@@ -145,7 +147,7 @@ export default function CloudRefuelHistory({
           truckName: truck?.name ?? list[0]?.equipment.name ?? 'Camión',
           km: result.km,
           gallons: result.gallons,
-          unit: truck?.distanceUnit ?? 'km',
+          unit: distanceUnit,
         },
       ]
     }
@@ -175,7 +177,7 @@ export default function CloudRefuelHistory({
             maxInches: maxInchesFor(tank),
             capacityGal: tank.capacityGal,
             odometer: truck
-              ? { unit: truck.distanceUnit, truckName: truck.name }
+              ? { unit: distanceUnit, truckName: truck.name }
               : null,
           }
         }}

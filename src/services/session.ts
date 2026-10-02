@@ -129,6 +129,8 @@ const membershipSchema = z.object({
 const organizationSchema = z.object({
   name: z.string(),
   defaultCurrency: z.enum(CURRENCIES),
+  // Missing in organizations from before specs/0010: see utils/distanceUnit
+  distanceUnit: z.optional(z.nullable(z.enum(['km', 'mi']))),
 })
 
 export type Profile = z.infer<typeof profileSchema>

@@ -1,7 +1,6 @@
 import {
   equipmentFromValue,
   equipmentToValue,
-  convertDistanceFields,
   tankFormSchema,
   tankFromForm,
   tankToForm,
@@ -15,17 +14,20 @@ import {
   type Truck,
 } from 'schemas/fleet'
 
-const truckForm = truckToForm(null)
+const truckForm = truckToForm(null, 'km')
 
 describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
+  // In the organization's unit (backend specs/0010 RF-4)
   test('miles are stored as kilometers and shown again in miles (CA-2)', () => {
-    const fields = truckFromForm({
-      ...truckForm,
-      name: 'Unidad 12',
-      distanceUnit: 'mi',
-      efficiency: '6',
-      odometer: '100000',
-    })
+    const fields = truckFromForm(
+      {
+        ...truckForm,
+        name: 'Unidad 12',
+        efficiency: '6',
+        odometer: '100000',
+      },
+      'mi'
+    )
 
     expect(fields.fuelEfficiencyKmPerGal).toBeCloseTo(9.656, 3)
     expect(fields.odometerKm).toBe(160934)
@@ -37,15 +39,17 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
       photoPath: null,
       ...fields,
     }
-    expect(truckToForm(truck)).toMatchObject({
-      distanceUnit: 'mi',
+    expect(fields.distanceUnit).toBe('mi')
+    expect(truckToForm(truck, 'mi')).toMatchObject({
       efficiency: '6',
       odometer: '100,000',
     })
   })
 
   test('empty optional fields are stored as null', () => {
-    expect(truckFromForm({ ...truckForm, name: '  Unidad 3 ' })).toMatchObject({
+    expect(
+      truckFromForm({ ...truckForm, name: '  Unidad 3 ' }, 'km')
+    ).toMatchObject({
       name: 'Unidad 3',
       plate: null,
       year: null,
@@ -58,15 +62,18 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
 
   test('a palette color keeps its name; "other" keeps what was written', () => {
     expect(
-      truckFromForm({ ...truckForm, name: 'U', colorSwatch: 'red' }).color
+      truckFromForm({ ...truckForm, name: 'U', colorSwatch: 'red' }, 'km').color
     ).toEqual({ swatch: 'red', label: 'Rojo' })
     expect(
-      truckFromForm({
-        ...truckForm,
-        name: 'U',
-        colorSwatch: 'other',
-        colorOther: 'Rojo vino',
-      }).color
+      truckFromForm(
+        {
+          ...truckForm,
+          name: 'U',
+          colorSwatch: 'other',
+          colorOther: 'Rojo vino',
+        },
+        'km'
+      ).color
     ).toEqual({ swatch: 'other', label: 'Rojo vino' })
   })
 
@@ -244,19 +251,4 @@ describe('tanks (RF-8)', () => {
     expect(equipmentFromValue('none')).toEqual({ kind: 'none', id: null })
     expect(equipmentFromValue('garbage')).toEqual({ kind: 'none', id: null })
   })
-})
-
-// Regression: switching km and mi kept the numbers, so an odometer of
-// 160,934 km was saved as 160,934 mi (259,000 km)
-test('switching the distance unit converts what was typed', () => {
-  expect(
-    convertDistanceFields(
-      { efficiency: '9.5', odometer: '160,934' },
-      'km',
-      'mi'
-    )
-  ).toEqual({ efficiency: '5.9', odometer: '100,000' })
-  expect(
-    convertDistanceFields({ efficiency: '', odometer: 'x' }, 'mi', 'km')
-  ).toEqual({ efficiency: '', odometer: 'x' })
 })
