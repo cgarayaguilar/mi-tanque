@@ -115,6 +115,10 @@ en cada push y PR.
   (`settleDistanceUnit`) al leer la cuenta. Úsala con `useDistanceUnit()`; en un formulario, con
   `useFormDistanceUnit()`, que la fija al abrirlo para mostrar y guardar con la misma. El rendimiento
   y el odómetro se guardan siempre en km.
+- **Dinero (specs/0012):** todo monto pasa por `utils/formatMoney` (`moneyTotal` para totales,
+  "C$9,274.26 NIO"; `unitPrice`/`unitPrices` para precios por galón y litro). Nombre, símbolo y
+  países de cada moneda viven en `CURRENCY_DETAILS` (`schemas/account`). Litros se escribe
+  completo, nunca "L" (es el símbolo del lempira). El CSV no lleva símbolos.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

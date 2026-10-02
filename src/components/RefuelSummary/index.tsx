@@ -1,9 +1,10 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { levelText, money } from 'components/RefuelForm'
+import { levelText } from 'components/RefuelForm'
 import { radius } from 'theme/tokens'
 import type { RefuelValues } from 'types'
 import { formatNumber } from 'utils/formatNumber'
+import { moneyTotal } from 'utils/formatMoney'
 
 /** What a saved refuel changed (backend specs/0006 RF-4). */
 export default function RefuelSummary({ values }: { values: RefuelValues }) {
@@ -26,8 +27,8 @@ export default function RefuelSummary({ values }: { values: RefuelValues }) {
       </Typography>
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
         {formatNumber(values.gallonsAdded, 2)} gal (
-        {formatNumber(values.litersAdded, 2)} L) ·{' '}
-        {money(values.currency, values.total)}
+        {formatNumber(values.litersAdded, 2)} litros) ·{' '}
+        {moneyTotal(values.currency, values.total)}
       </Typography>
     </Box>
   )

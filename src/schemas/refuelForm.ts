@@ -169,9 +169,10 @@ export const refuelFormSchema = ({
 
 export type RefuelFormValues = z.infer<ReturnType<typeof refuelFormSchema>>
 
+// Written in full: "L" is also the lempira's symbol (backend specs/0012 RF-7)
 export const VOLUME_UNIT_LABELS: Record<VolumeUnit, string> = {
-  gallon: 'gal',
-  liter: 'L',
+  gallon: 'galones',
+  liter: 'litros',
 }
 
 /** '' as null, a typed decimal as a number. */

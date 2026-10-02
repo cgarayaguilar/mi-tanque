@@ -305,7 +305,7 @@ describe('organizations and the account (RF-13, RF-14)', () => {
     fireEvent.change(within(dialog).getByLabelText('Nombre'), {
       target: { value: 'Transportes Ana' },
     })
-    await choose('Moneda', 'GTQ · Quetzal', dialog)
+    await choose('Moneda', 'Quetzales guatemaltecos (Q)', dialog)
     fireEvent.click(within(dialog).getByRole('button', { name: 'Crear' }))
     await waitFor(() => {
       expect(sessionApi.callAccount).toHaveBeenCalledWith({

@@ -88,6 +88,8 @@ test('summarizes each tank and lists its measurements, newest first', async () =
   })
   const [newest, oldest] = Array.from(list.querySelectorAll('li'))
   expect(newest).toHaveTextContent('30.00 gal de 75')
+  // Liters in full: "L" is also the lempira (specs/0012 RF-7)
+  expect(newest).toHaveTextContent(/litros · \d+ pulg\./)
   expect(oldest).toHaveTextContent('40.00 gal de 75')
   expect(
     screen.getAllByRole('progressbar', { name: 'Nivel del tanque: 42%' })

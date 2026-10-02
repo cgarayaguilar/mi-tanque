@@ -9,6 +9,10 @@ import AddAPhotoIcon from '@mui/icons-material/AddAPhoto'
 import NumberField from 'components/NumberField'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons from 'components/ChoiceButtons'
+import MoreDetails, {
+  countFilled,
+  useMoreDetails,
+} from 'components/MoreDetails'
 import Stat from 'components/Stat'
 import TextField from 'components/TextField'
 import { CURRENCY_OPTIONS, type Currency } from 'schemas/account'
@@ -22,10 +26,11 @@ import {
 } from 'schemas/refuelForm'
 import { radius } from 'theme/tokens'
 import type { RefuelValues } from 'types'
+import { currencySymbol, moneyTotal, unitPrices } from 'utils/formatMoney'
 import { compressImage } from 'utils/compressImage'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
-import { refuelAmounts, refuelLevels } from 'utils/refuelMath'
+import { levelAt, refuelAmounts, refuelLevels } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import type { TankGeometry } from 'utils/tankVolume'
 
@@ -55,6 +60,10 @@ interface RefuelFormProps {
   onSave: (result: RefuelResult) => void
 }
 
+// The field and its unit buttons share a row; the buttons get enough room
+// for "litros | galones" at 375 px (specs/0012 RF-6)
+const UNIT_ROW = 'minmax(0, 3fr) minmax(0, 2fr)'
+
 const UNIT_OPTIONS = (['liter', 'gallon'] as const).map(value => ({
   value,
   label: VOLUME_UNIT_LABELS[value],
@@ -64,9 +73,6 @@ const PRICE_UNIT_OPTIONS = [
   { value: 'liter', label: 'litro' },
   { value: 'gallon', label: 'galón' },
 ]
-
-export const money = (currency: string, amount: number) =>
-  `${currency} ${formatNumber(amount, 2)}`
 
 /** "40 gal (30 %)", or "sin dato". */
 export const levelText = (gallons: number | null, percent: number | null) =>
@@ -118,6 +124,7 @@ export default function RefuelForm({
     handleSubmit,
     control,
     reset,
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<RefuelFormValues>({
     resolver: zodResolver(
@@ -126,6 +133,7 @@ export default function RefuelForm({
     defaultValues: initial ?? { ...EMPTY, currency: defaultCurrency },
   })
   const watched = useWatch({ control })
+  const details = useMoreDetails<RefuelFormValues>(['odometer'], setFocus)
 
   useEffect(
     () => () => {
@@ -145,7 +153,17 @@ export default function RefuelForm({
           priceUnit: watched.priceUnit ?? 'liter',
         })
       : null
-  const currency = watched.currency ?? ''
+  const currency = (watched.currency ?? '') as Currency | ''
+  const symbol = currency ? currencySymbol(currency) : undefined
+  // The level the typed inches mean, while typing (specs/0012 RF-8, RF-9)
+  const levelOf = (typed: string | undefined) => {
+    const inches = parseDecimal(typed ?? '')
+    return Number.isFinite(inches) && inches >= 0 && inches <= maxInches
+      ? levelAt(geometry, inches)
+      : null
+  }
+  const levelBefore = levelOf(watched.inchesBefore)
+  const levelAfter = levelOf(watched.inchesAfter)
 
   const choosePhoto = async (file: File | undefined) => {
     if (!file) return
@@ -214,11 +232,11 @@ export default function RefuelForm({
       noValidate
       aria-label={initial ? 'Corregir relleno' : 'Nuevo relleno'}
       onSubmit={event => {
-        void handleSubmit(submit)(event)
+        void handleSubmit(submit, details.onInvalid)(event)
       }}
       sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}
     >
-      <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: UNIT_ROW, gap: 2 }}>
         <NumberField
           id="refuelQuantity"
           label="Cantidad echada"
@@ -234,13 +252,14 @@ export default function RefuelForm({
           options={UNIT_OPTIONS}
           control={control}
           name="quantityUnit"
+          compact
         />
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: UNIT_ROW, gap: 2 }}>
         <NumberField
           id="refuelPrice"
           label="Precio"
-          unit={currency || '—'}
+          prefix={symbol}
           placeholder="Ej. 30.50"
           hint=""
           error={errors.price?.message}
@@ -252,6 +271,7 @@ export default function RefuelForm({
           options={PRICE_UNIT_OPTIONS}
           control={control}
           name="priceUnit"
+          compact
         />
       </Box>
       <AutocompleteField
@@ -286,15 +306,15 @@ export default function RefuelForm({
             size="small"
             label="Echaste"
             value={live ? `${formatNumber(live.gallonsAdded, 2)} gal` : '—'}
-            caption={live ? `${formatNumber(live.litersAdded, 2)} L` : ''}
+            caption={live ? `${formatNumber(live.litersAdded, 2)} litros` : ''}
           />
           <Stat
             size="small"
             label="Total"
-            value={live && currency ? money(currency, live.total) : '—'}
+            value={live && currency ? moneyTotal(currency, live.total) : '—'}
             caption={
               live && currency
-                ? `${money(currency, live.pricePerGallon)}/gal · ${money(currency, live.pricePerLiter)}/L`
+                ? unitPrices(currency, live.pricePerGallon, live.pricePerLiter)
                 : ''
             }
           />
@@ -304,7 +324,7 @@ export default function RefuelForm({
         <NumberField
           id="refuelTotal"
           label="Total de la factura (opcional)"
-          unit={currency || '—'}
+          prefix={symbol}
           placeholder={live ? formatNumber(live.total, 2) : 'Ej. 1500'}
           hint="Déjalo vacío para usar el total calculado."
           error={errors.total?.message}
@@ -351,23 +371,31 @@ export default function RefuelForm({
           registration={register('inchesAfter')}
         />
       </Box>
+      <Box
+        role="group"
+        aria-live="polite"
+        aria-label="Nivel del tanque"
+        sx={{
+          px: 4,
+          py: 3,
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: `${String(radius.lg)}px`,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 2,
+        }}
+      >
+        <LevelStat label="Antes" level={levelBefore} />
+        <LevelStat label="Después" level={levelAfter} />
+      </Box>
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
         {lastGallons === null
           ? 'Sin pulgadas, el nivel queda sin dato: este tanque no tiene lecturas.'
           : `Sin pulgadas, "antes" es la última lectura (${formatNumber(lastGallons, 2)} gal) y "después" le suma lo echado.`}
       </Typography>
 
-      {odometer && (
-        <NumberField
-          id="refuelOdometer"
-          label="Odómetro (opcional)"
-          unit={odometer.unit}
-          placeholder="Ej. 120500"
-          hint={`El de ${odometer.truckName}: con dos rellenos con odómetro sale el rendimiento.`}
-          error={errors.odometer?.message}
-          registration={register('odometer')}
-        />
-      )}
       <TextField
         id="refuelStation"
         label="Gasolinera (opcional)"
@@ -424,6 +452,24 @@ export default function RefuelForm({
         </Box>
       )}
 
+      {odometer && (
+        <MoreDetails
+          open={details.open}
+          onToggle={details.toggle}
+          filled={countFilled([watched.odometer])}
+        >
+          <NumberField
+            id="refuelOdometer"
+            label="Odómetro (opcional)"
+            unit={odometer.unit}
+            placeholder="Ej. 120500"
+            hint={`El de ${odometer.truckName}: con dos rellenos con odómetro sale el rendimiento.`}
+            error={errors.odometer?.message}
+            registration={register('odometer')}
+          />
+        </MoreDetails>
+      )}
+
       <Button
         type="submit"
         variant="contained"
@@ -443,5 +489,30 @@ export default function RefuelForm({
         </Typography>
       )}
     </Box>
+  )
+}
+
+/**
+ * One side of the tank level: gallons, liters and how full (RF-8, RF-9).
+ * "42 % lleno" never breaks across lines.
+ */
+function LevelStat({
+  label,
+  level,
+}: {
+  label: string
+  level: ReturnType<typeof levelAt> | null
+}) {
+  return (
+    <Stat
+      size="small"
+      label={label}
+      value={level ? `${formatNumber(level.gallons, 2)} gal` : '—'}
+      caption={
+        level
+          ? `${formatNumber(level.liters, 2)} litros${level.percent === null ? '' : ` · ${formatNumber(Math.round(level.percent))}\u00a0%\u00a0lleno`}`
+          : ''
+      }
+    />
   )
 }

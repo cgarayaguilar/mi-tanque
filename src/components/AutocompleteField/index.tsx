@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react'
-import Autocomplete from '@mui/material/Autocomplete'
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
@@ -33,6 +33,10 @@ const labelOf = (option: SelectOption) => option.label
 const keyOf = (option: SelectOption) => option.value
 const sameOption = (option: SelectOption, chosen: SelectOption) =>
   option.value === chosen.value
+// The label and its keywords, ignoring case and accents
+const filterOptions = createFilterOptions<SelectOption>({
+  stringify: option => `${option.label} ${option.keywords ?? ''}`,
+})
 
 /**
  * A long or growing list with search (countries, currencies, colors,
@@ -73,6 +77,9 @@ export function AutocompleteBase({
         getOptionLabel={labelOf}
         getOptionKey={keyOf}
         isOptionEqualToValue={sameOption}
+        filterOptions={filterOptions}
+        // Typing "hond" and Enter picks the only match, as people expect
+        autoHighlight
         noOptionsText="Sin resultados"
         openText="Abrir"
         closeText="Cerrar"

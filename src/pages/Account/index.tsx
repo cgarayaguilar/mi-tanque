@@ -24,7 +24,7 @@ import {
 } from 'pages/Account/AccountDialogs'
 import TeamSection from 'pages/Account/TeamSection'
 import {
-  CURRENCY_NAMES,
+  CURRENCY_DETAILS,
   CURRENCY_OPTIONS,
   organizationSettingsSchema,
   profileFormSchema,
@@ -272,7 +272,7 @@ function OrganizationSection() {
               size="small"
               label="Moneda"
               value={organization.defaultCurrency}
-              caption={CURRENCY_NAMES[organization.defaultCurrency]}
+              caption={CURRENCY_DETAILS[organization.defaultCurrency].name}
             />
             <Stat
               size="small"

@@ -14,6 +14,8 @@ import {
 export interface SelectOption {
   value: string
   label: string
+  /** More words the search matches, not shown (e.g. a currency's code). */
+  keywords?: string
 }
 
 export interface ChoiceFieldProps<T extends FieldValues> {

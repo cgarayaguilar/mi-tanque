@@ -114,6 +114,7 @@ test('measurements are grouped by tank with author, city, estimate and odometer 
   const row = within(first).getByRole('listitem')
   expect(row).toHaveTextContent('Luis')
   expect(row).toHaveTextContent('70.50 gal')
+  expect(row).toHaveTextContent(/litros · \d+ pulg\./)
   expect(row).toHaveTextContent('~670 km (416 mi)')
   expect(row).toHaveTextContent('odómetro 120,500 km')
   expect(row).toHaveTextContent('Managua, Nicaragua')
