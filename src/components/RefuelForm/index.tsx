@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
@@ -153,6 +154,10 @@ export default function RefuelForm({
       setPreview(URL.createObjectURL(compressed))
     } catch (error) {
       reportError(error, { operation: 'compressInvoice' })
+      sileo.error({
+        title: 'No pudimos usar esa foto',
+        description: 'Prueba con otra o toma la foto de nuevo.',
+      })
     }
   }
 

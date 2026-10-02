@@ -32,9 +32,12 @@ const queue = vi.hoisted(() => ({
 vi.mock('services/invoiceQueue', () => queue)
 
 // Canvas is not available in jsdom: the compressed photo is the file itself
+const photos = vi.hoisted(() => ({
+  compressImage: vi.fn((file: Blob) => Promise.resolve(file)),
+}))
 vi.mock('utils/compressImage', () => ({
   PHOTO_MAX_SIDE: 1600,
-  compressImage: (file: Blob) => Promise.resolve(file),
+  compressImage: photos.compressImage,
 }))
 
 const LAST = { id: 'm', takenAt: new Date(), fillPercent: 50 }
@@ -130,6 +133,24 @@ test('stations are suggested from the organization (RF-5)', async () => {
     expect(document.querySelectorAll('datalist option').length).toBe(2)
   })
   expect(screen.getByLabelText('Gasolinera (opcional)')).toHaveAttribute('list')
+})
+
+// Regression: a photo that could not be compressed was dropped without a word
+test('a photo that cannot be used is said', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  photos.compressImage.mockRejectedValueOnce(new Error('not an image'))
+  await openRefuel()
+  const input = document.querySelector<HTMLInputElement>('input[type=file]')
+  if (!input) throw new Error('No file input')
+  fireEvent.change(input, {
+    target: { files: [new File(['x'], 'raro.heic', { type: 'image/heic' })] },
+  })
+
+  await waitFor(() => {
+    expect(sileo.error).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'No pudimos usar esa foto' })
+    )
+  })
 })
 
 test('the invoice photo is queued and the queue runs (RF-6)', async () => {

@@ -55,6 +55,16 @@ export default function PhotoField({
 
   const choose = async (file: File | undefined) => {
     if (!file) return
+    // Without signal the upload retries for minutes with the spinner on
+    // (audit 2026-10-01): a photo needs a connection, so say it now
+    if (!navigator.onLine) {
+      sileo.warning({
+        title: 'Necesitas conexión para subir la foto',
+        description: 'Vuelve a intentarlo cuando tengas señal.',
+      })
+      if (inputRef.current) inputRef.current.value = ''
+      return
+    }
     setBusy(true)
     try {
       const result = await upload(file)
