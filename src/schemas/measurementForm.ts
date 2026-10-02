@@ -45,31 +45,37 @@ export const optionalOdometer = z.string().check(
   )
 )
 
-/**
- * A fleet tank's measurement (backend specs/0004 RF-2): inches up to the
- * tank's measurable height, and the truck's odometer if it has one.
- */
+/** Inches of a fleet tank, up to its measurable height (specs/0004 RF-2). */
+const fleetInches = (maxInches: number) =>
+  z.string().check(
+    z.refine(value => value.trim() !== '', {
+      error: 'Ingresa las pulgadas que mediste',
+      abort: true,
+    }),
+    z.refine(value => !Number.isNaN(parseDecimal(value)), {
+      error: 'Escribe solo números, por ejemplo 12.5',
+      abort: true,
+    }),
+    z.refine(value => parseDecimal(value) > 0, {
+      error: 'Ingresa un valor mayor que 0',
+      abort: true,
+    }),
+    z.refine(value => parseDecimal(value) <= maxInches, {
+      error: `Este tanque permite hasta ${formatNumber(maxInches)} pulgadas.`,
+    })
+  )
+
+/** Measuring a fleet tank: only the inches; the odometer is added on edit. */
+export const fleetMeasureFormSchema = (maxInches: number) =>
+  z.object({ inches: fleetInches(maxInches) })
+
+export type FleetMeasureFormValues = z.infer<
+  ReturnType<typeof fleetMeasureFormSchema>
+>
+
+/** Editing a fleet measurement: the inches and the truck's odometer (RF-12). */
 export const cloudMeasurementFormSchema = (maxInches: number) =>
-  z.object({
-    inches: z.string().check(
-      z.refine(value => value.trim() !== '', {
-        error: 'Ingresa las pulgadas que mediste',
-        abort: true,
-      }),
-      z.refine(value => !Number.isNaN(parseDecimal(value)), {
-        error: 'Escribe solo números, por ejemplo 12.5',
-        abort: true,
-      }),
-      z.refine(value => parseDecimal(value) > 0, {
-        error: 'Ingresa un valor mayor que 0',
-        abort: true,
-      }),
-      z.refine(value => parseDecimal(value) <= maxInches, {
-        error: `Este tanque permite hasta ${formatNumber(maxInches)} pulgadas.`,
-      })
-    ),
-    odometer: optionalOdometer,
-  })
+  z.object({ inches: fleetInches(maxInches), odometer: optionalOdometer })
 
 export type CloudMeasurementFormValues = z.infer<
   ReturnType<typeof cloudMeasurementFormSchema>

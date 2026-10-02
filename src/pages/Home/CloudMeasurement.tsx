@@ -18,10 +18,10 @@ import Stat from 'components/Stat'
 import TankShapeIcon from 'components/TankShapeIcon'
 import { AutocompleteBase } from 'components/AutocompleteField'
 import { useSaveCloudMeasurement } from 'hooks/useSaveCloudMeasurement'
-import { KM_PER_MILE, type FleetTank, type Truck } from 'schemas/fleet'
+import type { FleetTank, Truck } from 'schemas/fleet'
 import {
-  cloudMeasurementFormSchema,
-  type CloudMeasurementFormValues,
+  fleetMeasureFormSchema,
+  type FleetMeasureFormValues,
 } from 'schemas/measurementForm'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
@@ -37,7 +37,7 @@ import {
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
-import { useDistanceUnit, useFormDistanceUnit } from 'hooks/useDistanceUnit'
+import { useDistanceUnit } from 'hooks/useDistanceUnit'
 
 const NOT_MEASURED = '—'
 const INDIVIDUAL = 'none'
@@ -143,26 +143,20 @@ function MeasureForm({
   truck: Truck | null
   canSave: boolean
   onSaved: () => void
-  save: (
-    tank: FleetTank,
-    reading: CloudReading,
-    odometerKm: number | null
-  ) => void
+  save: (tank: FleetTank, reading: CloudReading) => void
 }) {
   const [reading, setReading] = useState<CloudReading | null>(null)
   const maxInches = maxInchesFor(tank)
-  const odometerUnit = useFormDistanceUnit()
-  const asksOdometer = tank.equipment.kind === 'truck' && truck !== null
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CloudMeasurementFormValues>({
-    resolver: zodResolver(cloudMeasurementFormSchema(maxInches)),
-    defaultValues: { inches: '', odometer: '' },
+  } = useForm<FleetMeasureFormValues>({
+    resolver: zodResolver(fleetMeasureFormSchema(maxInches)),
+    defaultValues: { inches: '' },
   })
 
-  const onSubmit = ({ inches, odometer }: CloudMeasurementFormValues) => {
+  const onSubmit = ({ inches }: FleetMeasureFormValues) => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur()
     const next = readingFor(
@@ -172,13 +166,7 @@ function MeasureForm({
     )
     setReading(next)
     if (!canSave) return
-    const odometerKm =
-      asksOdometer && odometer.trim() !== ''
-        ? Math.round(
-            parseDecimal(odometer) * (odometerUnit === 'mi' ? KM_PER_MILE : 1)
-          )
-        : null
-    save(tank, next, odometerKm)
+    save(tank, next)
     onSaved()
   }
 
@@ -202,17 +190,6 @@ function MeasureForm({
           error={errors.inches?.message}
           registration={register('inches')}
         />
-        {asksOdometer && (
-          <NumberField
-            id="odometer"
-            label="Odómetro (opcional)"
-            unit={odometerUnit}
-            placeholder="Ej. 120500"
-            hint={`El de ${truck.name}, si lo tienes a mano.`}
-            error={errors.odometer?.message}
-            registration={register('odometer')}
-          />
-        )}
         <Button type="submit" variant="contained" size="large" fullWidth>
           Calcular
         </Button>
