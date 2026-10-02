@@ -2,7 +2,9 @@ import { db } from 'services/db'
 import { enqueueInvoice, processInvoiceQueue } from 'services/invoiceQueue'
 
 const api = vi.hoisted(() => ({
-  uploadInvoice: vi.fn(() => Promise.resolve()),
+  uploadInvoice: vi.fn(() =>
+    Promise.resolve<'uploaded' | 'discarded'>('uploaded')
+  ),
 }))
 vi.mock('services/cloudRefuels', () => api)
 
@@ -49,4 +51,14 @@ test('without signal it waits, and is not stuck afterwards', async () => {
   expect(api.uploadInvoice).not.toHaveBeenCalled()
   online.mockReturnValue(true)
   await expect(processInvoiceQueue('luis')).resolves.toBe(1)
+})
+
+// Regression: an invoice that can never attach (its refuel was deleted)
+// stayed in the queue for good, reported on every start
+test('an invoice with nothing left to attach to leaves the queue', async () => {
+  await enqueueInvoice({ refuelId: 'r-gone', orgId: 'org-1', uid: 'u1', photo })
+  api.uploadInvoice.mockResolvedValueOnce('discarded')
+
+  await expect(processInvoiceQueue('u1')).resolves.toBe(0)
+  expect(await db.pendingInvoices.count()).toBe(0)
 })

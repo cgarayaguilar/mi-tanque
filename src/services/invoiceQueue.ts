@@ -19,9 +19,9 @@ const upload = async (uid: string): Promise<number> => {
   let uploaded = 0
   for (const invoice of mine) {
     try {
-      await uploadInvoice(invoice)
+      const result = await uploadInvoice(invoice)
       await db.pendingInvoices.delete(invoice.refuelId)
-      uploaded += 1
+      if (result === 'uploaded') uploaded += 1
     } catch (error) {
       // Kept for the next try (no signal yet, refuel not synced yet…)
       reportError(error, { operation: 'uploadInvoice' })

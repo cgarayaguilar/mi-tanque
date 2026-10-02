@@ -258,6 +258,12 @@ export const invoicePath = (orgId: string, refuelId: string) =>
 /**
  * Uploads an already compressed invoice and points the refuel at it
  * (RF-6). Needs a connection: the queue calls it when there is one.
+ *
+ * Picks up where a past try stopped, since the invoice can never be
+ * replaced (storage.rules: create only): a photo already up is not sent
+ * again, a refuel that already points at it is done, and a refuel that no
+ * longer exists has nothing left to attach it to. Either way the queue can
+ * let the invoice go.
  */
 export const uploadInvoice = async ({
   orgId,
@@ -269,19 +275,36 @@ export const uploadInvoice = async ({
   refuelId: string
   uid: string
   photo: Blob
-}) => {
+}): Promise<'uploaded' | 'discarded'> => {
   const path = invoicePath(orgId, refuelId)
-  const [storage, { ref, uploadBytes }, { db }] = await Promise.all([
-    loadStorage(),
-    import('firebase/storage'),
-    loadFirebase(),
-  ])
-  await uploadBytes(ref(storage, path), photo, { contentType: 'image/jpeg' })
+  const [storage, { getMetadata, ref, uploadBytes }, { db }] =
+    await Promise.all([
+      loadStorage(),
+      import('firebase/storage'),
+      loadFirebase(),
+    ])
+  const refuel = await getDoc(doc(db, 'refuels', refuelId))
+  if (!refuel.exists()) return 'discarded'
+  if (refuel.get('invoicePhotoPath') === path) return 'uploaded'
+
+  const file = ref(storage, path)
+  const alreadyUp = await getMetadata(file).then(
+    () => true,
+    (error: unknown) => {
+      if ((error as { code?: unknown }).code === 'storage/object-not-found')
+        return false
+      throw error
+    }
+  )
+  if (!alreadyUp) {
+    await uploadBytes(file, photo, { contentType: 'image/jpeg' })
+  }
   await updateDoc(doc(db, 'refuels', refuelId), {
     invoicePhotoPath: path,
     updatedAt: serverTimestamp(),
     updatedBy: uid,
   })
+  return 'uploaded'
 }
 
 /** The invoice's download URL, remembered for the session. */
