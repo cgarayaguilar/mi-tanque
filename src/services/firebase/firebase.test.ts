@@ -163,9 +163,11 @@ test('the emulators are reached with the same host name as the page', () => {
 })
 
 // Vite's hot reload re-runs this module while the Firebase app lives on
-test('reuses an app that already exists instead of setting it up again', async () => {
+test('after a hot reload, reuses the app and its Firestore as they are', async () => {
   vi.stubEnv('VITE_USE_EMULATORS', 'true')
-  sdk.getApps.mockReturnValueOnce([{ name: 'app' }])
+  sdk.getApps.mockReturnValueOnce([
+    { name: 'app', [Symbol.for('solocamioneros.signedInSetup')]: true },
+  ])
   const { loadFirebase } = await load()
 
   const { db } = await loadFirebase()
@@ -176,7 +178,46 @@ test('reuses an app that already exists instead of setting it up again', async (
   expect(sdk.connectFirestoreEmulator).not.toHaveBeenCalled()
 })
 
+// Regression: the basic mode's place lookup creates the app first; signing in
+// then took it for a hot reload and left Firestore without its persistent
+// cache, so measurements saved without signal were lost (ADR 0003)
+test('an app created by the place lookup still gets the persistent cache', async () => {
+  vi.stubEnv('VITE_USE_EMULATORS', 'true')
+  sdk.getApps.mockReturnValueOnce([{ name: 'app' }])
+  const { loadFirebase } = await load()
+
+  const { db } = await loadFirebase()
+
+  expect(sdk.initializeApp).not.toHaveBeenCalled()
+  expect(sdk.initializeFirestore).toHaveBeenCalledWith(
+    { name: 'app', [Symbol.for('solocamioneros.signedInSetup')]: true },
+    { localCache: { options: { tabManager: 'tabs' } } }
+  )
+  expect(sdk.connectFirestoreEmulator).toHaveBeenCalledWith(
+    db,
+    'localhost',
+    8080
+  )
+})
+
 describe('App Check (specs/0008 RF-7, RF-8)', () => {
+  const recaptcha = window as { grecaptcha?: unknown }
+
+  beforeEach(() => {
+    // reCAPTCHA already on the page: no script to wait for
+    recaptcha.grecaptcha = { enterprise: {} }
+  })
+
+  afterEach(() => {
+    delete recaptcha.grecaptcha
+    document.head
+      .querySelectorAll('script[src*="recaptcha"]')
+      .forEach(script => {
+        script.remove()
+      })
+    vi.useRealTimers()
+  })
+
   test('starts with Fraud Defense and token refresh, once, before the other services', async () => {
     config.siteKey = 'site-key'
     const { loadFirebase } = await load()
@@ -184,7 +225,7 @@ describe('App Check (specs/0008 RF-7, RF-8)', () => {
 
     expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(1)
     expect(sdk.initializeAppCheck).toHaveBeenCalledWith(
-      { name: 'app' },
+      expect.objectContaining({ name: 'app' }),
       { provider: { key: 'site-key' }, isTokenAutoRefreshEnabled: true }
     )
     expect(sdk.initializeAppCheck.mock.invocationCallOrder[0]).toBeLessThan(
@@ -206,7 +247,7 @@ describe('App Check (specs/0008 RF-7, RF-8)', () => {
     config.siteKey = 'site-key'
     vi.resetModules()
     const { firebaseApp, functionsFor } = await import('services/firebase/core')
-    functionsFor(firebaseApp().app)
+    functionsFor(await firebaseApp())
     expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(1)
     expect(sdk.getFunctions).toHaveBeenCalledWith(
       { name: 'app' },
@@ -214,5 +255,74 @@ describe('App Check (specs/0008 RF-7, RF-8)', () => {
     )
     expect(sdk.initializeFirestore).not.toHaveBeenCalled()
     expect(sdk.getAuth).not.toHaveBeenCalled()
+  })
+
+  // Regression: a module flag kept App Check off for the next app, so the
+  // second account on a shared phone would be rejected once it is enforced
+  test('starts again for the app created after signing out', async () => {
+    config.siteKey = 'site-key'
+    const { loadFirebase, signOutAndClearFirebase } = await load()
+    await loadFirebase()
+    await signOutAndClearFirebase()
+    await loadFirebase()
+
+    expect(sdk.initializeApp).toHaveBeenCalledTimes(2)
+    expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(2)
+  })
+
+  // Regression: the SDK waits forever for a blocked script, and Auth and
+  // Functions wait for App Check: signing in kept spinning
+  test('a blocked reCAPTCHA leaves App Check off instead of hanging', async () => {
+    config.siteKey = 'site-key'
+    delete recaptcha.grecaptcha
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { loadFirebase } = await load()
+
+    const loading = loadFirebase()
+    await vi.waitFor(() => {
+      expect(
+        document.head.querySelector('script[src*="recaptcha"]')
+      ).not.toBeNull()
+    })
+    document.head
+      .querySelector('script[src*="recaptcha"]')
+      ?.dispatchEvent(new Event('error'))
+
+    await expect(loading).resolves.toMatchObject({ app: { name: 'app' } })
+    expect(sdk.initializeAppCheck).not.toHaveBeenCalled()
+  })
+
+  test('a reCAPTCHA that never answers is given up after a while', async () => {
+    config.siteKey = 'site-key'
+    delete recaptcha.grecaptcha
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.useFakeTimers()
+    const { RECAPTCHA_TIMEOUT_MS } = await import('services/firebase/core')
+    const { loadFirebase } = await load()
+
+    const loading = loadFirebase()
+    await vi.advanceTimersByTimeAsync(RECAPTCHA_TIMEOUT_MS)
+
+    await expect(loading).resolves.toMatchObject({ app: { name: 'app' } })
+    expect(sdk.initializeAppCheck).not.toHaveBeenCalled()
+  })
+
+  test('once reCAPTCHA loads, App Check starts with it', async () => {
+    config.siteKey = 'site-key'
+    delete recaptcha.grecaptcha
+    const { loadFirebase } = await load()
+
+    const loading = loadFirebase()
+    await vi.waitFor(() => {
+      expect(
+        document.head.querySelector('script[src*="recaptcha"]')
+      ).not.toBeNull()
+    })
+    document.head
+      .querySelector('script[src*="recaptcha"]')
+      ?.dispatchEvent(new Event('load'))
+    await loading
+
+    expect(sdk.initializeAppCheck).toHaveBeenCalledTimes(1)
   })
 })

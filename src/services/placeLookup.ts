@@ -20,7 +20,7 @@ export const lookupPlace = async ({
   latitude,
   longitude,
 }: Coordinates): Promise<string | null> => {
-  const { app } = firebaseApp()
+  const app = await firebaseApp()
   const result = await httpsCallable(
     functionsFor(app),
     'geocode'

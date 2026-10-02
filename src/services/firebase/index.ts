@@ -26,17 +26,22 @@ export interface FirebaseServices {
 
 let services: Promise<FirebaseServices> | null = null
 
-const initialize = (): FirebaseServices => {
-  // An app that outlived this module (Vite hot reload) is reused: Firestore
-  // and the emulators can only be set up once per app. App Check starts with
-  // a new app, before any request (specs/0008)
-  const { app, isNew } = firebaseApp()
-  const existing = !isNew
+// Shared across module reloads (Symbol.for), unlike a module variable
+const SIGNED_IN_SETUP = Symbol.for('solocamioneros.signedInSetup')
+
+const initialize = async (): Promise<FirebaseServices> => {
+  // App Check starts with the app, before any request (specs/0008)
+  const app = await firebaseApp()
+  // Firestore and the emulators are set up once per app, and the mark lives
+  // on the app: only a Vite hot reload finds it set. Whether the app is new
+  // says nothing, since the basic mode's place lookup may have created it
+  const marked = app as FirebaseApp & { [SIGNED_IN_SETUP]?: true }
+  const ready = marked[SIGNED_IN_SETUP] === true
   const auth = getAuth(app)
   auth.languageCode = 'es'
   // Persistent cache: reads work and writes queue while a driver has no
   // signal, then sync (backend ADR 0003)
-  const db = existing
+  const db = ready
     ? getFirestore(app)
     : initializeFirestore(app, {
         localCache: persistentLocalCache({
@@ -45,7 +50,7 @@ const initialize = (): FirebaseServices => {
       })
   const functions = functionsFor(app)
 
-  if (!existing && emulatorsEnabled()) {
+  if (!ready && emulatorsEnabled()) {
     const host = emulatorHostFor(window.location.hostname)
     connectAuthEmulator(auth, `http://${host}:${String(EMULATORS.auth)}`, {
       disableWarnings: true,
@@ -55,6 +60,7 @@ const initialize = (): FirebaseServices => {
     connectFirestoreEmulator(db, host, EMULATORS.firestore)
   }
 
+  marked[SIGNED_IN_SETUP] = true
   return { app, auth, db, functions }
 }
 

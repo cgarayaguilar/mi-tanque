@@ -6,7 +6,7 @@ const sdk = vi.hoisted(() => ({
 }))
 vi.mock('firebase/functions', () => ({ httpsCallable: sdk.httpsCallable }))
 vi.mock('services/firebase/core', () => ({
-  firebaseApp: () => ({ app: { name: 'app' }, isNew: false }),
+  firebaseApp: () => Promise.resolve({ name: 'app' }),
   functionsFor: () => ({ name: 'functions' }),
 }))
 
