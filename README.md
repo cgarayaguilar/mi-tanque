@@ -30,13 +30,13 @@ npm install
 npm run dev
 ```
 
-La app queda en http://localhost:3000. `npm install` también instala el hook de pre-commit.
+La app queda en http://localhost:4000. `npm install` también instala el hook de pre-commit.
 
 ## Scripts
 
 | Comando             | Descripción                                                      |
 | ------------------- | ---------------------------------------------------------------- |
-| `npm run dev`       | Servidor de desarrollo en http://localhost:3000                  |
+| `npm run dev`       | Servidor de desarrollo en http://localhost:4000                  |
 | `npm run build`     | Build de producción en `build/`                                  |
 | `npm run preview`   | Sirve localmente el build de producción                          |
 | `npm test`          | Tests con Vitest (modo watch; `npx vitest run` una vez)          |
