@@ -103,6 +103,13 @@ en cada push y PR.
   `import('services/placeLookup')` al medir con ubicación: la ciudad la da la función `geocode` del
   backend; no hay claves de terceros en el cliente. El texto de `components/RecaptchaNotice`
   reemplaza al sello oculto de reCAPTCHA.
+- **Formularios (specs/0009):** ningún control abre el selector del sistema: `ChoiceButtons` para
+  2–3 opciones, `SelectField` (menú de MUI) para 4–7 y `AutocompleteField` para listas largas; los
+  tres reciben `control` y `name` de React Hook Form, y `ChoiceButtonsBase`/`AutocompleteBase` sirven
+  para valores fuera de un formulario. Los campos no esenciales van en `MoreDetails`
+  (`useMoreDetails` abre la sección y enfoca el campo si falla al guardar). Toda etiqueta opcional
+  termina en "(opcional)". En los tests, `choose(label, opción)` de `src/testing/choose` elige en
+  cualquiera de los tres.
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
