@@ -32,7 +32,7 @@ test('refuel columns, in Spanish units for Excel (RF-4)', () => {
   }
   const [header, row] = rowsOf(toCsv(REFUEL_COLUMNS, [refuel]))
   expect(header).toBe(
-    'Fecha,Hora,Registrado por,Tanque,Equipo,Cantidad (gal),Cantidad (L),Moneda,Precio por galón,Precio por litro,Total,Gasolinera,Ciudad,Estado o departamento,País,Odómetro (km),Odómetro (mi),Antes (gal),Antes (L),Antes (%),Después (gal),Después (L),Después (%),Factura'
+    'Fecha,Hora,Registrado por,Tanque,Equipo,Cantidad (gal),Cantidad (litros),Moneda,Precio por galón,Precio por litro,Total,Gasolinera,Ciudad,Estado o departamento,País,Odómetro (km),Odómetro (mi),Antes (gal),Antes (litros),Antes (%),Después (gal),Después (litros),Después (%),Factura'
   )
   expect(row).toBe(
     '01/10/2026,08:05,Rosa Mena,Tanque izquierdo,Unidad 12,13.21,50,NIO,113.56,30,1500,Puma Km 7,León,León,Nicaragua,120600,74937,40,151.42,29.27,53.21,201.42,38.91,sí'
