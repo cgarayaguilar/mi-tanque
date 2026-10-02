@@ -24,7 +24,7 @@ vi.mock('sileo', () => ({
     promise: vi.fn(),
     dismiss: vi.fn(),
   },
-  Toaster: () => null,
+  Toaster: vi.fn(() => null),
 }))
 
 // jsdom has no matchMedia (real browsers do): report no media preference

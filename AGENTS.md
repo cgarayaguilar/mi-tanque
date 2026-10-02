@@ -121,9 +121,8 @@ en cada push y PR.
   `error`, `warning`, `action`); todo modal es un **`<Dialog>` de MUI**. Nada de `alert`, `confirm`
   ni otras librerías. Cada mutación termina en `sileo.success` o `sileo.error` (§8.14). En los tests
   `sileo` está simulado globalmente (`src/setupTests.ts`): verifica las llamadas, no el DOM.
-  Los toasts salen abajo al centro y los errores arriba al centro: `placeToasts`
-  (`utils/toastPositions`) le pone su posición a cada tipo al arrancar (`main.tsx`), porque Sileo
-  reusa un solo toast y uno sin posición hereda la del anterior. No pases `position` en las llamadas.
+  Todos los toasts salen **arriba al centro** (directiva del dueño): lo fija el `<Toaster>` de
+  `App.tsx`. No pases `position` en las llamadas.
 - **Theme:** los tokens viven en `src/theme/tokens.ts` (reflejo de `DESIGN.md`). De ahí salen el
   theme de MUI (`src/theme/muiTheme.ts`). Cambia un color en `DESIGN.md` y en `tokens.ts`, nunca en los
   componentes.

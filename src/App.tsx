@@ -10,7 +10,6 @@ import { useColorModeStore } from 'store/colorMode'
 import { useSessionStore } from 'store/session'
 import { muiThemes } from 'theme/muiTheme'
 import { colorTokens, layout } from 'theme/tokens'
-import { TOAST_POSITION } from 'utils/toastPositions'
 
 // Home is the landing screen; the rest load on first visit. The
 // service worker precaches every chunk, so they still open offline.
@@ -91,13 +90,9 @@ export default function App() {
           <ImportOffer />
         </Suspense>
       )}
-      {/* Single toast outlet for mutation feedback (§8.14); errors go to the
-          top center (utils/toastPositions) */}
-      <Toaster
-        position={TOAST_POSITION}
-        offset={{ bottom: layout.bottomNavSpace }}
-        theme={mode}
-      />
+      {/* Single toast outlet for mutation feedback (§8.14). Every toast goes
+          to the top center (owner's directive); calls never pass a position */}
+      <Toaster position="top-center" theme={mode} />
     </ThemeProvider>
   )
 }
