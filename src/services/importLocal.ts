@@ -10,12 +10,14 @@ import {
   Timestamp,
   where,
   writeBatch,
+  type QuerySnapshot,
 } from 'firebase/firestore'
 import { loadFirebase } from 'services/firebase'
 import { readAllLocalRefuels } from 'services/localRefuels'
 import { readAllMeasurements } from 'services/measurements'
 import { readTanks } from 'services/tanks'
-import { planImport } from 'utils/importPlan'
+import { getDeviceId } from 'services/deviceId'
+import { importIdsFor, planImport, tankFingerprint } from 'utils/importPlan'
 
 // Firestore allows 500 writes per batch; 450 leaves room (RF-17)
 const BATCH_SIZE = 450
@@ -62,20 +64,14 @@ export const importLocalData = async ({
   uid: string
   userName: string
 }): Promise<ImportResult> => {
-  const [{ db }, localTanks, localMeasurements, localRefuels] =
+  const [{ db }, localTanks, localMeasurements, localRefuels, deviceId] =
     await Promise.all([
       loadFirebase(),
       readTanks(),
       readAllMeasurements(),
       readAllLocalRefuels(),
+      getDeviceId(),
     ])
-  const plan = planImport(
-    uid,
-    localTanks,
-    localMeasurements,
-    new Date(),
-    localRefuels
-  )
 
   const imported = (name: 'measurements' | 'refuels') =>
     getDocs(
@@ -100,11 +96,39 @@ export const importLocalData = async ({
       imported('measurements'),
       imported('refuels'),
     ])
-  const tankIds = new Set(existingTanks.docs.map(document => document.id))
-  const measurementIds = new Set(
-    existingMeasurements.docs.map(document => document.id)
+  const takenAtById = (snapshot: QuerySnapshot) =>
+    new Map(
+      snapshot.docs.map(document => {
+        const takenAt: unknown = document.get('takenAt')
+        return [
+          document.id,
+          takenAt instanceof Timestamp ? takenAt.toMillis() : Number.NaN,
+        ]
+      })
+    )
+  const tankIds = new Map(
+    existingTanks.docs.map(document => [
+      document.id,
+      tankFingerprint({
+        capacityGal: Number(document.get('capacityGal')),
+        diameterIn: Number(document.get('dimensions.diameterIn')),
+        lengthIn: Number(document.get('dimensions.lengthIn')),
+      }),
+    ])
   )
-  const refuelIds = new Set(existingRefuels.docs.map(document => document.id))
+  const measurementIds = takenAtById(existingMeasurements)
+  const refuelIds = takenAtById(existingRefuels)
+
+  const plan = planImport(
+    importIdsFor(
+      { orgId, uid, deviceId },
+      { tanks: tankIds, measurements: measurementIds, refuels: refuelIds }
+    ),
+    localTanks,
+    localMeasurements,
+    new Date(),
+    localRefuels
+  )
 
   // Tanks first: the measurement rules read the tank as it is before the batch
   const newTanks = plan.tanks.filter(tank => !tankIds.has(tank.id))

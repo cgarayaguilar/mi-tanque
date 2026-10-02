@@ -38,11 +38,18 @@ export interface PendingInvoice {
   createdAt: Date
 }
 
+/** A value of this install, by key (e.g. 'deviceId'). */
+export interface Setting {
+  key: string
+  value: string
+}
+
 class MyTankDatabase extends Dexie {
   declare tanks: Table<StoredTank, number>
   declare measurements: Table<StoredMeasurement, number>
   declare refuels: Table<StoredRefuel, number>
   declare pendingInvoices: Table<PendingInvoice, string>
+  declare settings: Table<Setting, string>
 
   constructor() {
     super('MyTank')
@@ -61,6 +68,8 @@ class MyTankDatabase extends Dexie {
       refuels: '++id, date, tankId, &intentId',
       pendingInvoices: 'refuelId, createdAt',
     })
+    // This install's id for imports (backend specs/0004 RF-17, amended)
+    this.version(5).stores({ settings: 'key' })
   }
 }
 

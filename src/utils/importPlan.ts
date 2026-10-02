@@ -1,6 +1,7 @@
 import { FLEET_LIMITS } from 'schemas/fleet'
 import { CURRENCIES } from 'schemas/account'
 import type { LocalRefuel, Measurement, RefuelValues, Tank } from 'types'
+import { formatNumber } from 'utils/formatNumber'
 import { TANK_TEMPLATES } from 'utils/tankTemplates'
 import { fullVolumeGallons, type TankGeometry } from 'utils/tankVolume'
 
@@ -52,13 +53,99 @@ const OLDEST = new Date(2020, 0, 1)
 // The rules allow the phone clock up to 5 minutes ahead
 const CLOCK_SKEW_MS = 5 * 60 * 1000
 
-/** Deterministic: importing again writes the same documents (RF-17). */
-export const importId = (uid: string, localId: number) =>
-  `import-${uid}-${String(localId)}`
+/** Who imports, where to and from which phone (RF-17, amended 2026-10-01). */
+export interface ImportScope {
+  orgId: string
+  uid: string
+  /** This phone's install (services/deviceId): local ids repeat across phones. */
+  deviceId: string
+}
+
+/**
+ * Deterministic per organization, person and phone: importing again writes
+ * the same documents (RF-17). Without the organization a second one hit the
+ * first one's documents; without the phone, a second phone's records were
+ * taken as already imported.
+ */
+export const importId = (
+  { orgId, uid, deviceId }: ImportScope,
+  localId: number
+) => `import-${orgId}-${uid}-${deviceId}-${String(localId)}`
 
 /** Refuels get their own prefix: local ids repeat across tables. */
-export const refuelImportId = (uid: string, localId: number) =>
+export const refuelImportId = (scope: ImportScope, localId: number) =>
+  importId(scope, localId).replace(/-(\d+)$/, '-r$1')
+
+/** The ids before the amendment, which earlier imports keep. */
+export const legacyImportId = (uid: string, localId: number) =>
+  `import-${uid}-${String(localId)}`
+export const legacyRefuelImportId = (uid: string, localId: number) =>
   `import-${uid}-r${String(localId)}`
+
+/**
+ * The id of each local record. One already imported with the old id keeps
+ * it, so importing again into that organization skips it, but only when it
+ * is the same record (same tank measures, same date): the old id cannot
+ * tell phones apart.
+ */
+export interface ImportIds {
+  tank: (tank: Tank) => string
+  measurement: (localId: number, takenAt: Date) => string
+  refuel: (localId: number, takenAt: Date) => string
+}
+
+/** What identifies a record already in the organization. */
+export const tankFingerprint = (tank: {
+  capacityGal: number
+  diameterIn: number
+  lengthIn: number
+}) =>
+  `${String(tank.capacityGal)}|${String(tank.diameterIn)}|${String(tank.lengthIn)}`
+
+export const importIdsFor = (
+  scope: ImportScope,
+  existing: {
+    /** Fingerprints of this person's tanks in the organization, by id. */
+    tanks: ReadonlyMap<string, string>
+    /** Dates (ms) of their imported measurements and refuels, by id. */
+    measurements: ReadonlyMap<string, number>
+    refuels: ReadonlyMap<string, number>
+  }
+): ImportIds => {
+  const pick = <T>(
+    current: string,
+    legacy: string,
+    found: ReadonlyMap<string, T>,
+    same: T
+  ) => (found.get(legacy) === same ? legacy : current)
+  return {
+    tank: tank =>
+      pick(
+        importId(scope, tank.id),
+        legacyImportId(scope.uid, tank.id),
+        existing.tanks,
+        tankFingerprint({
+          capacityGal: tank.capacity,
+          diameterIn: tank.diameter,
+          lengthIn: tank.length,
+        })
+      ),
+    measurement: (localId, takenAt) =>
+      pick(
+        importId(scope, localId),
+        legacyImportId(scope.uid, localId),
+        existing.measurements,
+        takenAt.getTime()
+      ),
+    refuel: (localId, takenAt) =>
+      pick(
+        refuelImportId(scope, localId),
+        legacyRefuelImportId(scope.uid, localId),
+        existing.refuels,
+        takenAt.getTime()
+      ),
+  }
+}
 
 const STATION_MAX = 60
 const PRICE_PER_LITER_MAX = 1000
@@ -79,7 +166,7 @@ const validTank = (tank: Tank) =>
   inRange(tank.capacity, FLEET_LIMITS.capacity)
 
 export const planImport = (
-  uid: string,
+  ids: ImportIds,
   localTanks: readonly Tank[],
   localMeasurements: readonly Measurement[],
   now = new Date(),
@@ -109,8 +196,9 @@ export const planImport = (
         item.lengthIn === tank.length
     )
     const cloudTank = {
-      id: importId(uid, tank.id),
-      name: `Tanque de ${String(tank.capacity)} gal (importado)`,
+      id: ids.tank(tank),
+      // At most 2 decimals: the rules hold the name to 40 characters
+      name: `Tanque de ${formatNumber(tank.capacity)} gal (importado)`,
       capacityGal: tank.capacity,
       diameterIn: tank.diameter,
       lengthIn: tank.length,
@@ -145,7 +233,7 @@ export const planImport = (
 
     const place = local.location.trim()
     measurements.push({
-      id: importId(uid, local.id),
+      id: ids.measurement(local.id, takenAt),
       tankId: cloudTank.id,
       tankName: cloudTank.name,
       takenAt,
@@ -204,7 +292,7 @@ export const planImport = (
     } = local
     refuels.push({
       ...values,
-      id: refuelImportId(uid, id),
+      id: ids.refuel(id, takenAt),
       tankId: cloudTank.id,
       tankName: cloudTank.name,
       takenAt,
