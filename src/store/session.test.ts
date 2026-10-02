@@ -326,3 +326,63 @@ describe('specs/0005', () => {
     expect(store.getState().status).toBe('ready')
   })
 })
+
+describe('reading the account (audit 2026-10-01 #16, #17)', () => {
+  // Regression: an older read that failed after a newer one succeeded left
+  // the session in error
+  test('an older read that ends later does not overwrite the latest', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { store, emit } = await startWithListener()
+    let failFirst: (error: Error) => void = () => undefined
+    api.readAccount.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          failFirst = reject
+        })
+    )
+    emit(ana)
+    await settled()
+    await store.getState().refresh()
+    expect(store.getState().status).toBe('ready')
+
+    failFirst(new Error('late'))
+    await settled()
+    expect(store.getState().status).toBe('ready')
+  })
+
+  // Regression: signing out in another tab left this tab's Firestore
+  // terminated, and "Reintentar" could never recover
+  test('a client terminated by another tab reloads the page', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const reload = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      reload,
+    } as unknown as Location)
+    api.readAccount.mockRejectedValueOnce(
+      new Error('The client has already been terminated.')
+    )
+    const { emit } = await startWithListener()
+
+    emit(ana)
+    await settled()
+    expect(reload).toHaveBeenCalled()
+  })
+
+  // Regression: a failed Google redirect started the session again, with a
+  // second auth listener, and said nothing to the user
+  test('a failed Google redirect is told once, with one auth listener', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { sileo } = await import('sileo')
+    api.completeRedirectSignIn.mockRejectedValueOnce(new Error('redirect'))
+    api.subscribeToAuth.mockClear()
+    const { store } = await startWithListener()
+
+    await store.getState().start()
+    expect(api.subscribeToAuth).toHaveBeenCalledTimes(1)
+    expect(sileo.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'No pudimos terminar de entrar con Google',
+      })
+    )
+  })
+})

@@ -94,6 +94,7 @@ const EMPTY: SessionData = {
 }
 
 let started: Promise<void> | null = null
+let listeningOnline = false
 
 // Invoice photos saved without signal go up when there is one (specs/0006
 // RF-6). import(): the queue's upload brings the Firebase SDK
@@ -105,14 +106,24 @@ const uploadPendingInvoices = (uid: string) => {
     })
 }
 
+// Signing out in another tab terminates this tab's Firestore too (the shared
+// cache is cleared): its client cannot be used again until the page reloads
+const isTerminatedClient = (error: unknown) =>
+  error instanceof Error && /already been terminated/.test(error.message)
+
+let latestLoad = 0
+
 export const useSessionStore = create<SessionState>()((set, get) => {
   const loadAccount = async (user: SessionUser) => {
+    const load = ++latestLoad
+    // Only the latest read counts: an older one that ends later (switching
+    // organization, signing out meanwhile) must not overwrite it
+    const current = () => load === latestLoad && get().user?.uid === user.uid
     set({ status: 'loading', user })
     try {
       const api = await sessionApi()
       const account = await api.readAccount(user.uid)
-      // The user may have signed out while this was loading
-      if (get().user?.uid !== user.uid) return
+      if (!current()) return
       const { needsContactSync, ...data } = account
       set({
         ...data,
@@ -126,7 +137,12 @@ export const useSessionStore = create<SessionState>()((set, get) => {
         })
       }
     } catch (error) {
+      if (!current()) return
       reportError(error, { operation: 'readAccount' })
+      if (isTerminatedClient(error)) {
+        window.location.reload()
+        return
+      }
       set({ status: 'error' })
     }
   }
@@ -139,20 +155,35 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       started ??= (async () => {
         try {
           const api = await sessionApi()
-          window.addEventListener('online', () => {
-            const { status, user } = get()
-            if (status === 'ready' && user) uploadPendingInvoices(user.uid)
-          })
+          if (!listeningOnline) {
+            listeningOnline = true
+            window.addEventListener('online', () => {
+              const { status, user } = get()
+              if (status === 'ready' && user) uploadPendingInvoices(user.uid)
+            })
+          }
           await api.subscribeToAuth(user => {
             setHint(user !== null)
             if (user) void loadAccount(user)
             else set(EMPTY)
           })
-          await api.completeRedirectSignIn()
         } catch (error) {
           started = null
           reportError(error, { operation: 'startSession' })
           set({ status: hasHint() ? 'error' : 'signedOut' })
+          return
+        }
+        // Apart: the auth listener is already up, so failing here must not
+        // start it again (a second listener) nor hide the session
+        try {
+          const api = await sessionApi()
+          await api.completeRedirectSignIn()
+        } catch (error) {
+          reportError(error, { operation: 'completeRedirectSignIn' })
+          sileo.error({
+            title: 'No pudimos terminar de entrar con Google',
+            description: 'Vuelve a intentarlo.',
+          })
         }
       })()
       return started

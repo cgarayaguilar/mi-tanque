@@ -13,6 +13,7 @@ import ExportButton from 'components/ExportButton'
 import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import NavBar from 'components/NavBar'
 import TankHistoryCard from 'components/TankHistoryCard'
+import SessionErrorNotice from 'components/SessionErrorNotice'
 import { defaultPeriod, useHistoryStore } from 'store/history'
 import { layout, radius } from 'theme/tokens'
 import type { Period } from 'types'
@@ -111,6 +112,7 @@ function BasicHistory() {
       }}
     >
       <Box sx={{ p: 4, flexGrow: 1 }}>
+        <SessionErrorNotice />
         <Typography variant="h3" component="h1">
           Historial
         </Typography>

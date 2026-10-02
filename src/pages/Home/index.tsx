@@ -13,6 +13,7 @@ import FuelGauge from 'components/FuelGauge'
 import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
+import SessionErrorNotice from 'components/SessionErrorNotice'
 import { useSaveMeasurement } from 'hooks/useSaveMeasurement'
 import {
   measurementFormSchema,
@@ -212,6 +213,7 @@ export default function Home() {
       }}
     >
       <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
+        <SessionErrorNotice />
         {sessionStatus === 'ready' || sessionStatus === 'loading' ? (
           <Suspense fallback={null}>
             {sessionStatus === 'ready' && <CloudMeasurement />}
