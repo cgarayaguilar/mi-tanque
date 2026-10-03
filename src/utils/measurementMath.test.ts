@@ -73,3 +73,42 @@ test('the inches limit follows the shape and position', () => {
     )
   ).toBe(25)
 })
+
+// specs/0015 CA-4: a factory tank is measured with its capacity
+describe('a catalog tank is adjusted to its factory capacity', () => {
+  const kenworth = tank({
+    shape: 'cylinder',
+    dimensions: { diameterIn: 24.5, lengthIn: 50 },
+    capacityGal: 100,
+    templateId: 'kw-c24.5x50-100',
+  })
+
+  test('full, it holds its capacity; half way, about half', () => {
+    expect(readingFor(kenworth, 24.5, null).gallons).toBe(100)
+    const half = readingFor(kenworth, 12, null)
+    expect(half.gallons).toBeGreaterThan(48)
+    expect(half.gallons).toBeLessThan(49.5)
+    // The share of the tank does not change
+    expect(half.fillPercent).toBe(
+      readingFor({ ...kenworth, templateId: null }, 12, null).fillPercent
+    )
+  })
+
+  test('a "Genérico", one typed by hand or an edited one: as always', () => {
+    const geometry = {
+      shape: 'cylinder' as const,
+      orientation: 'horizontal' as const,
+      dimensions: { diameterIn: 24, lengthIn: 54 },
+    }
+    const byShape = Math.round(gallonsAt(geometry, 12) * 100) / 100
+    for (const templateId of ['cyl-100-24x54', null, 'not-a-template']) {
+      const generic = tank({
+        shape: 'cylinder',
+        dimensions: { diameterIn: 24, lengthIn: 54 },
+        capacityGal: 100,
+        templateId,
+      })
+      expect(readingFor(generic, 12, null).gallons).toBe(byShape)
+    }
+  })
+})

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useLocation } from 'wouter'
+import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
@@ -15,7 +16,14 @@ import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { radius } from 'theme/tokens'
 import type { Tank } from 'types'
+import { reportError } from 'utils/reportError'
 import type { CatalogTank } from 'utils/tankCatalog'
+import {
+  GENERIC_BRAND,
+  TANK_TEMPLATES,
+  templateById,
+  toCatalogTank,
+} from 'utils/tankTemplates'
 
 // Roughly a TankCard, so the page does not jump when the list arrives
 const CARD_HEIGHT = 72
@@ -41,6 +49,7 @@ export default function TankSearch() {
   const tanks = useTanksStore(state => state.tanks)
   const status = useTanksStore(state => state.status)
   const load = useTanksStore(state => state.load)
+  const addCatalogTank = useTanksStore(state => state.addCatalogTank)
   const selectTank = useSelectedTankStore(state => state.selectTank)
   const selectedTankId = useSelectedTankStore(state => state.selectedTank?.id)
   const [, navigate] = useLocation()
@@ -49,21 +58,66 @@ export default function TankSearch() {
     void load()
   }, [load])
 
-  const catalog = useMemo<CatalogTank[]>(
-    () =>
-      tanks.map(tank => ({
-        key: String(tank.id),
-        capacity: tank.capacity,
-        diameter: tank.diameter,
+  // This phone's tanks, then the catalog's cylinders not saved yet
+  // (specs/0015 RF-11: without an account, only cylinders for now)
+  const catalog = useMemo<CatalogTank[]>(() => {
+    const saved = new Set(tanks.flatMap(tank => tank.catalogId ?? []))
+    const local = tanks.map((tank): CatalogTank => {
+      const template = templateById(tank.catalogId)
+      if (template)
+        return { ...toCatalogTank(template), key: `t:${String(tank.id)}` }
+      return {
+        key: `t:${String(tank.id)}`,
+        shape: 'cylinder',
+        size: tank.diameter,
+        width: null,
         length: tank.length,
-        own: !isPredefined(tank),
-      })),
-    [tanks]
-  )
+        capacity: tank.capacity,
+        ...(isPredefined(tank)
+          ? { brand: GENERIC_BRAND, models: [] }
+          : { own: true }),
+      }
+    })
+    const fromCatalog = TANK_TEMPLATES.filter(
+      template =>
+        template.sourced &&
+        template.shape === 'cylinder' &&
+        !saved.has(template.id)
+    ).map(template => ({ ...toCatalogTank(template), key: `c:${template.id}` }))
+    return [...local, ...fromCatalog]
+  }, [tanks])
 
   const choose = (tank: Tank) => {
     selectTank(tank)
     navigate('/')
+  }
+
+  const chooseKey = async (key: string) => {
+    const tank = tanks.find(item => `t:${String(item.id)}` === key)
+    if (tank) {
+      choose(tank)
+      return
+    }
+    const template = templateById(key.replace(/^c:/, ''))
+    if (!template || !('diameterIn' in template.dimensions)) return
+    try {
+      choose(
+        await addCatalogTank(template.id, {
+          capacity: template.capacityGal,
+          diameter: template.dimensions.diameterIn,
+          length: template.dimensions.lengthIn,
+        })
+      )
+    } catch (error) {
+      reportError(error, {
+        operation: 'saveCatalogTank',
+        catalogId: template.id,
+      })
+      sileo.error({
+        title: 'No pudimos guardar el tanque',
+        description: 'Reintenta en un momento.',
+      })
+    }
   }
 
   const addTank = () => {
@@ -113,13 +167,12 @@ export default function TankSearch() {
       <TankCatalog
         tanks={catalog}
         selectedKey={
-          selectedTankId === undefined ? null : String(selectedTankId)
+          selectedTankId === undefined ? null : `t:${String(selectedTankId)}`
         }
         noun="tanque"
         actionLabel="Seleccionar"
         onChoose={key => {
-          const tank = tanks.find(item => String(item.id) === key)
-          if (tank) choose(tank)
+          void chooseKey(key)
         }}
       />
     )

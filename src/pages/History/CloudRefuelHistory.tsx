@@ -27,7 +27,11 @@ import {
 import { radius } from 'theme/tokens'
 import type { FleetTank } from 'schemas/fleet'
 import type { Period } from 'types'
-import { geometryOf, maxInchesFor } from 'utils/measurementMath'
+import {
+  capacityScaleOf,
+  geometryOf,
+  maxInchesFor,
+} from 'utils/measurementMath'
 import { truckEfficiency, truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
@@ -174,6 +178,7 @@ export default function CloudRefuelHistory({
           const truck = truckOf(tank)
           return {
             geometry: geometryOf(tank),
+            scale: capacityScaleOf(tank),
             maxInches: maxInchesFor(tank),
             capacityGal: tank.capacityGal,
             odometer: truck

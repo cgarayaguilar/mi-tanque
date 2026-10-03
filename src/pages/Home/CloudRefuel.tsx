@@ -7,7 +7,11 @@ import type { FleetTank, Truck } from 'schemas/fleet'
 import { readStations } from 'services/cloudRefuels'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import type { RefuelValues } from 'types'
-import { geometryOf, maxInchesFor } from 'utils/measurementMath'
+import {
+  capacityScaleOf,
+  geometryOf,
+  maxInchesFor,
+} from 'utils/measurementMath'
 import { truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
@@ -59,6 +63,7 @@ export default function CloudRefuel({
         // A save starts a fresh form (new intent, new "before")
         key={`${tank.id}-${String(saved?.gallonsAfter ?? '')}`}
         geometry={geometryOf(tank)}
+        scale={capacityScaleOf(tank)}
         maxInches={maxInchesFor(tank)}
         capacityGal={tank.capacityGal}
         defaultCurrency={currency}

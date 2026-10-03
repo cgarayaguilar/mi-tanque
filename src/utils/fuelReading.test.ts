@@ -14,3 +14,12 @@ test('a full tank reads 100%', () => {
     '100.00'
   )
 })
+
+// specs/0015 CA-6: without an account too, a catalog tank by its capacity
+test('a catalog tank of this phone is adjusted; an old one is not', () => {
+  const tank = { diameter: 24.5, length: 50, capacity: 100 }
+  expect(
+    calculateReading({ ...tank, catalogId: 'kw-c24.5x50-100' }, 24.5).gallons
+  ).toBe('100.00')
+  expect(Number(calculateReading(tank, 24.5).gallons)).toBeGreaterThan(101)
+})

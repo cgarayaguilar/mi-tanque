@@ -1,0 +1,94 @@
+[
+  {
+    "record": "Kenworth T270/T370 · rectangular null×28 · 45 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Kenworth T270/T370 · rectangular null×30.5 · 50 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Peterbilt 330 · rectangular 16×32 · 50 gal",
+    "reason": "capacidad aproximada"
+  },
+  {
+    "record": "Mack Granite MHD · d null×null · 66 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack Granite MHD · d null×null · 88 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack Granite MHD · d null×null · 110 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack Granite GU · d null×null · 100 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack TerraPro (MRU) · d null×null · 50 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack TerraPro (MRU) · d null×null · 70 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack TerraPro (MRU) · d null×null · 80 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Freightliner (sin modelo) · cylinder 23×46 · 80 gal",
+    "reason": "sin modelo"
+  },
+  {
+    "record": "Freightliner (sin modelo) · cylinder 23×60 · 100 gal",
+    "reason": "sin modelo"
+  },
+  {
+    "record": "Freightliner (sin modelo) · cylinder 25×48.5 · 100 gal",
+    "reason": "sin modelo"
+  },
+  {
+    "record": "Freightliner M2 106 · rectangular null×null · 80 gal",
+    "reason": "solo el texto de un buscador o de un título"
+  },
+  {
+    "record": "Freightliner 114SD · cylinder null×null · 60 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Freightliner Argosy · cylinder null×null · 130 gal",
+    "reason": "solo el texto de un buscador o de un título"
+  },
+  {
+    "record": "Western Star 47X/49X · rectangular null×null · 80 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Western Star (sin modelo) · cylinder 25×50 · 100 gal",
+    "reason": "sin modelo"
+  },
+  {
+    "record": "Western Star (sin modelo) · cylinder 25×36.5 · 80 gal",
+    "reason": "sin modelo"
+  },
+  {
+    "record": "Western Star 4900 · cylinder 22×71 · 120 gal",
+    "reason": "solo el texto de un buscador o de un título"
+  },
+  {
+    "record": "Western Star 4900 · cylinder 26×72 · 150 gal",
+    "reason": "solo el texto de un buscador o de un título"
+  },
+  {
+    "record": "International DuraStar 4300/4400 · rectangular null×66 · 65 gal",
+    "reason": "falta el diámetro o el alto"
+  },
+  {
+    "record": "Mack Granite · d 22×null · 111 gal",
+    "reason": "sin largo y sin tanques parecidos para calcularlo"
+  }
+]

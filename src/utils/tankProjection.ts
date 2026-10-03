@@ -40,6 +40,7 @@ export interface Projection {
   height: number
 }
 
+/** Segments of a half circle: fewer for small drawings (thumbnails). */
 const ARC_STEPS = 32
 
 /** Half circle (or full) as points, counter-clockwise from `start`. */
@@ -63,7 +64,8 @@ const arc = (
 export const crossSection = (
   shape: TankShape,
   across: number,
-  up: number
+  up: number,
+  steps = ARC_STEPS
 ): Point2[] => {
   switch (shape) {
     case 'cylinder': {
@@ -74,7 +76,7 @@ export const crossSection = (
         radius,
         -Math.PI / 2,
         1.5 * Math.PI,
-        2 * ARC_STEPS
+        2 * steps
       ).slice(0, -1)
     }
     case 'rectangular':
@@ -93,14 +95,10 @@ export const crossSection = (
         [radius, 0],
         [back, 0],
         [back, up],
-        ...arc(
-          radius,
-          radius,
-          radius,
-          Math.PI / 2,
-          1.5 * Math.PI,
-          ARC_STEPS
-        ).slice(0, -1),
+        ...arc(radius, radius, radius, Math.PI / 2, 1.5 * Math.PI, steps).slice(
+          0,
+          -1
+        ),
       ]
     }
     case 'd_flat_bottom': {
@@ -110,7 +108,7 @@ export const crossSection = (
       return [
         [0, 0],
         [across, 0],
-        ...arc(radius, straight, radius, 0, Math.PI, ARC_STEPS),
+        ...arc(radius, straight, radius, 0, Math.PI, steps),
       ]
     }
   }
@@ -173,10 +171,11 @@ const hull = (points: Point2[]): Point2[] => {
 export const projectTank = (
   shape: TankShape,
   orientation: TankOrientation,
-  size: PreviewSize
+  size: PreviewSize,
+  steps = ARC_STEPS
 ): Projection => {
   const { across, up, length } = size
-  const section = crossSection(shape, across, up)
+  const section = crossSection(shape, across, up, steps)
   // Section (a, b) at position t along the length, in the world
   const place =
     orientation === 'horizontal'

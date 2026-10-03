@@ -9,6 +9,7 @@ import {
   localStations,
 } from 'services/localRefuels'
 import type { RefuelValues, Tank } from 'types'
+import { localGeometry, localScale } from 'utils/fuelReading'
 import { reportError } from 'utils/reportError'
 import type { TankGeometry } from 'utils/tankVolume'
 
@@ -22,16 +23,13 @@ export default function BasicRefuel({ tank }: { tank: Tank }) {
     lastGallons: await lastLocalGallons(tank.id),
     stations: await localStations(),
   }))
-  const geometry: TankGeometry = {
-    shape: 'cylinder',
-    orientation: 'horizontal',
-    dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
-  }
+  const geometry: TankGeometry = localGeometry(tank)
 
   return (
     <>
       <RefuelForm
         geometry={geometry}
+        scale={localScale(tank)}
         maxInches={tank.diameter}
         capacityGal={tank.capacity}
         defaultCurrency=""

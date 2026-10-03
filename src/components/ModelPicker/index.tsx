@@ -16,15 +16,11 @@ import TankCatalog from 'components/TankCatalog'
 import TankThumbnail, { thumbnailFrame } from 'components/TankThumbnail'
 import { radius } from 'theme/tokens'
 import { formatNumber } from 'utils/formatNumber'
-import type { CatalogTank } from 'utils/tankCatalog'
-import { TANK_TEMPLATES } from 'utils/tankTemplates'
+import { fitsText, measuresText, type CatalogTank } from 'utils/tankCatalog'
+import { TANK_TEMPLATES, toCatalogTank } from 'utils/tankTemplates'
 
-const MODELS: CatalogTank[] = TANK_TEMPLATES.map(template => ({
-  key: template.id,
-  capacity: template.capacityGal,
-  diameter: template.diameterIn,
-  length: template.lengthIn,
-}))
+// The 15 "Genérico" tanks and the factory tanks of each brand (specs/0015)
+const MODELS: CatalogTank[] = TANK_TEMPLATES.map(toCatalogTank)
 const FRAME = thumbnailFrame(MODELS)
 
 interface ModelPickerProps {
@@ -83,21 +79,27 @@ export default function ModelPicker({
           }}
         >
           <Box sx={{ width: 72, flexShrink: 0 }}>
-            <TankThumbnail
-              diameter={chosen.diameter}
-              length={chosen.length}
-              frame={FRAME}
-              height={36}
-            />
+            <TankThumbnail tank={chosen} frame={FRAME} height={36} />
           </Box>
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography variant="subtitle1" component="p">
               {formatNumber(chosen.capacity)} gal
+              {chosen.usable === undefined
+                ? ''
+                : ` (${formatNumber(chosen.usable)} útiles)`}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Ø {formatNumber(chosen.diameter)} × {formatNumber(chosen.length)}{' '}
-              pulg.
+            <Typography
+              variant="caption"
+              component="p"
+              sx={{ color: 'text.secondary' }}
+            >
+              {measuresText(chosen)}
             </Typography>
+            {chosen.brand && chosen.models && chosen.models.length > 0 && (
+              <Typography variant="caption" component="p">
+                {fitsText(chosen, true)}
+              </Typography>
+            )}
           </Box>
           <Button
             id={id}

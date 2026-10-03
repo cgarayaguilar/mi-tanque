@@ -35,7 +35,7 @@ import type { FleetSection } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { measureHelp, type MeasureName } from 'utils/measureHelp'
 import { parseDecimal } from 'utils/parseDecimal'
-import { TANK_TEMPLATES } from 'utils/tankTemplates'
+import { templateById } from 'utils/tankTemplates'
 import { TANK_ORIENTATIONS, TANK_SHAPES } from 'utils/tankVolume'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
@@ -60,14 +60,21 @@ type Describe = 'template' | 'measures'
 
 /** The model these values still are, if any. */
 const templateOf = (values: TankFormValues) => {
-  const template = TANK_TEMPLATES.find(item => item.id === values.templateId)
-  return template !== undefined &&
-    values.shape === 'cylinder' &&
+  const template = templateById(values.templateId)
+  if (template === undefined) return null
+  const same = (typed: string, value: number) => parseDecimal(typed) === value
+  const { dimensions } = template
+  const measures =
+    'diameterIn' in dimensions
+      ? same(values.diameter, dimensions.diameterIn)
+      : same(values.height, dimensions.heightIn) &&
+        same(values.width, dimensions.widthIn)
+  return values.shape === template.shape &&
     values.orientation === 'horizontal' &&
-    parseDecimal(values.diameter) === template.diameterIn &&
-    parseDecimal(values.length) === template.lengthIn &&
+    measures &&
+    same(values.length, dimensions.lengthIn) &&
     // A capacity edited by hand is no longer the model (audit 2026-10-02)
-    parseDecimal(values.capacity) === template.capacityGal
+    same(values.capacity, template.capacityGal)
     ? template
     : null
 }
@@ -112,7 +119,7 @@ export default function TankEditor({
   const [describe, setDescribe] = useState<Describe>(() =>
     tank === null || templateOf(tankToForm(tank)) ? 'template' : 'measures'
   )
-  const template = TANK_TEMPLATES.find(item => item.id === values.templateId)
+  const template = templateById(values.templateId)
   const details = useMoreDetails<TankFormValues>(['description'], setFocus)
   const cylinder = values.shape === 'cylinder'
   const vertical = values.orientation === 'vertical'
@@ -124,12 +131,18 @@ export default function TankEditor({
   )
 
   const applyTemplate = (templateId: string) => {
-    const template = TANK_TEMPLATES.find(item => item.id === templateId)
+    const template = templateById(templateId)
     if (!template) return
-    setValue('shape', 'cylinder')
+    const { dimensions } = template
+    setValue('shape', template.shape)
     setValue('orientation', 'horizontal')
-    setValue('diameter', formatNumber(template.diameterIn))
-    setValue('length', formatNumber(template.lengthIn))
+    if ('diameterIn' in dimensions) {
+      setValue('diameter', formatNumber(dimensions.diameterIn))
+    } else {
+      setValue('height', formatNumber(dimensions.heightIn))
+      setValue('width', formatNumber(dimensions.widthIn))
+    }
+    setValue('length', formatNumber(dimensions.lengthIn))
     setValue('capacity', formatNumber(template.capacityGal))
   }
 
@@ -278,10 +291,15 @@ export default function TankEditor({
               />
               {template && (
                 <TankPreview
-                  shape="cylinder"
+                  shape={template.shape}
                   orientation="horizontal"
-                  diameter={template.diameterIn}
-                  length={template.lengthIn}
+                  {...('diameterIn' in template.dimensions
+                    ? { diameter: template.dimensions.diameterIn }
+                    : {
+                        height: template.dimensions.heightIn,
+                        width: template.dimensions.widthIn,
+                      })}
+                  length={template.dimensions.lengthIn}
                   capacity={template.capacityGal}
                 />
               )}

@@ -83,6 +83,8 @@ const pickModel = async (
     })
   )
   const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+  // The 15 tanks of before are the "Genérico" brand (specs/0015 RF-6)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Genérico' }))
   fireEvent.click(
     within(dialog).getByRole('button', {
       name: `Elegir: tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`,
@@ -645,10 +647,8 @@ test('the model catalog is grouped by capacity and filters combine', async () =>
   fireEvent.click(await screen.findByRole('button', { name: 'Elegir modelo' }))
   const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
 
-  expect(within(dialog).getByText('15 modelos')).toBeInTheDocument()
-  expect(
-    within(dialog).getByRole('region', { name: '100 galones' })
-  ).toHaveTextContent('100 gal · 3 modelos')
+  // The 15 "Genérico" and the 194 factory tanks (specs/0015)
+  expect(within(dialog).getByText('209 modelos')).toBeInTheDocument()
 
   fireEvent.click(
     within(within(dialog).getByRole('group', { name: 'Capacidad' })).getByRole(
@@ -656,14 +656,71 @@ test('the model catalog is grouped by capacity and filters combine', async () =>
       { name: '100 gal' }
     )
   )
+  expect(
+    await within(dialog).findByRole('region', { name: '100 galones' })
+  ).toHaveTextContent('100 gal · 21 modelos')
   fireEvent.click(
     within(within(dialog).getByRole('group', { name: 'Diámetro' })).getByRole(
       'button',
       { name: '24 pulg.' }
     )
   )
-  expect(await within(dialog).findByText('1 modelo')).toBeInTheDocument()
+  expect(await within(dialog).findByText('3 modelos')).toBeInTheDocument()
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Limpiar' }))
-  expect(await within(dialog).findByText('15 modelos')).toBeInTheDocument()
+  expect(await within(dialog).findByText('209 modelos')).toBeInTheDocument()
+})
+
+// specs/0015 CA-2, CA-3, CA-5: a factory "D" tank of a Volvo, by brand and model
+test('a Volvo VNL (2024+) "D" tank is chosen by brand and model and saved as the model', async () => {
+  renderAt('/flota/tanques/nuevo')
+  type(
+    await screen
+      .findByLabelText('Nombre del tanque')
+      .then(() => 'Nombre del tanque'),
+    'Tanque Volvo'
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Elegir modelo' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Volvo' }))
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Modelo' })).getByRole(
+      'button',
+      { name: 'VNL (2024+)' }
+    )
+  )
+  expect(
+    within(dialog).getByText(/^Volvo VNL \(2024\+\) · \d+ tanques$/)
+  ).toBeInTheDocument()
+  // Its width was computed: the card says so
+  expect(
+    within(dialog).getAllByText('Medidas calculadas: confírmalas con una cinta')
+      .length
+  ).toBeGreaterThan(0)
+  fireEvent.click(
+    within(dialog).getByRole('button', {
+      name: /tanque de 100 galones, en D, 26 de alto/,
+    })
+  )
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  expect(
+    screen.getByRole('img', { name: /^Tanque en "D" de lado plano acostado/ })
+  ).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+  await waitFor(() => {
+    expect(api.createFleetItem).toHaveBeenCalledWith(
+      'tanks',
+      'new-id',
+      ORG_ID,
+      expect.objectContaining({
+        shape: 'd_flat_side',
+        orientation: 'horizontal',
+        capacityGal: 100,
+        templateId: expect.stringMatching(/^vo-d26x/) as unknown,
+      })
+    )
+  })
 })

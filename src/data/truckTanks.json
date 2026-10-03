@@ -1,0 +1,2760 @@
+[
+  {
+    "id": "fl-r18x18.5x38-55",
+    "brand": "Freightliner",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 18,
+      "widthIn": 18.5,
+      "lengthIn": 38
+    },
+    "capacityGal": 55,
+    "models": ["M2 106", "M2 112"]
+  },
+  {
+    "id": "fl-c25x30.1-60",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 30.1
+    },
+    "capacityGal": 60,
+    "models": ["Cascadia (2018+)"],
+    "calculated": ["length"]
+  },
+  {
+    "id": "fl-c25x35-70",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 35
+    },
+    "capacityGal": 70,
+    "models": ["Cascadia (2018+)"],
+    "calculated": ["length"]
+  },
+  {
+    "id": "fl-c23x48-80",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 48
+    },
+    "capacityGal": 80,
+    "models": ["Cascadia (2008–2017)", "Century Class", "Columbia", "Coronado"]
+  },
+  {
+    "id": "fl-c25x38.5-80",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 38.5
+    },
+    "capacityGal": 80,
+    "models": [
+      "114SD",
+      "Cascadia (2008–2017)",
+      "Cascadia (2018+)",
+      "Century Class",
+      "Classic / Classic XL",
+      "Columbia",
+      "Coronado",
+      "M2 112"
+    ]
+  },
+  {
+    "id": "fl-c25x44.8-90",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 44.8
+    },
+    "capacityGal": 90,
+    "models": ["Cascadia (2018+)"],
+    "calculated": ["length"]
+  },
+  {
+    "id": "fl-r18x18.5x64-90",
+    "brand": "Freightliner",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 18,
+      "widthIn": 18.5,
+      "lengthIn": 64
+    },
+    "capacityGal": 90,
+    "models": ["M2 106", "M2 112"]
+  },
+  {
+    "id": "fl-r18x18.5x63.5-92",
+    "brand": "Freightliner",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 18,
+      "widthIn": 18.5,
+      "lengthIn": 63.5
+    },
+    "capacityGal": 92,
+    "models": ["M2 106", "M2 112"]
+  },
+  {
+    "id": "fl-c25x46.5-100",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 46.5
+    },
+    "capacityGal": 100,
+    "models": ["Cascadia (2008–2017)"]
+  },
+  {
+    "id": "fl-c25x50.5-100",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 50.5
+    },
+    "capacityGal": 100,
+    "models": [
+      "Cascadia (2008–2017)",
+      "Cascadia (2018+)",
+      "Century Class",
+      "Classic / Classic XL",
+      "Columbia",
+      "Coronado",
+      "M2 112"
+    ]
+  },
+  {
+    "id": "fl-r18x18.5x85-100",
+    "brand": "Freightliner",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 18,
+      "widthIn": 18.5,
+      "lengthIn": 85
+    },
+    "capacityGal": 100,
+    "models": ["M2 106", "M2 112"]
+  },
+  {
+    "id": "fl-c23x62-110",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 62
+    },
+    "capacityGal": 110,
+    "models": [
+      "Cascadia (2008–2017)",
+      "Century Class",
+      "Classic / Classic XL",
+      "Columbia",
+      "Coronado",
+      "FLD 112 / 120",
+      "M2 112"
+    ]
+  },
+  {
+    "id": "fl-c23x71.5-120",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 71.5
+    },
+    "capacityGal": 120,
+    "models": ["Cascadia (2008–2017)", "Century Class", "Columbia", "Coronado"]
+  },
+  {
+    "id": "fl-c25x56.5-120",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 56.5
+    },
+    "capacityGal": 120,
+    "models": ["Cascadia (2008–2017)"]
+  },
+  {
+    "id": "fl-c25x60-120",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 60
+    },
+    "capacityGal": 120,
+    "models": [
+      "Cascadia (2008–2017)",
+      "Cascadia (2018+)",
+      "Century Class",
+      "Classic / Classic XL",
+      "Columbia",
+      "Coronado",
+      "M2 112"
+    ]
+  },
+  {
+    "id": "fl-c23x84-140",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 84
+    },
+    "capacityGal": 140,
+    "models": [
+      "Cascadia (2008–2017)",
+      "Century Class",
+      "Classic / Classic XL",
+      "Columbia",
+      "Coronado",
+      "FLD 112 / 120",
+      "M2 112"
+    ]
+  },
+  {
+    "id": "fl-c25x70.5-140",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 70.5
+    },
+    "capacityGal": 140,
+    "models": ["Cascadia (2008–2017)", "Cascadia (2018+)", "Coronado"]
+  },
+  {
+    "id": "fl-c23x88.8-150",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 88.75
+    },
+    "capacityGal": 150,
+    "models": ["Cascadia (2008–2017)"]
+  },
+  {
+    "id": "fl-c25x74.5-150",
+    "brand": "Freightliner",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 74.5
+    },
+    "capacityGal": 150,
+    "models": ["Cascadia (2008–2017)", "Cascadia (2018+)"]
+  },
+  {
+    "id": "in-r15x25x21-28",
+    "brand": "International",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 15,
+      "widthIn": 25,
+      "lengthIn": 21
+    },
+    "capacityGal": 28,
+    "models": ["4700 / 4800 / 4900"]
+  },
+  {
+    "id": "in-d16x21.9x30.4-40",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 16,
+      "widthIn": 21.9,
+      "lengthIn": 30.4
+    },
+    "capacityGal": 40,
+    "models": ["DuraStar (4100–4400)", "HV", "MV", "WorkStar (7300–7600)"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "in-c24x26.5-50",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 26.5
+    },
+    "capacityGal": 50,
+    "models": ["DuraStar (4100–4400)", "MV", "WorkStar (7300–7600)"]
+  },
+  {
+    "id": "in-d16x23.4x35.4-50",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 16,
+      "widthIn": 23.4,
+      "lengthIn": 35.4
+    },
+    "capacityGal": 50,
+    "models": ["DuraStar (4100–4400)", "HV", "MV", "WorkStar (7300–7600)"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "in-d19x23.3x30.4-50",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19,
+      "widthIn": 23.3,
+      "lengthIn": 30.4
+    },
+    "capacityGal": 50,
+    "models": ["DuraStar (4100–4400)", "HV", "MV", "WorkStar (7300–7600)"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "in-d16x25x35-55",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 16,
+      "widthIn": 25,
+      "lengthIn": 35
+    },
+    "capacityGal": 55,
+    "models": ["4700 / 4800 / 4900", "DuraStar (4100–4400)"]
+  },
+  {
+    "id": "in-c24x33.5-60",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 33.5
+    },
+    "capacityGal": 60,
+    "models": ["HX"]
+  },
+  {
+    "id": "in-r15x25x37-60",
+    "brand": "International",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 15,
+      "widthIn": 25,
+      "lengthIn": 37
+    },
+    "capacityGal": 60,
+    "models": ["4700 / 4800 / 4900"]
+  },
+  {
+    "id": "in-d19x25x35-65",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19,
+      "widthIn": 25,
+      "lengthIn": 35
+    },
+    "capacityGal": 65,
+    "models": ["DuraStar (4100–4400)"]
+  },
+  {
+    "id": "in-c26x33.7-70",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 33.7
+    },
+    "capacityGal": 70,
+    "models": [
+      "9900i / 9900ix",
+      "HV",
+      "HX",
+      "PayStar 5000",
+      "RH",
+      "WorkStar (7300–7600)"
+    ]
+  },
+  {
+    "id": "in-d19x25x39.4-70",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19,
+      "widthIn": 25,
+      "lengthIn": 39.4
+    },
+    "capacityGal": 70,
+    "models": ["DuraStar (4100–4400)", "HV", "MV", "WorkStar (7300–7600)"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "in-c24x45-80",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 45
+    },
+    "capacityGal": 80,
+    "models": ["HX", "PayStar 5000"]
+  },
+  {
+    "id": "in-c26x38-80",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 38
+    },
+    "capacityGal": 80,
+    "models": [
+      "9200i",
+      "9400i",
+      "HV",
+      "HX",
+      "LT",
+      "MV",
+      "PayStar 5000",
+      "ProStar",
+      "RH",
+      "TranStar / 8600",
+      "WorkStar (7300–7600)"
+    ]
+  },
+  {
+    "id": "in-d19.4x25.2x40.9-80",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19.37,
+      "widthIn": 25.24,
+      "lengthIn": 40.87
+    },
+    "capacityGal": 80,
+    "models": ["WorkStar (7300–7600)"]
+  },
+  {
+    "id": "in-d19x24.7x45.7-80",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19,
+      "widthIn": 24.7,
+      "lengthIn": 45.7
+    },
+    "capacityGal": 80,
+    "models": ["HV"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "in-c24x53.5-100",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 53.5
+    },
+    "capacityGal": 100,
+    "models": ["PayStar 5900i"]
+  },
+  {
+    "id": "in-c24x56-100",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 56
+    },
+    "capacityGal": 100,
+    "models": ["9400i", "9900i / 9900ix", "HX", "PayStar 5000"]
+  },
+  {
+    "id": "in-c26x47.5-100",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 47.5
+    },
+    "capacityGal": 100,
+    "models": [
+      "8400",
+      "9100i",
+      "9200i",
+      "9400i",
+      "9900i / 9900ix",
+      "HV",
+      "HX",
+      "LT",
+      "PayStar 5000",
+      "ProStar",
+      "TranStar / 8600",
+      "WorkStar (7300–7600)"
+    ]
+  },
+  {
+    "id": "in-d19.1x25.2x57.1-100",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19.1,
+      "widthIn": 25.2,
+      "lengthIn": 57.1
+    },
+    "capacityGal": 100,
+    "models": ["DuraStar (4100–4400)", "HV", "MV", "WorkStar (7300–7600)"]
+  },
+  {
+    "id": "in-d19x25x55-100",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19,
+      "widthIn": 25,
+      "lengthIn": 55
+    },
+    "capacityGal": 100,
+    "models": ["WorkStar (7300–7600)"]
+  },
+  {
+    "id": "in-c26x52-115",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 52
+    },
+    "capacityGal": 115,
+    "models": ["LoneStar"]
+  },
+  {
+    "id": "in-c24x62-120",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 62
+    },
+    "capacityGal": 120,
+    "models": ["LT"]
+  },
+  {
+    "id": "in-c24x66.8-120",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 66.8
+    },
+    "capacityGal": 120,
+    "models": ["HV", "HX", "PayStar 5000"]
+  },
+  {
+    "id": "in-c26x56.5-120",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 56.5
+    },
+    "capacityGal": 120,
+    "models": [
+      "9200i",
+      "9400i",
+      "9900i / 9900ix",
+      "HV",
+      "HX",
+      "LoneStar",
+      "LT",
+      "PayStar 5000",
+      "ProStar",
+      "TranStar / 8600",
+      "WorkStar (7300–7600)"
+    ]
+  },
+  {
+    "id": "in-d19.4x25.3x57.3-120",
+    "brand": "International",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 19.35,
+      "widthIn": 25.25,
+      "lengthIn": 57.32
+    },
+    "capacityGal": 120,
+    "models": ["WorkStar (7300–7600)"]
+  },
+  {
+    "id": "in-c26x65-140",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 65
+    },
+    "capacityGal": 140,
+    "models": ["LoneStar", "LT"]
+  },
+  {
+    "id": "in-c26x70.5-150",
+    "brand": "International",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 70.5
+    },
+    "capacityGal": 150,
+    "models": [
+      "9200i",
+      "9400i",
+      "9900i / 9900ix",
+      "LoneStar",
+      "ProStar",
+      "TranStar / 8600"
+    ]
+  },
+  {
+    "id": "kw-c22x27.9-45",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 27.9
+    },
+    "capacityGal": 45,
+    "models": ["T270", "T370"]
+  },
+  {
+    "id": "kw-c24.5x23-45",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 23
+    },
+    "capacityGal": 45,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c22x35.6-56",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 35.6
+    },
+    "capacityGal": 56,
+    "models": [
+      "C500",
+      "T270",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x28.1-56",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 28.1
+    },
+    "capacityGal": 56,
+    "models": ["T270", "T370"]
+  },
+  {
+    "id": "kw-c22x34-60",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 34
+    },
+    "capacityGal": 60,
+    "models": ["T300", "T370", "T800 (2000–2007)"]
+  },
+  {
+    "id": "kw-c22x38-60",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 38
+    },
+    "capacityGal": 60,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x30.6-60",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 30.6
+    },
+    "capacityGal": 60,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x38-70",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 38
+    },
+    "capacityGal": 70,
+    "models": [
+      "T300",
+      "T370",
+      "T600",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)"
+    ]
+  },
+  {
+    "id": "kw-c22x47.3-75",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 47.3
+    },
+    "capacityGal": 75,
+    "models": [
+      "C500",
+      "T270",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x38.5-75",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 38.5
+    },
+    "capacityGal": 75,
+    "models": [
+      "C500",
+      "T270",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x28.7-75",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 28.7
+    },
+    "capacityGal": 75,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x45.5-90",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 45.5
+    },
+    "capacityGal": 90,
+    "models": [
+      "C500",
+      "T270",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x34.3-90",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 34.3
+    },
+    "capacityGal": 90,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c22x62.2-100",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 62.2
+    },
+    "capacityGal": 100,
+    "models": [
+      "C500",
+      "T270",
+      "T300",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x50-100",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 50
+    },
+    "capacityGal": 100,
+    "models": [
+      "C500",
+      "T270",
+      "T300",
+      "T370",
+      "T600",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x38.8-105",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 38.8
+    },
+    "capacityGal": 105,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x55-110",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 55
+    },
+    "capacityGal": 110,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c22x74.3-120",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 74.3
+    },
+    "capacityGal": 120,
+    "models": [
+      "C500",
+      "T270",
+      "T300",
+      "T370",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x60.6-120",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 60.6
+    },
+    "capacityGal": 120,
+    "models": [
+      "C500",
+      "T300",
+      "T600",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x45.8-120",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 45.8
+    },
+    "capacityGal": 120,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x67.2-135",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 67.2
+    },
+    "capacityGal": 135,
+    "models": [
+      "C500",
+      "T300",
+      "T370",
+      "T600",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x50.9-135",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 50.9
+    },
+    "capacityGal": 135,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c24.5x72-150",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 72
+    },
+    "capacityGal": 150,
+    "models": ["T800 (2000–2007)", "W900B (2000–2007)", "W900L (2000–2007)"]
+  },
+  {
+    "id": "kw-c24.5x74.5-150",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24.5,
+      "lengthIn": 74.5
+    },
+    "capacityGal": 150,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2000–2007)",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2000–2007)",
+      "W900B (2008+)",
+      "W900L (2000–2007)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x56.2-150",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 56.2
+    },
+    "capacityGal": 150,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "kw-c28.5x66.1-177",
+    "brand": "Kenworth",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 28.5,
+      "lengthIn": 66.1
+    },
+    "capacityGal": 177,
+    "models": [
+      "C500",
+      "T660",
+      "T680",
+      "T700",
+      "T800 (2008+)",
+      "T880",
+      "W900B (2008+)",
+      "W900L (2008+)",
+      "W990"
+    ]
+  },
+  {
+    "id": "mk-c24x25-44",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 25
+    },
+    "capacityGal": 44,
+    "models": ["RD"]
+  },
+  {
+    "id": "mk-c22x30-45",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 30
+    },
+    "capacityGal": 45,
+    "models": ["Granite CV"]
+  },
+  {
+    "id": "mk-c22x36-50",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 36
+    },
+    "capacityGal": 50,
+    "models": ["Granite", "Granite CT"]
+  },
+  {
+    "id": "mk-c24x29-50",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 29
+    },
+    "capacityGal": 50,
+    "models": ["TerraPro"]
+  },
+  {
+    "id": "mk-c26x25-50",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 25
+    },
+    "capacityGal": 50,
+    "models": ["Pinnacle", "Vision"]
+  },
+  {
+    "id": "mk-c22x35-53",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 35
+    },
+    "capacityGal": 53,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-c26x25.2-53",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 25.2
+    },
+    "capacityGal": 53,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d22x22x31-53",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 22,
+      "lengthIn": 31
+    },
+    "capacityGal": 53,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-d26x25.6x22.5-53",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 25.6,
+      "lengthIn": 22.5
+    },
+    "capacityGal": 53,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c22x36-55",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 36
+    },
+    "capacityGal": 55,
+    "models": ["Granite CV"]
+  },
+  {
+    "id": "mk-c24x34-56",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 34
+    },
+    "capacityGal": 56,
+    "models": ["RD"]
+  },
+  {
+    "id": "mk-c22x46-66",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 46
+    },
+    "capacityGal": 66,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d22x20.8x41-66",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 20.8,
+      "lengthIn": 41
+    },
+    "capacityGal": 66,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c25x33-68",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 33
+    },
+    "capacityGal": 68,
+    "models": ["CH"]
+  },
+  {
+    "id": "mk-c22x44-70",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 44
+    },
+    "capacityGal": 70,
+    "models": ["Granite CT", "Granite CV"]
+  },
+  {
+    "id": "mk-c24x40-70",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 40
+    },
+    "capacityGal": 70,
+    "models": ["TerraPro"]
+  },
+  {
+    "id": "mk-c26x36-72",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 36
+    },
+    "capacityGal": 72,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d26x24.6x32-72",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 24.6,
+      "lengthIn": 32
+    },
+    "capacityGal": 72,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c22x50-75",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 50
+    },
+    "capacityGal": 75,
+    "models": ["Granite CV"]
+  },
+  {
+    "id": "mk-c24x44-75",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 44
+    },
+    "capacityGal": 75,
+    "models": ["RD"]
+  },
+  {
+    "id": "mk-c26x36-75",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 36
+    },
+    "capacityGal": 75,
+    "models": ["Pinnacle", "Vision"]
+  },
+  {
+    "id": "mk-c22x51.6-80",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 51.6
+    },
+    "capacityGal": 80,
+    "models": [
+      "Anthem",
+      "Granite",
+      "Granite CV",
+      "LR",
+      "Pinnacle",
+      "TerraPro",
+      "Titan"
+    ]
+  },
+  {
+    "id": "mk-c24x45-80",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 45
+    },
+    "capacityGal": 80,
+    "models": ["TerraPro"]
+  },
+  {
+    "id": "mk-d22x22.5x45.5-80",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 22.5,
+      "lengthIn": 45.5
+    },
+    "capacityGal": 80,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c22x61.2-88",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 61.2
+    },
+    "capacityGal": 88,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d22x21x54-88",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 21,
+      "lengthIn": 54
+    },
+    "capacityGal": 88,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c22x61-90",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 61
+    },
+    "capacityGal": 90,
+    "models": ["Granite CT"]
+  },
+  {
+    "id": "mk-c25x43-90",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 43
+    },
+    "capacityGal": 90,
+    "models": ["CH"]
+  },
+  {
+    "id": "mk-c26x46-93",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 46
+    },
+    "capacityGal": 93,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d26x24.8x41-93",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 24.8,
+      "lengthIn": 41
+    },
+    "capacityGal": 93,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c22x63-95",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 63
+    },
+    "capacityGal": 95,
+    "models": ["Granite CV"]
+  },
+  {
+    "id": "mk-c24x55-95",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 55
+    },
+    "capacityGal": 95,
+    "models": ["RD"]
+  },
+  {
+    "id": "mk-c25x49-96",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 49
+    },
+    "capacityGal": 96,
+    "models": ["Vision"]
+  },
+  {
+    "id": "mk-c26x46-100",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 46
+    },
+    "capacityGal": 100,
+    "models": ["Anthem", "Pinnacle", "Vision"]
+  },
+  {
+    "id": "mk-c26x44-101",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 44
+    },
+    "capacityGal": 101,
+    "models": ["Pinnacle"]
+  },
+  {
+    "id": "mk-c25x50-104",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 50
+    },
+    "capacityGal": 104,
+    "models": ["CH"]
+  },
+  {
+    "id": "mk-c22x73-110",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 73
+    },
+    "capacityGal": 110,
+    "models": ["Granite CV"]
+  },
+  {
+    "id": "mk-c24x62-110",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 24,
+      "lengthIn": 62
+    },
+    "capacityGal": 110,
+    "models": ["RD", "TerraPro"]
+  },
+  {
+    "id": "mk-c22x80-116",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 80
+    },
+    "capacityGal": 116,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d22x21.2x70.5-116",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 21.2,
+      "lengthIn": 70.5
+    },
+    "capacityGal": 116,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c26x58-117",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 58
+    },
+    "capacityGal": 117,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d26x24.6x52-117",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 24.6,
+      "lengthIn": 52
+    },
+    "capacityGal": 117,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c25x57-120",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 57
+    },
+    "capacityGal": 120,
+    "models": ["CH"]
+  },
+  {
+    "id": "mk-c22x83-125",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 83
+    },
+    "capacityGal": 125,
+    "models": ["Granite"]
+  },
+  {
+    "id": "mk-c26x58-125",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 58
+    },
+    "capacityGal": 125,
+    "models": ["Pinnacle", "Vision"]
+  },
+  {
+    "id": "mk-c25x69-135",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 69
+    },
+    "capacityGal": 135,
+    "models": ["Vision"]
+  },
+  {
+    "id": "mk-c22x96-142",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 22,
+      "lengthIn": 96
+    },
+    "capacityGal": 142,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-c26x70-142",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 70
+    },
+    "capacityGal": 142,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"]
+  },
+  {
+    "id": "mk-d26x24.8x62.6-142",
+    "brand": "Mack",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 24.8,
+      "lengthIn": 62.6
+    },
+    "capacityGal": 142,
+    "models": ["Anthem", "Granite", "LR", "Pinnacle", "TerraPro", "Titan"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "mk-c25x69-145",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 69
+    },
+    "capacityGal": 145,
+    "models": ["CH"]
+  },
+  {
+    "id": "mk-c26x70-150",
+    "brand": "Mack",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 70
+    },
+    "capacityGal": 150,
+    "models": ["Pinnacle", "Vision"]
+  },
+  {
+    "id": "pb-c20x33.3-46",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 20,
+      "lengthIn": 33.3
+    },
+    "capacityGal": 46,
+    "usableGal": 40,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c20x43.2-57",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 20,
+      "lengthIn": 43.2
+    },
+    "capacityGal": 57,
+    "usableGal": 50,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x34.5-57",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 34.5
+    },
+    "capacityGal": 57,
+    "usableGal": 50,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x26.7-57",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 26.7
+    },
+    "capacityGal": 57,
+    "usableGal": 50,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x27-60",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 27
+    },
+    "capacityGal": 60,
+    "models": ["367", "379", "386", "387", "389", "567", "579"]
+  },
+  {
+    "id": "pb-c20x51.3-67",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 20,
+      "lengthIn": 51.3
+    },
+    "capacityGal": 67,
+    "usableGal": 60,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x40.7-67",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 40.7
+    },
+    "capacityGal": 67,
+    "usableGal": 60,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x31.5-67",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 31.5
+    },
+    "capacityGal": 67,
+    "usableGal": 60,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x43-75",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 43
+    },
+    "capacityGal": 75,
+    "models": ["330", "378", "379", "387"]
+  },
+  {
+    "id": "pb-c20x57.3-78",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 20,
+      "lengthIn": 57.3
+    },
+    "capacityGal": 78,
+    "usableGal": 70,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x46.8-78",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 46.8
+    },
+    "capacityGal": 78,
+    "usableGal": 70,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x36.2-78",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 36.2
+    },
+    "capacityGal": 78,
+    "usableGal": 70,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x38-80",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 38
+    },
+    "capacityGal": 80,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c20x65.3-89",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 20,
+      "lengthIn": 65.3
+    },
+    "capacityGal": 89,
+    "usableGal": 80,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x52.9-89",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 52.9
+    },
+    "capacityGal": 89,
+    "usableGal": 80,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x41-89",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 41
+    },
+    "capacityGal": 89,
+    "usableGal": 80,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x41-90",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 41
+    },
+    "capacityGal": 90,
+    "models": ["330", "378", "379", "387"]
+  },
+  {
+    "id": "pb-c23x59-99",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 59
+    },
+    "capacityGal": 99,
+    "usableGal": 90,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x45.7-99",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 45.7
+    },
+    "capacityGal": 99,
+    "usableGal": 90,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x60-100",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 60
+    },
+    "capacityGal": 100,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c26x48-100",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 48
+    },
+    "capacityGal": 100,
+    "models": ["330", "367", "378", "379", "386", "387", "389", "567", "579"]
+  },
+  {
+    "id": "pb-c23x62-110",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 62
+    },
+    "capacityGal": 110,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c23x65.1-110",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 65.1
+    },
+    "capacityGal": 110,
+    "usableGal": 100,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x50.5-110",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 50.5
+    },
+    "capacityGal": 110,
+    "usableGal": 100,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x53-110",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 53
+    },
+    "capacityGal": 110,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c23x72-120",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 72
+    },
+    "capacityGal": 120,
+    "models": [
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c26x55.2-121",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 55.2
+    },
+    "capacityGal": 121,
+    "usableGal": 110,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x57-125",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 57
+    },
+    "capacityGal": 125,
+    "models": ["330", "378", "379", "386", "387", "389", "567", "579"]
+  },
+  {
+    "id": "pb-c23x77.3-131",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 77.3
+    },
+    "capacityGal": 131,
+    "usableGal": 120,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c26x60-131",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 60
+    },
+    "capacityGal": 131,
+    "usableGal": 120,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x77-135",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 77
+    },
+    "capacityGal": 135,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c26x65-135",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 65
+    },
+    "capacityGal": 135,
+    "models": ["330", "378", "379", "386", "387", "389", "567", "579"]
+  },
+  {
+    "id": "pb-c26x66.8-147",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 66.8
+    },
+    "capacityGal": 147,
+    "usableGal": 135,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "pb-c23x87-150",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 87
+    },
+    "capacityGal": 150,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c26x72-150",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 72
+    },
+    "capacityGal": 150,
+    "models": [
+      "330",
+      "337",
+      "348",
+      "365",
+      "367",
+      "378",
+      "379",
+      "384",
+      "386",
+      "387",
+      "389",
+      "567",
+      "579"
+    ]
+  },
+  {
+    "id": "pb-c26x74-163",
+    "brand": "Peterbilt",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 74
+    },
+    "capacityGal": 163,
+    "usableGal": 150,
+    "models": ["365", "367", "384", "386", "389", "520", "567", "579"]
+  },
+  {
+    "id": "vo-c26x25.2-50",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 25.2
+    },
+    "capacityGal": 50,
+    "models": ["VHD", "VNL (2000–2017)", "VNM", "VNR (2017–2023)"]
+  },
+  {
+    "id": "vo-d22x20.9x30.9-50",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 20.9,
+      "lengthIn": 30.9
+    },
+    "capacityGal": 50,
+    "models": ["VHD"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d26x24.4x22.5-50",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 24.4,
+      "lengthIn": 22.5
+    },
+    "capacityGal": 50,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VNR (2024+)"
+    ],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d26x26x20-50",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 26,
+      "lengthIn": 20
+    },
+    "capacityGal": 50,
+    "models": ["VNL (2000–2017)", "VNL (2018–2023)", "VT 880"]
+  },
+  {
+    "id": "vo-d22x22.1x40.6-70",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 22.1,
+      "lengthIn": 40.6
+    },
+    "capacityGal": 70,
+    "models": ["VHD"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-c26x36-75",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 36
+    },
+    "capacityGal": 75,
+    "models": ["VHD", "VNL (2000–2017)", "VNM", "VNR (2017–2023)"]
+  },
+  {
+    "id": "vo-d26x25.4x32.2-75",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 25.4,
+      "lengthIn": 32.2
+    },
+    "capacityGal": 75,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VNR (2024+)"
+    ],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d22x21.5x54-90",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 21.5,
+      "lengthIn": 54
+    },
+    "capacityGal": 90,
+    "models": ["VHD"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-c26x43-99",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 43
+    },
+    "capacityGal": 99,
+    "models": ["VNL (2000–2017)"]
+  },
+  {
+    "id": "vo-c26x46-100",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 46
+    },
+    "capacityGal": 100,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VT 880"
+    ]
+  },
+  {
+    "id": "vo-d26x26.4x41.1-100",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 26.4,
+      "lengthIn": 41.1
+    },
+    "capacityGal": 100,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VNR (2024+)"
+    ],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d26x26x39-100",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 26,
+      "lengthIn": 39
+    },
+    "capacityGal": 100,
+    "models": ["VNL (2000–2017)", "VNL (2018–2023)", "VT 880"]
+  },
+  {
+    "id": "vo-c26x57-120",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 57
+    },
+    "capacityGal": 120,
+    "models": ["VNL (2000–2017)", "VT 880"]
+  },
+  {
+    "id": "vo-c26x58-125",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 58
+    },
+    "capacityGal": 125,
+    "models": ["VHD", "VNL (2000–2017)", "VNM", "VNR (2017–2023)"]
+  },
+  {
+    "id": "vo-d22x22.7x70.5-125",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 22.7,
+      "lengthIn": 70.5
+    },
+    "capacityGal": 125,
+    "models": ["VHD"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d26x26.2x51.9-125",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 26.2,
+      "lengthIn": 51.9
+    },
+    "capacityGal": 125,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VNR (2024+)"
+    ],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-c26x70-150",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 70
+    },
+    "capacityGal": 150,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VT 880"
+    ]
+  },
+  {
+    "id": "vo-d22x22.7x84.6-150",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 22,
+      "widthIn": 22.7,
+      "lengthIn": 84.6
+    },
+    "capacityGal": 150,
+    "models": ["VHD"],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-d26x26x62.6-150",
+    "brand": "Volvo",
+    "shape": "d_flat_side",
+    "dimensions": {
+      "heightIn": 26,
+      "widthIn": 26,
+      "lengthIn": 62.6
+    },
+    "capacityGal": 150,
+    "models": [
+      "VHD",
+      "VNL (2000–2017)",
+      "VNL (2018–2023)",
+      "VNL (2024+)",
+      "VNM",
+      "VNR (2017–2023)",
+      "VNR (2024+)"
+    ],
+    "calculated": ["width"]
+  },
+  {
+    "id": "vo-c26x67.5-155",
+    "brand": "Volvo",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 26,
+      "lengthIn": 67.5
+    },
+    "capacityGal": 155,
+    "models": ["VNL (2000–2017)"]
+  },
+  {
+    "id": "ws-c23x30-50",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 30
+    },
+    "capacityGal": 50,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c23x35.5-60",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 35.5
+    },
+    "capacityGal": 60,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c25x30.5-60",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 30.5
+    },
+    "capacityGal": 60,
+    "models": ["47X", "49X", "57X", "4700", "4800", "4900", "5700XE"]
+  },
+  {
+    "id": "ws-r14.8x18.5x63.6-60",
+    "brand": "Western Star",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 14.8,
+      "widthIn": 18.5,
+      "lengthIn": 63.6
+    },
+    "capacityGal": 60,
+    "models": ["4700"]
+  },
+  {
+    "id": "ws-c25x35-70",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 35
+    },
+    "capacityGal": 70,
+    "models": ["47X", "49X"],
+    "calculated": ["length"]
+  },
+  {
+    "id": "ws-c23x46.5-80",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 46.5
+    },
+    "capacityGal": 80,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c25x40-80",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 40
+    },
+    "capacityGal": 80,
+    "models": ["47X", "49X", "4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-r14.8x18.5x85.1-90",
+    "brand": "Western Star",
+    "shape": "rectangular",
+    "dimensions": {
+      "heightIn": 14.8,
+      "widthIn": 18.5,
+      "lengthIn": 85.1
+    },
+    "capacityGal": 90,
+    "models": ["4700"]
+  },
+  {
+    "id": "ws-c23x58-100",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 58
+    },
+    "capacityGal": 100,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c25x50-100",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 50
+    },
+    "capacityGal": 100,
+    "models": ["47X", "49X", "4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c23x69-120",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 69
+    },
+    "capacityGal": 120,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c25x59.6-120",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 59.6
+    },
+    "capacityGal": 120,
+    "models": ["47X", "49X"],
+    "calculated": ["length"]
+  },
+  {
+    "id": "ws-c25x61.5-125",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 61.5
+    },
+    "capacityGal": 125,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c23x86-150",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 23,
+      "lengthIn": 86
+    },
+    "capacityGal": 150,
+    "models": ["4700", "4800", "4900"]
+  },
+  {
+    "id": "ws-c25x73-150",
+    "brand": "Western Star",
+    "shape": "cylinder",
+    "dimensions": {
+      "diameterIn": 25,
+      "lengthIn": 73
+    },
+    "capacityGal": 150,
+    "models": ["47X", "49X", "57X", "4700", "4800", "4900", "5700XE"]
+  }
+]

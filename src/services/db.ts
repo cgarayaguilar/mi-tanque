@@ -8,6 +8,9 @@ export interface StoredTank {
   capacity: number | string
   diameter: number | string
   length: number | string
+  /** Chosen from the truck catalog (specs/0015 RF-11). Not indexed: no new
+   * schema version is needed for it. */
+  catalogId?: string
 }
 
 // Older versions stored numbers where the app now writes strings (and the

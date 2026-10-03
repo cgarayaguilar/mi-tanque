@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import Box from '@mui/material/Box'
 import TankSolid from 'components/TankSolid'
-import { projectTank } from 'utils/tankProjection'
+import type { CatalogShape } from 'utils/tankCatalog'
+import { projectTank, type PreviewSize } from 'utils/tankProjection'
 
 export interface ThumbnailFrame {
   /** The projected size of the largest tank in the list. */
@@ -9,43 +10,63 @@ export interface ThumbnailFrame {
   height: number
 }
 
-/** The frame that fits the largest diameter and length of a list. */
+/** What a thumbnail needs: the shape and its sizes, in inches. */
+export interface ThumbnailTank {
+  shape: CatalogShape
+  /** A cylinder's diameter, or the height of a "D" or a box. */
+  size: number
+  width: number | null
+  length: number
+}
+
+// A 56px drawing needs far fewer faces than the large preview
+const THUMBNAIL_STEPS = 10
+
+/** Across, up and length, as the projection takes them. */
+const previewSize = (tank: ThumbnailTank): PreviewSize => ({
+  across: tank.width ?? tank.size,
+  up: tank.size,
+  length: tank.length,
+})
+
+/** The frame that fits every tank of a list, at one scale. */
 export const thumbnailFrame = (
-  tanks: readonly { diameter: number; length: number }[]
+  tanks: readonly ThumbnailTank[]
 ): ThumbnailFrame => {
-  const diameter = Math.max(1, ...tanks.map(tank => tank.diameter))
-  const length = Math.max(1, ...tanks.map(tank => tank.length))
-  const drawing = projectTank('cylinder', 'horizontal', {
-    across: diameter,
-    up: diameter,
-    length,
-  })
-  return { width: drawing.width, height: drawing.height }
+  let width = 1
+  let height = 1
+  for (const tank of tanks) {
+    const drawing = projectTank(
+      tank.shape,
+      'horizontal',
+      previewSize(tank),
+      THUMBNAIL_STEPS
+    )
+    width = Math.max(width, drawing.width)
+    height = Math.max(height, drawing.height)
+  }
+  return { width, height }
 }
 
 interface TankThumbnailProps {
-  diameter: number
-  length: number
+  tank: ThumbnailTank
   /** Shared by the whole list: a short tank looks shorter than a long one. */
   frame: ThumbnailFrame
   height?: number
 }
 
 /**
- * A horizontal cylinder in 3D at the list's scale, without dimension lines
- * (backend specs/0014 RF-2). Decorative: the card says the measures.
+ * The tank in 3D at the list's scale, in its own shape, without dimension
+ * lines (backend specs/0014 RF-2, specs/0015 RF-8). Decorative: the card
+ * says the measures.
  */
-function TankThumbnail({
-  diameter,
-  length,
-  frame,
-  height = 56,
-}: TankThumbnailProps) {
-  const drawing = projectTank('cylinder', 'horizontal', {
-    across: diameter,
-    up: diameter,
-    length,
-  })
+function TankThumbnail({ tank, frame, height = 56 }: TankThumbnailProps) {
+  const drawing = projectTank(
+    tank.shape,
+    'horizontal',
+    previewSize(tank),
+    THUMBNAIL_STEPS
+  )
   const margin = Math.max(frame.width, frame.height) * 0.04
   // Sitting at the bottom left of the shared frame
   const offsetY = frame.height - drawing.height
