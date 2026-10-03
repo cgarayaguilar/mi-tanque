@@ -126,11 +126,10 @@ en cada push y PR.
   La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
 - **Catálogo de tanques (specs/0014, 0015):** `components/TankCatalog` (lógica pura en
   `utils/tankCatalog`) lo usan `ModelPicker` ("De un modelo", en un diálogo) y "Elige tu tanque"
-  sin cuenta (solo cilíndricos hasta specs/0017). Las plantillas (`utils/tankTemplates`) son los 15
+  sin cuenta (solo cilíndricos hasta specs/0019). Las plantillas (`utils/tankTemplates`) son los 15
   "Genérico" y los tanques de fábrica de `src/data/truckTanks.json`, que **no se edita a mano**:
   se regenera con `npm run build:tanks` desde `data/tank-research/` (un test exige que coincidan).
-  Un tanque de fábrica con fuente se mide ajustado a su capacidad (`capacityScale`; sin cuenta,
-  `localScale` por su `catalogId`); los Genéricos y los registrados a mano, como siempre.
+  Un tanque de fábrica con fuente se mide ajustado a su capacidad (specs/0015).
   `TankSolid` dibuja el sólido para la vista previa y las miniaturas.
 - **Marca y modelo del camión (specs/0016):** se eligen de `src/data/truckModels.ts` (marcas,
   modelos y la generación del catálogo por año; un test exige que cubra el catálogo), con
@@ -155,8 +154,20 @@ en cada push y PR.
   `main`). Los commits de formato masivo se registran en `.git-blame-ignore-revs`.
 - **Tests:** toda corrección de bug lleva su test de regresión. Los tests que tocan IndexedDB usan
   `fake-indexeddb` (configurado en `src/setupTests.ts`) y vacían las tablas en `beforeEach`.
-- **El cálculo de combustible** vive solo en `src/utils/calcFuelLevel.ts` y
-  `src/utils/converts.ts`, fijado por tests de caracterización. No lo dupliques.
+- **El cálculo de combustible** vive solo en `src/utils/calcFuelLevel.ts` (cilindro y segmento
+  circular), `src/utils/tankVolume.ts` (las demás formas y el ajuste) y `src/utils/converts.ts`
+  (las únicas constantes, exactas: 25.4 mm por pulgada, 231 in³ y 3.785411784 litros por galón).
+  No lo dupliques. Precisión (specs/0018):
+  - **Lleno marca la capacidad:** todo tanque cuyas medidas cuadran con su capacidad (±15 %) se
+    ajusta a ella (`capacityScale`; con cuenta `capacityScaleOf`, sin cuenta `localScale`); uno que
+    no cuadra se calcula con las medidas y el resultado lo avisa (`CapacityMismatchNote`). Los de
+    fábrica, siempre.
+  - **El porcentaje es de volumen** en toda la app; sin cuenta lo da `volumePercent`, y el
+    historial lo recalcula de las pulgadas (lo guardado antes era de altura).
+  - **Sin redondeo intermedio:** se redondea a 2 decimales solo al mostrar o guardar. Las alturas
+    se recortan al tanque.
+  - `utils/tankVolume.test.ts` compara cada forma, acostada y de pie, con la integración numérica
+    de su corte: un cambio de fórmula que no la cumpla no pasa.
 
 ## Lo no obvio
 
