@@ -10,12 +10,10 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
-import Switch from '@mui/material/Switch'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
@@ -45,7 +43,7 @@ import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
-import ChipRow from 'components/ChipRow'
+import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
 import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
 import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
@@ -508,41 +506,42 @@ function FleetScreen() {
           }}
         />
 
-        {section.collection === 'trucks' && brandOptions.length > 1 && (
-          <Box sx={{ display: 'grid', gap: 2, mt: 3 }}>
-            <ChipRow
-              label="Marca"
-              allLabel="Todas"
-              options={brandOptions.map(value => ({ value, label: value }))}
-              value={brand}
-              onChange={next => {
-                setBrand(next)
-                setModel(null)
-              }}
-            />
-            {brand !== null && modelOptions.length > 1 && (
-              <ChipRow
-                label="Modelo"
-                allLabel="Todos"
-                options={modelOptions.map(value => ({ value, label: value }))}
-                value={model}
-                onChange={setModel}
+        {/* One row of chips (specs/0017 RF-9) */}
+        <Box sx={{ my: 3 }}>
+          <FilterBar>
+            {section.collection === 'trucks' && brandOptions.length > 1 && (
+              <FilterChip
+                label="Marca"
+                allLabel="Todas"
+                options={brandOptions.map(value => ({ value, label: value }))}
+                value={brand}
+                onChange={next => {
+                  setBrand(next)
+                  setModel(null)
+                }}
               />
             )}
-          </Box>
-        )}
-        <FormControlLabel
-          control={
-            <Switch
-              checked={showArchived}
-              onChange={event => {
-                setShowArchived(event.target.checked)
-              }}
+            {section.collection === 'trucks' &&
+              brand !== null &&
+              modelOptions.length > 1 && (
+                <FilterChip
+                  label="Modelo"
+                  allLabel="Todos"
+                  options={modelOptions.map(value => ({
+                    value,
+                    label: value,
+                  }))}
+                  value={model}
+                  onChange={setModel}
+                />
+              )}
+            <FilterToggle
+              label="Archivados"
+              on={showArchived}
+              onChange={setShowArchived}
             />
-          }
-          label="Ver archivados"
-          sx={{ my: 2 }}
-        />
+          </FilterBar>
+        </Box>
 
         {renderList()}
       </Box>

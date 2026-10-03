@@ -18,6 +18,7 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose, chosen } from '../../testing/choose'
+import { filterBy, filterChip } from '../../testing/filterBy'
 
 const api = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -84,7 +85,7 @@ const pickModel = async (
   )
   const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
   // The 15 tanks of before are the "Genérico" brand (specs/0015 RF-6)
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Genérico' }))
+  await filterBy('Marca', 'Genérico', dialog)
   fireEvent.click(
     within(dialog).getByRole('button', {
       name: `Elegir: tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`,
@@ -652,21 +653,11 @@ test('the model catalog is grouped by capacity and filters combine', async () =>
   // The 15 "Genérico" and the 194 factory tanks (specs/0015)
   expect(within(dialog).getByText('209 modelos')).toBeInTheDocument()
 
-  fireEvent.click(
-    within(within(dialog).getByRole('group', { name: 'Capacidad' })).getByRole(
-      'button',
-      { name: '100 gal' }
-    )
-  )
+  await filterBy('Capacidad', '100 gal', dialog)
   expect(
     await within(dialog).findByRole('region', { name: '100 galones' })
   ).toHaveTextContent('100 gal · 21 modelos')
-  fireEvent.click(
-    within(within(dialog).getByRole('group', { name: 'Diámetro' })).getByRole(
-      'button',
-      { name: '24 pulg.' }
-    )
-  )
+  await filterBy('Diámetro', '24 pulg.', dialog)
   expect(await within(dialog).findByText('3 modelos')).toBeInTheDocument()
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Limpiar' }))
@@ -684,15 +675,10 @@ test('a Volvo VNL (2024+) "D" tank is chosen by brand and model and saved as the
   )
   fireEvent.click(screen.getByRole('button', { name: 'Elegir modelo' }))
   const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Volvo' }))
-  fireEvent.click(
-    within(within(dialog).getByRole('group', { name: 'Modelo' })).getByRole(
-      'button',
-      { name: 'VNL (2024+)' }
-    )
-  )
+  await filterBy('Marca', 'Volvo', dialog)
+  await filterBy('Modelo', 'VNL (2024+)', dialog)
   expect(
-    within(dialog).getByText(/^Volvo VNL \(2024\+\) · \d+ tanques$/)
+    await within(dialog).findByText(/^Volvo VNL \(2024\+\) · \d+ tanques$/)
   ).toBeInTheDocument()
   // Its width was computed: the card says so
   expect(
@@ -841,7 +827,12 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
         /Filtrado por tu camión: Freightliner Cascadia \(2018\+\)/
       )
     ).toBeInTheDocument()
-    expect(chosen('Modelo', dialog)).toBe('Cascadia (2018+)')
+    expect(filterChip('Marca', dialog)).toHaveAccessibleName(
+      'Marca: Freightliner'
+    )
+    expect(filterChip('Modelo', dialog)).toHaveAccessibleName(
+      'Modelo: Cascadia (2018+)'
+    )
     expect(
       within(dialog).getByText(
         /^Freightliner Cascadia \(2018\+\) · \d+ tanques$/
