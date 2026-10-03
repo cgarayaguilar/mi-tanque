@@ -91,7 +91,8 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 3000,
+    // 4000 (owner, 2026-10-02); the emulators' UI moved to 4001
+    port: 4000,
   },
   build: {
     outDir: 'build',

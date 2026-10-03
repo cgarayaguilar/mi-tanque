@@ -44,7 +44,7 @@ ubicación y se muestra en un historial. Se instala en el teléfono y funciona s
 ## Comandos
 
 ```bash
-npm run dev            # servidor de desarrollo en http://localhost:3000 (sin service worker)
+npm run dev            # servidor de desarrollo en http://localhost:4000 (sin service worker)
 npm run dev:emulators  # igual, pero el modo autenticado usa los emuladores de Firebase
                        # (arráncalos antes en ../solocamioneros-backend: npm run emulators)
 npm run build          # build de producción en build/
