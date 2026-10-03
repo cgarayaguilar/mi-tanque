@@ -35,6 +35,7 @@ import type { FleetSection } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { measureHelp, type MeasureName } from 'utils/measureHelp'
 import { parseDecimal } from 'utils/parseDecimal'
+import { catalogFilterFor } from 'data/truckModels'
 import { templateById } from 'utils/tankTemplates'
 import { TANK_ORIENTATIONS, TANK_SHAPES } from 'utils/tankVolume'
 import EditorLayout from './EditorLayout'
@@ -199,6 +200,14 @@ export default function TankEditor({
     )
   }
 
+  // The catalog opens on the tank's truck (specs/0016 RF-6, RF-7)
+  const ownerTruck = values.equipment.startsWith('truck:')
+    ? trucks.find(truck => `truck:${truck.id}` === values.equipment)
+    : undefined
+  const truckFilter = ownerTruck
+    ? catalogFilterFor(ownerTruck.brand, ownerTruck.model, ownerTruck.year)
+    : null
+
   const isCurrent = (kind: string, itemId: string) =>
     tank?.equipment.kind === kind && tank.equipment.id === itemId
   const equipmentOptions = [
@@ -282,6 +291,7 @@ export default function TankEditor({
                     error={errors.templateId?.message}
                     disabled={!canWrite}
                     buttonRef={field.ref}
+                    truckFilter={truckFilter}
                     onChange={templateId => {
                       field.onChange(templateId)
                       applyTemplate(templateId)

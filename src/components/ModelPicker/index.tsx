@@ -33,6 +33,8 @@ interface ModelPickerProps {
   disabled?: boolean
   /** The button, so a failed save can focus it (specs/0014 RF-9). */
   buttonRef?: Ref<HTMLButtonElement>
+  /** The tank's truck: the catalog opens on it (specs/0016 RF-6). */
+  truckFilter?: { brand: string; model: string | null } | null
 }
 
 /**
@@ -47,6 +49,7 @@ export default function ModelPicker({
   hint,
   disabled = false,
   buttonRef,
+  truckFilter = null,
 }: ModelPickerProps) {
   const [open, setOpen] = useState(false)
   const theme = useTheme()
@@ -162,7 +165,15 @@ export default function ModelPicker({
           </IconButton>
         </DialogTitle>
         <DialogContent>
+          {truckFilter && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              Filtrado por tu camión: {truckFilter.brand}
+              {truckFilter.model ? ` ${truckFilter.model}` : ''}. Toca «Limpiar»
+              para ver todos.
+            </Typography>
+          )}
           <TankCatalog
+            {...(truckFilter && { initialFilters: truckFilter })}
             tanks={MODELS}
             selectedKey={value || null}
             noun="modelo"

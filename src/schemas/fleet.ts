@@ -1,5 +1,6 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
+import { matchBrand, matchModel } from 'data/truckModels'
 import {
   fullVolumeGallons,
   type TankOrientation,
@@ -255,9 +256,15 @@ const otherColorNeedsName = z.refine<{
   { error: 'Escribe el color', path: ['colorOther'] }
 )
 
+/** "Otra marca…" / "Otro modelo…": then it is written (specs/0016 RF-2). */
+export const OTHER_CHOICE = 'other'
+
 export const truckFormSchema = z
   .object({
     ...vehicleFields,
+    // From the list, '' or OTHER_CHOICE (then `brand` / `model` is typed)
+    brandChoice: z.string(),
+    modelChoice: z.string(),
     efficiency: optionalDecimal(
       FLEET_LIMITS.efficiency.min,
       FLEET_LIMITS.efficiency.max,
@@ -266,7 +273,20 @@ export const truckFormSchema = z
     odometer: optionalDecimal(0, FLEET_LIMITS.odometerMax, ''),
     assignedDriverUid: z.string(),
   })
-  .check(otherColorNeedsName, otherColorFits)
+  .check(
+    otherColorNeedsName,
+    otherColorFits,
+    z.refine(
+      values =>
+        values.brandChoice !== OTHER_CHOICE || values.brand.trim() !== '',
+      { error: 'Escribe la marca', path: ['brand'] }
+    ),
+    z.refine(
+      values =>
+        values.modelChoice !== OTHER_CHOICE || values.model.trim() !== '',
+      { error: 'Escribe el modelo', path: ['model'] }
+    )
+  )
 export type TruckFormValues = z.infer<typeof truckFormSchema>
 
 export const trailerFormSchema = z
@@ -472,11 +492,52 @@ export const truckFromForm = (values: TruckFormValues, unit: DistanceUnit) => {
   const odometer = decimalOrNull(values.odometer)
   return {
     ...vehicleFromForm(values),
+    ...brandAndModel(values),
     distanceUnit: unit,
     fuelEfficiencyKmPerGal: efficiency === null ? null : efficiency * toKm,
     // Whole kilometers: an odometer has no use for fractions
     odometerKm: odometer === null ? null : Math.round(odometer * toKm),
     assignedDriverUid: values.assignedDriverUid || null,
+  }
+}
+
+/**
+ * The brand and model to save (specs/0016 RF-4): the list's name, the typed
+ * one with "Otra…", or none.
+ */
+const brandAndModel = (values: TruckFormValues) => {
+  const listedBrand =
+    values.brandChoice !== '' && values.brandChoice !== OTHER_CHOICE
+  const brand = listedBrand
+    ? values.brandChoice
+    : values.brandChoice === OTHER_CHOICE
+      ? textOrNull(values.brand)
+      : null
+  // With a brand of the list the model is chosen; otherwise it is typed
+  const model = !listedBrand
+    ? textOrNull(values.model)
+    : values.modelChoice === OTHER_CHOICE
+      ? textOrNull(values.model)
+      : values.modelChoice || null
+  return { brand, model }
+}
+
+/** A stored brand and model as the form shows them (specs/0016 RF-5). */
+const brandAndModelToForm = (brand: string | null, model: string | null) => {
+  const listedBrand = matchBrand(brand)
+  if (!listedBrand)
+    return {
+      brandChoice: brand ? OTHER_CHOICE : '',
+      brand: brand ?? '',
+      modelChoice: '',
+      model: model ?? '',
+    }
+  const listedModel = matchModel(listedBrand, model)
+  return {
+    brandChoice: listedBrand,
+    brand: '',
+    modelChoice: listedModel ?? (model ? OTHER_CHOICE : ''),
+    model: listedModel ? '' : (model ?? ''),
   }
 }
 
@@ -509,6 +570,7 @@ export const truckToForm = (
     odometer: show(
       truck?.odometerKm == null ? null : Math.round(truck.odometerKm * fromKm)
     ),
+    ...brandAndModelToForm(truck?.brand ?? null, truck?.model ?? null),
     assignedDriverUid: truck?.assignedDriverUid ?? '',
   }
 }

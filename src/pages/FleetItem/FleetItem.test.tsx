@@ -17,7 +17,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
+import { choose, chosen } from '../../testing/choose'
 
 const api = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -728,5 +728,122 @@ test('a Volvo VNL (2024+) "D" tank is chosen by brand and model and saved as the
         templateId: expect.stringMatching(/^vo-d26x/) as unknown,
       })
     )
+  })
+})
+
+describe('truck brand and model from the list (backend specs/0016)', () => {
+  const newTruck = async () => {
+    renderAt('/flota/camiones/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre o número de unidad')
+        .then(() => 'Nombre o número de unidad'),
+      'Unidad 30'
+    )
+  }
+  const save = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
+  }
+
+  // CA-1
+  test('a brand and a model of the list are saved by their names', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Freightliner')
+    await choose('Modelo (opcional)', 'Cascadia')
+    save()
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({ brand: 'Freightliner', model: 'Cascadia' })
+      )
+    })
+  })
+
+  test('"Otra marca…" asks for it, and the model is typed', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Otra marca…')
+    save()
+    expect(await screen.findByText('Escribe la marca')).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+
+    type('¿Qué marca?', 'Hino')
+    type('Modelo (opcional)', '500')
+    save()
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({ brand: 'Hino', model: '500' })
+      )
+    })
+  })
+
+  // CA-2
+  test('another brand clears a model that is not its own', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Freightliner')
+    await choose('Modelo (opcional)', 'Cascadia')
+    await choose('Marca (opcional)', 'Volvo')
+    expect(chosen('Modelo (opcional)')).toBe('Sin modelo')
+    await choose('Modelo (opcional)', 'VNL')
+    expect(chosen('Modelo (opcional)')).toBe('VNL')
+  })
+
+  // CA-3
+  test('typed names are recognized; others open as "Otra"', async () => {
+    api.readFleet.mockResolvedValue({
+      trucks: [
+        truck({ brand: 'freightliner', model: 'CASCADIA' }),
+        truck({
+          id: 'truck-2',
+          name: 'Unidad 40',
+          brand: 'Hino',
+          model: '500',
+        }),
+      ],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByLabelText('Nombre o número de unidad')
+    expect(chosen('Marca (opcional)')).toBe('Freightliner')
+    expect(chosen('Modelo (opcional)')).toBe('Cascadia')
+  })
+
+  test('a brand that is not in the list opens as "Otra marca…"', async () => {
+    api.readFleet.mockResolvedValue({
+      trucks: [truck({ brand: 'Hino', model: '500' })],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByLabelText('Nombre o número de unidad')
+    expect(chosen('Marca (opcional)')).toBe('Otra marca…')
+    expect(screen.getByLabelText('¿Qué marca?')).toHaveValue('Hino')
+    expect(screen.getByLabelText('Modelo (opcional)')).toHaveValue('500')
+  })
+
+  // CA-4: the fixture truck is a Freightliner Cascadia 2019
+  test("a truck's tank opens the catalog on that truck", async () => {
+    renderAt('/flota/tanques/nuevo')
+    await choose('Pertenece a', 'Camión · Unidad 12')
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir modelo' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Elige un modelo',
+    })
+    expect(
+      within(dialog).getByText(
+        /Filtrado por tu camión: Freightliner Cascadia \(2018\+\)/
+      )
+    ).toBeInTheDocument()
+    expect(chosen('Modelo', dialog)).toBe('Cascadia (2018+)')
+    expect(
+      within(dialog).getByText(
+        /^Freightliner Cascadia \(2018\+\) · \d+ tanques$/
+      )
+    ).toBeInTheDocument()
   })
 })

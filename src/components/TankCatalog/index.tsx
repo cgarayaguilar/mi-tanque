@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import SearchIcon from '@mui/icons-material/Search'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
+import ChipRow from 'components/ChipRow'
 import EmptyState from 'components/EmptyState'
 import TankThumbnail, { thumbnailFrame } from 'components/TankThumbnail'
 import { radius, softShadow, typeScale } from 'theme/tokens'
@@ -37,6 +38,8 @@ interface TankCatalogProps {
   noun: 'modelo' | 'tanque'
   /** Verb of each card's accessible name: "Seleccionar" or "Elegir". */
   actionLabel: string
+  /** Where it opens, e.g. on the tank's truck (specs/0016 RF-6). */
+  initialFilters?: Partial<CatalogFilters>
 }
 
 // Cards drawn at a time; "Ver más" adds as many again
@@ -44,74 +47,6 @@ const PAGE = 24
 
 const plural = (count: number, noun: string) =>
   `${String(count)} ${noun}${count === 1 ? '' : 's'}`
-
-/** A row of chips, one chosen at most: "Todas" means no filter. */
-function ChipRow<T extends string | number>({
-  label,
-  allLabel,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  allLabel: string
-  options: readonly { value: T; label: string }[]
-  value: T | null
-  onChange: (value: T | null) => void
-}) {
-  const chip = (
-    key: string,
-    text: string,
-    pressed: boolean,
-    next: T | null
-  ) => (
-    <Chip
-      key={key}
-      label={text}
-      clickable
-      variant={pressed ? 'filled' : 'outlined'}
-      color={pressed ? 'primary' : 'default'}
-      aria-pressed={pressed}
-      onClick={() => {
-        onChange(next)
-      }}
-      sx={{ flexShrink: 0 }}
-    />
-  )
-  return (
-    // minWidth 0: a grid item grows to its chips otherwise, and the whole
-    // page (or dialog) scrolled sideways instead of the row
-    <Box role="group" aria-label={label} sx={{ minWidth: 0 }}>
-      <Typography
-        variant="overline"
-        component="p"
-        sx={{ color: 'text.secondary' }}
-      >
-        {label}
-      </Typography>
-      {/* One line that slides sideways on a phone (specs/0014 RF-3) */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          overflowX: 'auto',
-          pb: 1,
-          scrollbarWidth: 'none',
-        }}
-      >
-        {chip('all', allLabel, value === null, null)}
-        {options.map(option =>
-          chip(
-            String(option.value),
-            option.label,
-            value === option.value,
-            value === option.value ? null : option.value
-          )
-        )}
-      </Box>
-    </Box>
-  )
-}
 
 /** The card's accessible name: what the tank is, in words. */
 const spokenTank = (tank: CatalogTank, actionLabel: string) => {
@@ -134,8 +69,12 @@ export default function TankCatalog({
   onChoose,
   noun,
   actionLabel,
+  initialFilters,
 }: TankCatalogProps) {
-  const [filters, setFilters] = useState<CatalogFilters>(NO_FILTERS)
+  const [filters, setFilters] = useState<CatalogFilters>(() => ({
+    ...NO_FILTERS,
+    ...initialFilters,
+  }))
   const [search, setSearch] = useState('')
   const query = useDeferredValue(normalizeDecimal(search) ?? search.trim())
   const options = useMemo(() => filterOptions(tanks), [tanks])
