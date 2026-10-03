@@ -184,3 +184,44 @@ test('the card texts: measures by shape and where it fits', () => {
     )
   ).toBe('A, B y 2 más')
 })
+
+test('diameter chips go by the half inch, and "Genérico" is the last brand', () => {
+  const tanks: CatalogTank[] = [
+    {
+      key: 'a',
+      shape: 'd_flat_side',
+      size: 19.35,
+      width: 25,
+      length: 57,
+      capacity: 120,
+      brand: 'International',
+      models: ['HV'],
+    },
+    {
+      key: 'b',
+      shape: 'cylinder',
+      size: 24,
+      width: null,
+      length: 54,
+      capacity: 100,
+      brand: 'Genérico',
+      models: [],
+    },
+    {
+      key: 'c',
+      shape: 'cylinder',
+      size: 26,
+      width: null,
+      length: 46,
+      capacity: 100,
+      brand: 'Volvo',
+      models: ['VNM'],
+    },
+  ]
+  const options = filterOptions(tanks)
+  expect(options.diameters).toEqual([19.5, 24, 26])
+  expect(options.brands).toEqual(['International', 'Volvo', 'Genérico'])
+  expect(
+    filterTanks(tanks, { ...NO_FILTERS, diameter: 19.5 }).map(t => t.key)
+  ).toEqual(['a'])
+})

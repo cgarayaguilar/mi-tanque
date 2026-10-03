@@ -62,17 +62,29 @@ export const NO_FILTERS: CatalogFilters = {
 const distinct = (values: number[]) =>
   [...new Set(values)].sort((a, b) => a - b)
 
+/**
+ * The size the "Diámetro" chips use, to the half inch: a "D" counts by its
+ * height (its round side's diameter), and 19.35 is a 19.5. A box has none.
+ */
 const roundSize = (tank: CatalogTank) =>
-  tank.shape === 'rectangular' ? null : tank.size
+  tank.shape === 'rectangular' ? null : Math.round(tank.size * 2) / 2
 
 const byName = (a: string, b: string) =>
   a.localeCompare(b, 'es', { numeric: true })
 
+const withoutModels = (tanks: readonly CatalogTank[], brand: string) =>
+  tanks.every(tank => tank.brand !== brand || (tank.models ?? []).length === 0)
+
 /** The chips of each row: only values some tank has (RF-3). */
 export const filterOptions = (tanks: readonly CatalogTank[]) => ({
+  // Truck brands by name; a brand without models ("Genérico") goes last
   brands: [
     ...new Set(tanks.flatMap(tank => (tank.brand ? [tank.brand] : []))),
-  ].sort(byName),
+  ].sort(
+    (a, b) =>
+      Number(withoutModels(tanks, a)) - Number(withoutModels(tanks, b)) ||
+      byName(a, b)
+  ),
   capacities: distinct(tanks.map(tank => tank.capacity)),
   diameters: distinct(
     tanks.flatMap(tank => {
