@@ -14,7 +14,7 @@ import {
 const catalog: CatalogTank[] = PREDEFINED_TANKS.map((tank, index) => ({
   key: String(index),
   shape: 'cylinder',
-  size: tank.diameter,
+  size: tank.shape === 'cylinder' ? tank.diameter : tank.height,
   width: null,
   length: tank.length,
   capacity: tank.capacity,

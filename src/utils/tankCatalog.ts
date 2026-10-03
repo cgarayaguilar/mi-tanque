@@ -2,13 +2,18 @@
 // RF-1–RF-5, specs/0015 RF-7). Pure: the catalog component draws the result.
 
 import { formatNumber } from 'utils/formatNumber'
+import type { TankOrientation, TankShape } from 'utils/tankVolume'
 
-export type CatalogShape = 'cylinder' | 'd_flat_side' | 'rectangular'
+/** The factory's are 'cylinder', 'd_flat_side' or 'rectangular'; a phone's
+ * own tank may be any shape (backend specs/0019). */
+export type CatalogShape = TankShape
 
 export interface CatalogTank {
   /** Unique in the list: the template id or the stored tank's id. */
   key: string
   shape: CatalogShape
+  /** Lying unless said: a phone's own tank may stand (specs/0019). */
+  orientation?: TankOrientation
   /** A cylinder's diameter, or the height of a "D" or a box. */
   size: number
   /** The width of a "D" or a box; null for a cylinder. */
@@ -168,13 +173,27 @@ export const groupByCapacity = (
 }
 
 /** "Ø 26 × 60 pulg." or "En D · 19 × 25 × 57 pulg.". */
+const KIND: Record<CatalogShape, string> = {
+  cylinder: 'Cilíndrico',
+  rectangular: 'Rectangular',
+  d_flat_side: 'En D',
+  d_flat_bottom: 'En D de fondo plano',
+}
+
+/** "Ø 26 × 48 pulg.", "En D · 26 × 27 × 41 pulg.", "Rectangular de pie · …". */
 export const measuresText = (tank: CatalogTank) => {
   const length = formatNumber(tank.length)
-  if (tank.width === null)
-    return `Ø ${formatNumber(tank.size)} × ${length} pulg.`
-  const kind = tank.shape === 'd_flat_side' ? 'En D' : 'Rectangular'
-  return `${kind} · ${formatNumber(tank.size)} × ${formatNumber(tank.width)} × ${length} pulg.`
+  const standing = tank.orientation === 'vertical'
+  if (tank.width === null) {
+    const measures = `Ø ${formatNumber(tank.size)} × ${length} pulg.`
+    return standing ? `Cilíndrico de pie · ${measures}` : measures
+  }
+  return `${KIND[tank.shape]}${standing ? ' de pie' : ''} · ${formatNumber(tank.size)} × ${formatNumber(tank.width)} × ${length} pulg.`
 }
+
+/** The kind of tank, in words, for an accessible name. */
+export const spokenKind = (tank: CatalogTank) =>
+  `${KIND[tank.shape].toLowerCase()}${tank.orientation === 'vertical' ? ' de pie' : ''}`
 
 /** "Kenworth T680, T880 y 7 más", or the models alone within a brand. */
 export const fitsText = (tank: CatalogTank, withBrand: boolean) => {

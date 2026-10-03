@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { sileo } from 'sileo'
 import { usePrecisionNotice } from 'hooks/usePrecisionNotice'
 import { useSelectedTankStore } from 'store/selectedTank'
+import { cylinder } from '../testing/localTank'
 
 const notice = {
   title: 'Mejoramos la precisión',
@@ -20,7 +21,7 @@ afterEach(() => {
 // backend specs/0018 RF-7
 test('who already measured is told once per phone', async () => {
   useSelectedTankStore.setState({
-    selectedTank: { id: 1, capacity: 100, diameter: 26, length: 48 },
+    selectedTank: cylinder({ id: 1, capacity: 100, diameter: 26, length: 48 }),
   })
   renderHook(() => {
     usePrecisionNotice()
@@ -44,7 +45,7 @@ test('someone new is never told, not even after choosing a tank', async () => {
     expect(window.localStorage.getItem('precisionNotice0018')).toBe('seen')
   })
   useSelectedTankStore.setState({
-    selectedTank: { id: 1, capacity: 100, diameter: 26, length: 48 },
+    selectedTank: cylinder({ id: 1, capacity: 100, diameter: 26, length: 48 }),
   })
   renderHook(() => {
     usePrecisionNotice()
@@ -57,7 +58,7 @@ test('someone new is never told, not even after choosing a tank', async () => {
 // again must still end in one toast
 test('a page mounted twice still shows it once', async () => {
   useSelectedTankStore.setState({
-    selectedTank: { id: 1, capacity: 100, diameter: 26, length: 48 },
+    selectedTank: cylinder({ id: 1, capacity: 100, diameter: 26, length: 48 }),
   })
   const first = renderHook(() => {
     usePrecisionNotice()

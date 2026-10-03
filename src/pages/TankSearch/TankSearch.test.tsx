@@ -5,6 +5,7 @@ import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { settle } from '../../testUtils'
+import { calculateReading } from 'utils/fuelReading'
 import { filterBy, filterChip, filterOptions } from '../../testing/filterBy'
 
 const renderTankSearch = ({ strict = false } = {}) => {
@@ -40,7 +41,7 @@ afterEach(async () => {
 test('seeds the predefined tanks once on the first visit', async () => {
   renderTankSearch({ strict: true })
 
-  expect(await screen.findByText('168 tanques')).toBeInTheDocument()
+  expect(await screen.findByText('209 tanques')).toBeInTheDocument()
   await settle()
 
   expect(await db.tanks.count()).toBe(15)
@@ -53,12 +54,12 @@ test('shows placeholders while the tanks load', async () => {
     'aria-busy',
     'true'
   )
-  expect(await screen.findByText('168 tanques')).toBeInTheDocument()
+  expect(await screen.findByText('209 tanques')).toBeInTheDocument()
 })
 
 test('selecting a tank remembers it and goes to the measurement', async () => {
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
   await onlyGeneric()
 
   fireEvent.click(
@@ -77,7 +78,7 @@ test('selecting a tank remembers it and goes to the measurement', async () => {
 
 test('filters by any dimension and offers to clear an empty search', async () => {
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
   await onlyGeneric()
 
   search('150')
@@ -94,14 +95,14 @@ test('filters by any dimension and offers to clear an empty search', async () =>
   fireEvent.click(
     screen.getAllByRole('button', { name: 'Limpiar' })[0] as HTMLElement
   )
-  expect(await screen.findByText('168 tanques')).toBeInTheDocument()
+  expect(await screen.findByText('209 tanques')).toBeInTheDocument()
 })
 
 test('a decimal search matches with a comma or a dot', async () => {
   await db.tanks.add({ capacity: 80, diameter: 24.5, length: 50 })
   renderTankSearch()
-  // Their own tank and the catalog's cylinders
-  await screen.findByText('154 tanques')
+  // Their own tank and the catalog's, every shape (specs/0019 RF-4)
+  await screen.findByText('195 tanques')
 
   search('24,5')
 
@@ -120,7 +121,7 @@ test('a failed load explains it and can be retried', async () => {
 
   fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }))
 
-  expect(await screen.findByText('168 tanques')).toBeInTheDocument()
+  expect(await screen.findByText('209 tanques')).toBeInTheDocument()
 })
 
 test('"Agregar tanque" opens the form', async () => {
@@ -142,7 +143,7 @@ test('marks the tank being measured', async () => {
   useSelectedTankStore.getState().selectTank(measured)
 
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
   await onlyGeneric()
 
   expect(
@@ -164,7 +165,7 @@ test('tanks are grouped by capacity, filtered with chips, and yours say so', asy
   await db.tanks.add({ capacity: 100, diameter: 30, length: 33 })
   useTanksStore.setState({ tanks: [], status: 'idle' })
   renderTankSearch()
-  await screen.findByText('169 tanques')
+  await screen.findByText('210 tanques')
 
   // Theirs is found by a measure, and says so
   search('33')
@@ -174,7 +175,7 @@ test('tanks are grouped by capacity, filtered with chips, and yours say so', asy
   search('')
 
   // Grouped by capacity: the 15 of before, by brand
-  await screen.findByText('169 tanques')
+  await screen.findByText('210 tanques')
   await onlyGeneric()
   const hundred = await screen.findByRole('region', { name: '100 galones' })
   expect(hundred).toHaveTextContent('100 gal · 3 tanques')
@@ -183,7 +184,7 @@ test('tanks are grouped by capacity, filtered with chips, and yours say so', asy
 // specs/0015 CA-1, CA-6: a brand, then a model; only cylinders without account
 test('a truck brand and model narrow the list to their tanks', async () => {
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
 
   await filterBy('Marca', 'Kenworth')
   await filterBy('Modelo', 'T680')
@@ -196,13 +197,13 @@ test('a truck brand and model narrow the list to their tanks', async () => {
   const capacities = await filterOptions('Capacidad')
   expect(capacities).not.toContain('28 gal')
   expect(capacities).toContain('100 gal')
-  // Without an account, no "D" nor box tanks yet (specs/0016)
+  // The truck has only cylinders: no "D" nor box tanks (specs/0019 has them)
   expect(screen.queryByText(/^En D ·|^Rectangular ·/)).toBeNull()
 })
 
 test('capacity and diameter chips combine, and Limpiar clears them', async () => {
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
   await onlyGeneric()
 
   await filterBy('Capacidad', '100 gal')
@@ -213,13 +214,13 @@ test('capacity and diameter chips combine, and Limpiar clears them', async () =>
   expect(filterChip('Diámetro')).toHaveAccessibleName('Diámetro: 24 pulg.')
 
   fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
-  expect(await screen.findByText('168 tanques')).toBeInTheDocument()
+  expect(await screen.findByText('209 tanques')).toBeInTheDocument()
 })
 
 // specs/0015 RF-11: a catalog cylinder becomes this phone's tank, once
 test('choosing a factory tank saves it with its catalog id and selects it', async () => {
   renderTankSearch()
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
   await filterBy('Marca', 'Kenworth')
   await filterBy('Modelo', 'T680')
   fireEvent.click(
@@ -241,4 +242,33 @@ test('choosing a factory tank saves it with its catalog id and selects it', asyn
     saved.filter(tank => tank.catalogId === 'kw-c24.5x50-100')
   ).toHaveLength(1)
   expect(window.location.pathname).toBe('/')
+})
+
+// specs/0019 RF-4, CA-2: without an account too, a factory "D" tank
+test('a factory "D" tank is chosen and measured by its capacity', async () => {
+  renderTankSearch()
+  await screen.findByText('209 tanques')
+  await filterBy('Marca', 'Volvo')
+  await filterBy('Modelo', 'VNL (2024+)')
+  expect(
+    await screen.findByText(/^Volvo VNL \(2024\+\) · 6 tanques$/)
+  ).toBeInTheDocument()
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: /^Seleccionar: tanque de 100 galones, en D, 26 de alto/,
+    })
+  )
+
+  await waitFor(() => {
+    expect(useSelectedTankStore.getState().selectedTank).toMatchObject({
+      capacity: 100,
+      shape: 'd_flat_side',
+      orientation: 'horizontal',
+      height: 26,
+    })
+  })
+  const tank = useSelectedTankStore.getState().selectedTank
+  expect(tank?.catalogId).toMatch(/^vo-d26/)
+  // Full, it reads its capacity (specs/0015 RF-9)
+  expect(tank && calculateReading(tank, 26).gallons).toBe('100.00')
 })

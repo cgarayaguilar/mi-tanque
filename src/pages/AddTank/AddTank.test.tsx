@@ -5,6 +5,8 @@ import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { settle } from '../../testUtils'
+import { choose } from '../../testing/choose'
+import { cylinder } from '../../testing/localTank'
 
 interface Dimensions {
   capacity: string
@@ -53,12 +55,9 @@ test('saves the tank, selects it with numeric dimensions and confirms', async ()
   })
   const [saved] = await db.tanks.toArray()
   expect(saved).toMatchObject({ capacity: 80, diameter: 22, length: 50 })
-  expect(selectedTank()).toEqual({
-    id: saved?.id,
-    capacity: 80,
-    diameter: 22,
-    length: 50,
-  })
+  expect(selectedTank()).toEqual(
+    cylinder({ id: saved?.id ?? 0, capacity: 80, diameter: 22, length: 50 })
+  )
   expect(window.location.pathname).toBe('/')
 })
 
@@ -134,12 +133,15 @@ test('a double tap on Guardar creates the tank once', async () => {
 test('explains invalid dimensions next to each field and saves nothing', async () => {
   await fillAndSubmit({ capacity: '300', diameter: '', length: 'cincuenta' })
 
+  // The same messages as the fleet's tank (specs/0019 RF-5)
   expect(
-    await screen.findByText('Debe estar entre 10 y 250 galones')
+    await screen.findByText('Escribe la capacidad entre 10 y 250 galones')
   ).toBeInTheDocument()
-  expect(screen.getByText('Ingresa el diámetro')).toBeInTheDocument()
   expect(
-    screen.getByText('Escribe solo números, por ejemplo 24.5')
+    screen.getByText('Escribe el diámetro entre 10 y 99 pulgadas')
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText('Escribe el largo entre 10 y 150 pulgadas')
   ).toBeInTheDocument()
   expect(screen.getByLabelText('Capacidad')).toHaveAttribute(
     'aria-invalid',
@@ -173,12 +175,44 @@ test('a duplicate offers to use the tank that already exists', async () => {
     expect(window.location.pathname).toBe('/')
   })
   expect(sileo.dismiss).toHaveBeenCalledWith('duplicate-notice')
-  expect(selectedTank()).toEqual({
-    id,
-    capacity: 80,
-    diameter: 22,
-    length: 50,
+  // Stored before specs/0019, without a shape: the same lying cylinder
+  expect(selectedTank()).toEqual(
+    cylinder({ id, capacity: 80, diameter: 22, length: 50 })
+  )
+})
+
+// specs/0019 RF-5, CA-3: any shape and position, as in the fleet
+test('a standing box is saved with its shape and measures', async () => {
+  window.history.pushState({}, '', '/tanques/crear')
+  render(<App />)
+  await choose('Forma', 'Cuadrado o rectangular')
+  await choose('Posición', 'Vertical (de pie)')
+  for (const [label, value] of [
+    ['Capacidad', '80'],
+    ['Alto', '20'],
+    ['Ancho', '24'],
+    ['Altura', '40'],
+  ] as const) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } })
+  }
+  expect(
+    screen.getByRole('img', { name: /^Tanque rectangular de pie: 20 de alto/ })
+  ).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+
+  await waitFor(() => {
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Tanque agregado' })
   })
+  const [saved] = await db.tanks.toArray()
+  expect(saved).toMatchObject({
+    capacity: 80,
+    shape: 'rectangular',
+    orientation: 'vertical',
+    height: 20,
+    width: 24,
+    length: 40,
+  })
+  expect(selectedTank()).toMatchObject({ shape: 'rectangular', height: 20 })
 })
 
 // Regression: number inputs rejected decimal dimensions like 24.5

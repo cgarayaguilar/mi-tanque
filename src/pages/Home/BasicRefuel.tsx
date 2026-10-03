@@ -9,7 +9,7 @@ import {
   localStations,
 } from 'services/localRefuels'
 import type { RefuelValues, Tank } from 'types'
-import { localGeometry, localScale } from 'utils/fuelReading'
+import { localGeometry, localMaxInches, localScale } from 'utils/fuelReading'
 import { reportError } from 'utils/reportError'
 import type { TankGeometry } from 'utils/tankVolume'
 
@@ -30,7 +30,7 @@ export default function BasicRefuel({ tank }: { tank: Tank }) {
       <RefuelForm
         geometry={geometry}
         scale={localScale(tank)}
-        maxInches={tank.diameter}
+        maxInches={localMaxInches(tank)}
         capacityGal={tank.capacity}
         defaultCurrency=""
         lastGallons={context.value?.lastGallons ?? null}

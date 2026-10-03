@@ -23,6 +23,7 @@ import {
   hasFilters,
   LENGTH_RANGES,
   measuresText,
+  spokenKind,
   modelsOf,
   NO_FILTERS,
   type CatalogFilters,
@@ -51,10 +52,11 @@ const plural = (count: number, noun: string) =>
 /** The card's accessible name: what the tank is, in words. */
 const spokenTank = (tank: CatalogTank, actionLabel: string) => {
   const gallons = `tanque de ${formatNumber(tank.capacity)} galones`
+  const length = `${formatNumber(tank.length)} de ${tank.orientation === 'vertical' ? 'altura' : 'largo'}`
   const measures =
     tank.width === null
-      ? `${formatNumber(tank.size)} pulgadas de diámetro y ${formatNumber(tank.length)} de largo`
-      : `${tank.shape === 'd_flat_side' ? 'en D' : 'rectangular'}, ${formatNumber(tank.size)} de alto, ${formatNumber(tank.width)} de ancho y ${formatNumber(tank.length)} de largo`
+      ? `${tank.orientation === 'vertical' ? 'de pie, ' : ''}${formatNumber(tank.size)} pulgadas de diámetro y ${length}`
+      : `${spokenKind(tank).replace(/^en d/, 'en D')}, ${formatNumber(tank.size)} de alto, ${formatNumber(tank.width)} de ancho y ${length}`
   return `${actionLabel}: ${gallons}, ${measures}${tank.own ? ', tuyo' : ''}`
 }
 

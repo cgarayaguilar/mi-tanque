@@ -11,7 +11,7 @@ beforeEach(async () => {
   window.history.pushState({}, '', '/tanques')
   render(<App />)
   // The 15 "Genérico" tanks and the catalog's cylinders (specs/0015)
-  await screen.findByText('168 tanques')
+  await screen.findByText('209 tanques')
 })
 
 test('the logo is a link home', () => {

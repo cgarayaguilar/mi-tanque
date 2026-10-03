@@ -57,10 +57,9 @@ export const groupByTank = (
  * hold the percent of the height. Without both, what was stored.
  */
 export const fillPercent = (measurement: Measurement, tank: Tank): number => {
-  const percent =
-    Number.isFinite(measurement.inches) && tank.diameter > 0
-      ? volumePercent(tank, measurement.inches)
-      : Number.parseFloat(measurement.fuelHeight)
+  const percent = Number.isFinite(measurement.inches)
+    ? volumePercent(tank, measurement.inches)
+    : Number.parseFloat(measurement.fuelHeight)
   return Number.isFinite(percent)
     ? Math.min(100, Math.max(0, Math.round(percent)))
     : 0

@@ -18,6 +18,7 @@ import { readAllMeasurements } from 'services/measurements'
 import { readTanks } from 'services/tanks'
 import { getDeviceId } from 'services/deviceId'
 import { importIdsFor, planImport, tankFingerprint } from 'utils/importPlan'
+import type { TankGeometry } from 'utils/tankVolume'
 
 // Firestore allows 500 writes per batch; 450 leaves room (RF-17)
 const BATCH_SIZE = 450
@@ -111,9 +112,10 @@ export const importLocalData = async ({
       document.id,
       tankFingerprint({
         capacityGal: Number(document.get('capacityGal')),
-        diameterIn: Number(document.get('dimensions.diameterIn')),
-        lengthIn: Number(document.get('dimensions.lengthIn')),
-      }),
+        shape: document.get('shape') as TankGeometry['shape'],
+        orientation: document.get('orientation') as TankGeometry['orientation'],
+        dimensions: document.get('dimensions') as TankGeometry['dimensions'],
+      } as Parameters<typeof tankFingerprint>[0]),
     ])
   )
   const measurementIds = takenAtById(existingMeasurements)
@@ -141,9 +143,10 @@ export const importLocalData = async ({
         description: null,
         photoPath: null,
         archived: false,
-        shape: 'cylinder',
-        orientation: 'horizontal',
-        dimensions: { diameterIn: tank.diameterIn, lengthIn: tank.lengthIn },
+        // Its own shape and position (specs/0019 RF-11)
+        shape: tank.shape,
+        orientation: tank.orientation,
+        dimensions: tank.dimensions,
         capacityGal: tank.capacityGal,
         equipment: { kind: 'none', id: null },
         templateId: tank.templateId,

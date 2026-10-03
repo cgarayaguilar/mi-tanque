@@ -6,13 +6,16 @@ import Typography from '@mui/material/Typography'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MeasurementCard from 'components/MeasurementCard'
 import Stat from 'components/Stat'
-import TankDiagram from 'components/TankDiagram'
-import { radius } from 'theme/tokens'
+import TankThumbnail, { type ThumbnailFrame } from 'components/TankThumbnail'
+import { radius, space } from 'theme/tokens'
 import type { TankHistory } from 'utils/measurementHistory'
 import { formatNumber } from 'utils/formatNumber'
+import { tankMeasuresText, thumbnailOf } from 'utils/tankText'
 
 interface TankHistoryCardProps {
   history: TankHistory
+  /** Shared by the page: a short tank looks shorter than a long one. */
+  frame: ThumbnailFrame
   defaultExpanded?: boolean
 }
 
@@ -33,6 +36,7 @@ const describeChange = (change: number, count: number) => {
 /** A tank's period: summary figures and its measurements, newest first. */
 export default function TankHistoryCard({
   history,
+  frame,
   defaultExpanded = false,
 }: TankHistoryCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
@@ -55,17 +59,24 @@ export default function TankHistoryCard({
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-        <TankDiagram
-          capacity={tank.capacity}
-          diameter={tank.diameter}
-          length={tank.length}
-        />
+        {/* The 3D thumbnail of its shape, as in the catalog (specs/0019 RF-9) */}
+        <Box sx={{ width: space.xxl + space.lg, flexShrink: 0 }}>
+          <TankThumbnail
+            tank={thumbnailOf(tank)}
+            frame={frame}
+            height={space.xxl}
+          />
+        </Box>
         <div>
           <Typography id={titleId} variant="subtitle1" component="h2">
             Tanque de {formatNumber(tank.capacity)} gls
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {plural(count, 'medición', 'mediciones')}
+          <Typography
+            variant="caption"
+            component="p"
+            sx={{ color: 'text.secondary' }}
+          >
+            {tankMeasuresText(tank)} · {plural(count, 'medición', 'mediciones')}
           </Typography>
         </div>
       </Box>

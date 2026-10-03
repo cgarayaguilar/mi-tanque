@@ -6,11 +6,18 @@ import type { NewLocalRefuel, NewMeasurement } from 'types'
 export interface StoredTank {
   id?: number
   capacity: number | string
-  diameter: number | string
+  /** Cylinders only. */
+  diameter?: number | string
   length: number | string
   /** Chosen from the truck catalog (specs/0015 RF-11). Not indexed: no new
    * schema version is needed for it. */
   catalogId?: string
+  /** Any shape and position (specs/0019 RF-1). Absent: a lying cylinder, as
+   * every tank was before. Not indexed either. */
+  shape?: string
+  orientation?: string
+  height?: number
+  width?: number
 }
 
 // Older versions stored numbers where the app now writes strings (and the

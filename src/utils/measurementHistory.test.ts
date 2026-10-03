@@ -1,8 +1,9 @@
 import type { Measurement, Tank } from 'types'
 import { fillPercent, groupByTank } from 'utils/measurementHistory'
+import { cylinder } from '../testing/localTank'
 
-const small: Tank = { id: 1, capacity: 50, diameter: 25, length: 26 }
-const large: Tank = { id: 2, capacity: 150, diameter: 24, length: 80 }
+const small: Tank = cylinder({ id: 1, capacity: 50, diameter: 25, length: 26 })
+const large: Tank = cylinder({ id: 2, capacity: 150, diameter: 24, length: 80 })
 
 let nextId = 1
 const measurement = (

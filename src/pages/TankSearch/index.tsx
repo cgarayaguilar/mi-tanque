@@ -11,11 +11,11 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
 import TankCatalog from 'components/TankCatalog'
-import { PREDEFINED_TANKS } from 'services/tanks'
+import { PREDEFINED_TANKS, sameDimensions } from 'services/tanks'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { radius } from 'theme/tokens'
-import type { Tank } from 'types'
+import type { Tank, TankDimensions } from 'types'
 import { reportError } from 'utils/reportError'
 import type { CatalogTank } from 'utils/tankCatalog'
 import {
@@ -23,7 +23,9 @@ import {
   TANK_TEMPLATES,
   templateById,
   toCatalogTank,
+  type TankTemplate,
 } from 'utils/tankTemplates'
+import { thumbnailOf } from 'utils/tankText'
 
 // Roughly a TankCard, so the page does not jump when the list arrives
 const CARD_HEIGHT = 72
@@ -38,12 +40,27 @@ const tileGrid = {
 
 /** One of the 15 predefined tanks, or one the user added ("Tuyo"). */
 const isPredefined = (tank: Tank) =>
-  PREDEFINED_TANKS.some(
-    predefined =>
-      predefined.capacity === tank.capacity &&
-      predefined.diameter === tank.diameter &&
-      predefined.length === tank.length
-  )
+  PREDEFINED_TANKS.some(predefined => sameDimensions(predefined, tank))
+
+/** A template of the catalog as this phone's tank, of its shape. */
+const dimensionsOf = (template: TankTemplate): TankDimensions => {
+  const common = {
+    capacity: template.capacityGal,
+    orientation: 'horizontal' as const,
+    length: template.dimensions.lengthIn,
+  }
+  const { dimensions } = template
+  if (template.shape === 'cylinder' && 'diameterIn' in dimensions)
+    return { ...common, shape: 'cylinder', diameter: dimensions.diameterIn }
+  if (template.shape !== 'cylinder' && 'heightIn' in dimensions)
+    return {
+      ...common,
+      shape: template.shape,
+      height: dimensions.heightIn,
+      width: dimensions.widthIn,
+    }
+  throw new Error(`Template ${template.id} without the measures of its shape`)
+}
 
 export default function TankSearch() {
   const tanks = useTanksStore(state => state.tanks)
@@ -58,8 +75,8 @@ export default function TankSearch() {
     void load()
   }, [load])
 
-  // This phone's tanks, then the catalog's cylinders not saved yet
-  // (specs/0015 RF-11: without an account, only cylinders for now)
+  // This phone's tanks, then the catalog's not saved yet, of every shape
+  // (specs/0015 RF-11, specs/0019 RF-4)
   const catalog = useMemo<CatalogTank[]>(() => {
     const saved = new Set(tanks.flatMap(tank => tank.catalogId ?? []))
     const local = tanks.map((tank): CatalogTank => {
@@ -68,10 +85,7 @@ export default function TankSearch() {
         return { ...toCatalogTank(template), key: `t:${String(tank.id)}` }
       return {
         key: `t:${String(tank.id)}`,
-        shape: 'cylinder',
-        size: tank.diameter,
-        width: null,
-        length: tank.length,
+        ...thumbnailOf(tank),
         capacity: tank.capacity,
         ...(isPredefined(tank)
           ? { brand: GENERIC_BRAND, models: [] }
@@ -79,10 +93,7 @@ export default function TankSearch() {
       }
     })
     const fromCatalog = TANK_TEMPLATES.filter(
-      template =>
-        template.sourced &&
-        template.shape === 'cylinder' &&
-        !saved.has(template.id)
+      template => template.sourced && !saved.has(template.id)
     ).map(template => ({ ...toCatalogTank(template), key: `c:${template.id}` }))
     return [...local, ...fromCatalog]
   }, [tanks])
@@ -99,15 +110,9 @@ export default function TankSearch() {
       return
     }
     const template = templateById(key.replace(/^c:/, ''))
-    if (!template || !('diameterIn' in template.dimensions)) return
+    if (!template) return
     try {
-      choose(
-        await addCatalogTank(template.id, {
-          capacity: template.capacityGal,
-          diameter: template.dimensions.diameterIn,
-          length: template.dimensions.lengthIn,
-        })
-      )
+      choose(await addCatalogTank(template.id, dimensionsOf(template)))
     } catch (error) {
       reportError(error, {
         operation: 'saveCatalogTank',

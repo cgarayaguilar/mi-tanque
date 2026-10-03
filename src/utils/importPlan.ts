@@ -3,20 +3,19 @@ import { CURRENCIES } from 'schemas/account'
 import type { LocalRefuel, Measurement, RefuelValues, Tank } from 'types'
 import { formatNumber } from 'utils/formatNumber'
 import { TANK_TEMPLATES, templateById } from 'utils/tankTemplates'
-import { fullVolumeGallons, type TankGeometry } from 'utils/tankVolume'
+import { localGeometry, localMaxInches, volumePercent } from 'utils/fuelReading'
+import type { TankGeometry } from 'utils/tankVolume'
 
 /**
  * What importing the basic mode writes (backend specs/0004 RF-16, RF-17).
  * Pure: the service reads IndexedDB, plans with this and writes Firestore.
  */
-export interface ImportTank {
+export type ImportTank = {
   id: string
   name: string
   capacityGal: number
-  diameterIn: number
-  lengthIn: number
   templateId: string | null
-}
+} & TankGeometry
 
 export interface ImportMeasurement {
   id: string
@@ -94,13 +93,24 @@ export interface ImportIds {
   refuel: (localId: number, takenAt: Date) => string
 }
 
-/** What identifies a record already in the organization. */
-export const tankFingerprint = (tank: {
-  capacityGal: number
-  diameterIn: number
-  lengthIn: number
-}) =>
-  `${String(tank.capacityGal)}|${String(tank.diameterIn)}|${String(tank.lengthIn)}`
+/**
+ * What identifies a tank already in the organization. A lying cylinder keeps
+ * the text imports have always used; other shapes and positions say theirs
+ * (backend specs/0019 RF-11).
+ */
+export const tankFingerprint = (
+  tank: { capacityGal: number } & TankGeometry
+) => {
+  const capacity = String(tank.capacityGal)
+  const { dimensions } = tank
+  if (tank.shape === 'cylinder' && tank.orientation === 'horizontal')
+    return `${capacity}|${String(tank.dimensions.diameterIn)}|${String(dimensions.lengthIn)}`
+  const section =
+    'diameterIn' in dimensions
+      ? String(dimensions.diameterIn)
+      : `${String(dimensions.heightIn)}x${String(dimensions.widthIn)}`
+  return `${capacity}|${tank.shape}|${tank.orientation}|${section}|${String(dimensions.lengthIn)}`
+}
 
 export const importIdsFor = (
   scope: ImportScope,
@@ -126,8 +136,7 @@ export const importIdsFor = (
         existing.tanks,
         tankFingerprint({
           capacityGal: tank.capacity,
-          diameterIn: tank.diameter,
-          lengthIn: tank.length,
+          ...localGeometry(tank),
         })
       ),
     measurement: (localId, takenAt) =>
@@ -161,7 +170,10 @@ const inRange = (value: number, { min, max }: { min: number; max: number }) =>
 const round2 = (value: number) => Math.round(value * 100) / 100
 
 const validTank = (tank: Tank) =>
-  inRange(tank.diameter, FLEET_LIMITS.section) &&
+  (tank.shape === 'cylinder'
+    ? inRange(tank.diameter, FLEET_LIMITS.section)
+    : inRange(tank.height, FLEET_LIMITS.section) &&
+      inRange(tank.width, FLEET_LIMITS.section)) &&
   inRange(tank.length, FLEET_LIMITS.tankLength) &&
   inRange(tank.capacity, FLEET_LIMITS.capacity)
 
@@ -175,40 +187,40 @@ export const planImport = (
   const tanksById = new Map(
     localTanks.filter(validTank).map(tank => [tank.id, tank])
   )
-  const used = new Map<number, ImportTank & { fullGallons: number }>()
+  const used = new Map<number, ImportTank>()
   const measurements: ImportMeasurement[] = []
   const refuels: ImportRefuel[] = []
   let skipped = 0
 
-  // Each local tank in use becomes one individual cylinder, once (RF-16)
+  // Each local tank in use becomes one individual tank of its shape, once
+  // (RF-16; specs/0019 RF-11)
   const cloudTankFor = (tank: Tank) => {
     const existing = used.get(tank.id)
     if (existing) return existing
-    const geometry: TankGeometry = {
-      shape: 'cylinder',
-      orientation: 'horizontal',
-      dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
-    }
+    const geometry = localGeometry(tank)
     // Chosen from the catalog (specs/0015 RF-11), or the same as a template
     const template =
       templateById(tank.catalogId) ??
       TANK_TEMPLATES.find(
         item =>
-          item.shape === 'cylinder' &&
+          tank.orientation === 'horizontal' &&
+          item.shape === tank.shape &&
           item.capacityGal === tank.capacity &&
-          'diameterIn' in item.dimensions &&
-          item.dimensions.diameterIn === tank.diameter &&
-          item.dimensions.lengthIn === tank.length
+          item.dimensions.lengthIn === tank.length &&
+          (tank.shape === 'cylinder'
+            ? 'diameterIn' in item.dimensions &&
+              item.dimensions.diameterIn === tank.diameter
+            : 'heightIn' in item.dimensions &&
+              item.dimensions.heightIn === tank.height &&
+              item.dimensions.widthIn === tank.width)
       )
-    const cloudTank = {
+    const cloudTank: ImportTank = {
       id: ids.tank(tank),
       // At most 2 decimals: the rules hold the name to 40 characters
       name: `Tanque de ${formatNumber(tank.capacity)} gal (importado)`,
       capacityGal: tank.capacity,
-      diameterIn: tank.diameter,
-      lengthIn: tank.length,
+      ...geometry,
       templateId: template?.id ?? null,
-      fullGallons: fullVolumeGallons(geometry),
     }
     used.set(tank.id, cloudTank)
     return cloudTank
@@ -225,7 +237,7 @@ export const planImport = (
       tank !== undefined &&
       Number.isFinite(local.inches) &&
       local.inches > 0 &&
-      local.inches <= tank.diameter &&
+      local.inches <= localMaxInches(tank) &&
       inRange(gallons, { min: 0, max: tank.capacity * 2 }) &&
       inRange(liters, { min: 0, max: tank.capacity * 2 * 3.785411784 }) &&
       validDate(takenAt)
@@ -245,10 +257,9 @@ export const planImport = (
       inches: local.inches,
       gallons,
       liters,
-      // By volume, like the cloud measurements (RF-3)
-      fillPercent: round2(
-        Math.min(100, (gallons / cloudTank.fullGallons) * 100)
-      ),
+      // By volume from the inches, like the cloud measurements (RF-3). Not
+      // from the gallons: since specs/0018 they are adjusted to the capacity
+      fillPercent: round2(volumePercent(tank, local.inches)),
       legacyPlace:
         place === '' || place === NO_LOCATION
           ? null
@@ -305,7 +316,7 @@ export const planImport = (
   }
 
   return {
-    tanks: [...used.values()].map(({ fullGallons: _, ...tank }) => tank),
+    tanks: [...used.values()],
     measurements,
     refuels,
     skipped,

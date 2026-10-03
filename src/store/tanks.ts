@@ -17,15 +17,19 @@ interface TanksState {
   load: () => Promise<void>
   /** Saves a tank and adds it to the list. Rejects like `createTank`. */
   addTank: (dimensions: TankDimensions) => Promise<Tank>
-  /** A catalog cylinder as one of this phone's tanks (specs/0015 RF-11). */
+  /** A catalog tank as one of this phone's tanks (specs/0015, 0019). */
   addCatalogTank: (
     catalogId: string,
     dimensions: TankDimensions
   ) => Promise<Tank>
 }
 
+/** The diameter, or the height of a box or a "D" (specs/0019). */
+const across = (tank: Tank) =>
+  tank.shape === 'cylinder' ? tank.diameter : tank.height
+
 const bySize = (a: Tank, b: Tank) =>
-  a.capacity - b.capacity || a.diameter - b.diameter || a.length - b.length
+  a.capacity - b.capacity || across(a) - across(b) || a.length - b.length
 
 // One read at a time: StrictMode and quick revisits call load() back to back
 let pendingLoad: Promise<void> | null = null

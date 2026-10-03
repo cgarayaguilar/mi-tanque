@@ -1,5 +1,6 @@
 import { db } from 'services/db'
 import { useTanksStore } from 'store/tanks'
+import { cylinder } from '../testing/localTank'
 
 beforeEach(async () => {
   await db.tanks.clear()
@@ -39,7 +40,7 @@ test('addTank keeps the list sorted by size', async () => {
 
   const tank = await useTanksStore
     .getState()
-    .addTank({ capacity: 60, diameter: 20, length: 40 })
+    .addTank(cylinder({ capacity: 60, diameter: 20, length: 40 }))
 
   const { tanks } = useTanksStore.getState()
   expect(tanks).toHaveLength(16)

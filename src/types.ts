@@ -1,17 +1,30 @@
 // Canonical types for data that crosses UI <-> storage (ENGINEERING_PRINCIPLES.md §6.2).
 import type { Currency } from 'schemas/account'
+import type { TankOrientation, TankShape } from 'utils/tankVolume'
 // They mirror what IndexedDB stores today and become the Firestore model in phase 3.
 
-export interface TankDimensions {
+/**
+ * A tank of this phone: its shape, position and the measures of its shape,
+ * in inches (backend specs/0019 RF-1). Tanks saved before had no shape: they
+ * are read as lying cylinders (services/tanks, store/selectedTank).
+ */
+export type TankDimensions = {
   /** Nominal capacity, in gallons. */
   capacity: number
-  /** Inches. */
-  diameter: number
-  /** Inches. */
+  orientation: TankOrientation
+  /** Length, or height when standing. */
   length: number
-}
+} & (
+  | { shape: 'cylinder'; diameter: number }
+  | {
+      shape: Exclude<TankShape, 'cylinder'>
+      /** Of the cross-section. */
+      height: number
+      width: number
+    }
+)
 
-export interface Tank extends TankDimensions {
+export type Tank = TankDimensions & {
   id: number
   /** Chosen from the truck catalog: measured with its capacity (specs/0015). */
   catalogId?: string

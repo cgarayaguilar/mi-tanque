@@ -7,6 +7,7 @@ import {
   type ImportScope,
 } from 'utils/importPlan'
 import { calcFuelLevel } from 'utils/calcFuelLevel'
+import { volumePercent } from 'utils/fuelReading'
 
 const NOW = new Date(2026, 9, 1, 12, 0)
 
@@ -23,13 +24,16 @@ const NOTHING_YET = {
 const idsFor = (uid: string, orgId = 'org-1') =>
   importIdsFor(scope(uid, orgId), NOTHING_YET)
 
-const localTank = (overrides: Partial<Tank> = {}): Tank => ({
-  id: 3,
-  capacity: 75,
-  diameter: 25,
-  length: 39,
-  ...overrides,
-})
+const localTank = (overrides: Partial<Tank> = {}): Tank =>
+  ({
+    id: 3,
+    capacity: 75,
+    shape: 'cylinder',
+    orientation: 'horizontal',
+    diameter: 25,
+    length: 39,
+    ...overrides,
+  }) as Tank
 
 const local = (overrides: Partial<Measurement> = {}): Measurement => ({
   id: 10,
@@ -57,8 +61,9 @@ test('a used tank becomes an imported individual cylinder, linked to its templat
       id: 'import-org-1-uid-1-dev1-3',
       name: 'Tanque de 75 gal (importado)',
       capacityGal: 75,
-      diameterIn: 25,
-      lengthIn: 39,
+      shape: 'cylinder',
+      orientation: 'horizontal',
+      dimensions: { diameterIn: 25, lengthIn: 39 },
       templateId: 'cyl-75-25x39',
     },
   ])
@@ -71,6 +76,11 @@ test('measurements keep their date, amounts and place, with the percent by volum
     tankLength: 39,
     fuelHeight: 25,
   })
+  const atTwelve = calcFuelLevel({
+    tankDiameter: 25,
+    tankLength: 39,
+    fuelHeight: 12,
+  })
 
   expect(plan.measurements).toEqual([
     {
@@ -81,7 +91,9 @@ test('measurements keep their date, amounts and place, with the percent by volum
       inches: 12,
       gallons: 38.85,
       liters: 147.06,
-      fillPercent: Math.round((38.85 / full) * 10000) / 100,
+      // By volume from its 12 inches (specs/0019). Not from the stored
+      // gallons: since specs/0018 they are adjusted to the capacity
+      fillPercent: Math.round((atTwelve / full) * 10000) / 100,
       legacyPlace: 'Managua, Nicaragua',
     },
   ])
@@ -207,7 +219,12 @@ describe('imports made with the old ids', () => {
       tanks: new Map([
         [
           'import-u-3',
-          tankFingerprint({ capacityGal: 75, diameterIn: 25, lengthIn: 39 }),
+          tankFingerprint({
+            capacityGal: 75,
+            shape: 'cylinder',
+            orientation: 'horizontal',
+            dimensions: { diameterIn: 25, lengthIn: 39 },
+          }),
         ],
       ]),
       measurements: new Map([['import-u-10', measurementTakenAt]]),
@@ -251,4 +268,66 @@ test('the imported tank name fits in 40 characters', () => {
   )
   expect(plan.tanks[0]?.name).toBe('Tanque de 123.12 gal (importado)')
   expect(plan.tanks[0]?.name.length).toBeLessThanOrEqual(40)
+})
+
+// backend specs/0019 RF-11, CA-7: a "D" tank of this phone keeps its shape
+describe('tanks of any shape', () => {
+  const dTank = localTank({
+    id: 5,
+    capacity: 100,
+    shape: 'd_flat_side',
+    orientation: 'horizontal',
+    height: 26,
+    width: 27,
+    length: 41,
+  })
+
+  test('it is imported with its shape, and its percent from its inches', () => {
+    const plan = planImport(
+      idsFor('uid-1'),
+      [localTank(), dTank],
+      [local(), local({ id: 11, tankId: 5, inches: 13 })],
+      NOW
+    )
+    expect(plan.tanks.find(tank => tank.shape === 'd_flat_side')).toMatchObject(
+      {
+        orientation: 'horizontal',
+        dimensions: { heightIn: 26, widthIn: 27, lengthIn: 41 },
+        capacityGal: 100,
+      }
+    )
+    const reading = plan.measurements.find(item => item.inches === 13)
+    expect(reading?.fillPercent).toBe(
+      Math.round(volumePercent(dTank, 13) * 100) / 100
+    )
+  })
+
+  test('its inches are held to its height', () => {
+    const plan = planImport(
+      idsFor('uid-1'),
+      [dTank],
+      [local({ tankId: 5, inches: 27 })],
+      NOW
+    )
+    expect(plan.measurements).toHaveLength(0)
+    expect(plan.skipped).toBe(1)
+  })
+
+  test('a "D" and a cylinder never share a fingerprint', () => {
+    expect(
+      tankFingerprint({
+        capacityGal: 100,
+        shape: 'd_flat_side',
+        orientation: 'horizontal',
+        dimensions: { heightIn: 26, widthIn: 27, lengthIn: 41 },
+      })
+    ).not.toBe(
+      tankFingerprint({
+        capacityGal: 100,
+        shape: 'cylinder',
+        orientation: 'horizontal',
+        dimensions: { diameterIn: 26, lengthIn: 41 },
+      })
+    )
+  })
 })

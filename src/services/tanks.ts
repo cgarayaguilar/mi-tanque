@@ -1,18 +1,21 @@
 import { db, type StoredTank } from 'services/db'
-import { tankDimensionsSchema } from 'schemas/tank'
+import { parseTankDimensions, readTankDimensions } from 'schemas/tank'
 import type { Tank, TankDimensions } from 'types'
 
 const toTank = (stored: StoredTank): Tank => {
   if (stored.id === undefined) throw new Error('Stored tank without id')
-
+  const dimensions = readTankDimensions(stored)
+  if (dimensions === null) throw new Error('Stored tank without its measures')
   return {
     id: stored.id,
-    capacity: Number(stored.capacity),
-    diameter: Number(stored.diameter),
-    length: Number(stored.length),
+    ...dimensions,
     ...(stored.catalogId === undefined ? {} : { catalogId: stored.catalogId }),
   }
 }
+
+/** Tanks of this phone that can be read; one that cannot is left out. */
+const readable = (stored: StoredTank[]) =>
+  stored.filter(tank => readTankDimensions(tank) !== null).map(toTank)
 
 /** Domain error (§7.6): the user already has a tank with these dimensions. */
 export class TankAlreadyExistsError extends Error {
@@ -25,10 +28,15 @@ export class TankAlreadyExistsError extends Error {
   }
 }
 
-const sameDimensions = (a: TankDimensions, b: TankDimensions) =>
+/** Same shape, position, measures and capacity (specs/0019 RF-11). */
+export const sameDimensions = (a: TankDimensions, b: TankDimensions) =>
   a.capacity === b.capacity &&
-  a.diameter === b.diameter &&
-  a.length === b.length
+  a.shape === b.shape &&
+  a.orientation === b.orientation &&
+  a.length === b.length &&
+  (a.shape === 'cylinder'
+    ? b.shape === 'cylinder' && a.diameter === b.diameter
+    : b.shape !== 'cylinder' && a.height === b.height && a.width === b.width)
 
 /**
  * Saves a tank and returns it normalized. The duplicate check and the insert
@@ -36,12 +44,12 @@ const sameDimensions = (a: TankDimensions, b: TankDimensions) =>
  * (§2.6). Rejects with TankAlreadyExistsError, invalid data or storage errors.
  */
 export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
-  const valid = tankDimensionsSchema.parse(dimensions)
+  const valid = parseTankDimensions(dimensions)
 
   return db.transaction('rw', db.tanks, async () => {
-    const existing = (await db.tanks.toArray())
-      .map(toTank)
-      .find(tank => sameDimensions(tank, valid))
+    const existing = readable(await db.tanks.toArray()).find(tank =>
+      sameDimensions(tank, valid)
+    )
     if (existing) throw new TankAlreadyExistsError(existing)
 
     const id = await db.tanks.add(valid)
@@ -50,7 +58,8 @@ export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
 }
 
 /**
- * A cylinder of the truck catalog as this phone's tank (specs/0015 RF-11):
+ * A tank of the truck catalog as this phone's tank, of any shape (specs/0015
+ * RF-11, specs/0019 RF-4):
  * the one already saved for it, a saved tank with its very dimensions (now
  * marked as the catalog's), or a new one. One read-write transaction.
  */
@@ -58,9 +67,9 @@ export const saveCatalogTank = async (
   catalogId: string,
   dimensions: TankDimensions
 ): Promise<Tank> => {
-  const valid = tankDimensionsSchema.parse(dimensions)
+  const valid = parseTankDimensions(dimensions)
   return db.transaction('rw', db.tanks, async () => {
-    const stored = (await db.tanks.toArray()).map(toTank)
+    const stored = readable(await db.tanks.toArray())
     const saved = stored.find(tank => tank.catalogId === catalogId)
     if (saved) return saved
     const same = stored.find(tank => sameDimensions(tank, valid))
@@ -74,24 +83,36 @@ export const saveCatalogTank = async (
 }
 
 export const readTanks = async (): Promise<Tank[]> =>
-  (await db.tanks.toArray()).map(toTank)
+  readable(await db.tanks.toArray())
+
+const genericCylinder = (
+  capacity: number,
+  diameter: number,
+  length: number
+): TankDimensions => ({
+  capacity,
+  shape: 'cylinder',
+  orientation: 'horizontal',
+  diameter,
+  length,
+})
 
 export const PREDEFINED_TANKS: TankDimensions[] = [
-  { capacity: 50, diameter: 25, length: 26 },
-  { capacity: 75, diameter: 24, length: 41 },
-  { capacity: 75, diameter: 25, length: 39 },
-  { capacity: 100, diameter: 23, length: 61 },
-  { capacity: 100, diameter: 24, length: 54 },
-  { capacity: 100, diameter: 26, length: 48 },
-  { capacity: 110, diameter: 25, length: 57 },
-  { capacity: 110, diameter: 26, length: 54 },
-  { capacity: 120, diameter: 23, length: 73 },
-  { capacity: 120, diameter: 24, length: 64 },
-  { capacity: 125, diameter: 26, length: 59 },
-  { capacity: 135, diameter: 26, length: 64 },
-  { capacity: 140, diameter: 23, length: 85 },
-  { capacity: 150, diameter: 24, length: 80 },
-  { capacity: 150, diameter: 26, length: 71 },
+  genericCylinder(50, 25, 26),
+  genericCylinder(75, 24, 41),
+  genericCylinder(75, 25, 39),
+  genericCylinder(100, 23, 61),
+  genericCylinder(100, 24, 54),
+  genericCylinder(100, 26, 48),
+  genericCylinder(110, 25, 57),
+  genericCylinder(110, 26, 54),
+  genericCylinder(120, 23, 73),
+  genericCylinder(120, 24, 64),
+  genericCylinder(125, 26, 59),
+  genericCylinder(135, 26, 64),
+  genericCylinder(140, 23, 85),
+  genericCylinder(150, 24, 80),
+  genericCylinder(150, 26, 71),
 ]
 
 // Check and insert inside one read-write transaction: IndexedDB serializes
