@@ -200,6 +200,12 @@ test('a truck brand and model narrow the list to their tanks', async () => {
     await screen.findByText(/Kenworth T680 · \d+ tanques/)
   ).toBeInTheDocument()
   expect(screen.getByText(/Mide el diámetro/)).toBeInTheDocument()
+  // The other rows offer only what that truck has
+  const capacity = screen.getByRole('group', { name: 'Capacidad' })
+  expect(within(capacity).queryByRole('button', { name: '28 gal' })).toBeNull()
+  expect(
+    within(capacity).getByRole('button', { name: '100 gal' })
+  ).toBeInTheDocument()
   // Without an account, no "D" nor box tanks yet (specs/0016)
   expect(screen.queryByText(/^En D ·|^Rectangular ·/)).toBeNull()
 })

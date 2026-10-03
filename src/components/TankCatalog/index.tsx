@@ -20,6 +20,7 @@ import {
   fitsText,
   groupByCapacity,
   hasFilters,
+  LENGTH_RANGES,
   measuresText,
   modelsOf,
   NO_FILTERS,
@@ -138,6 +139,21 @@ export default function TankCatalog({
   const [search, setSearch] = useState('')
   const query = useDeferredValue(normalizeDecimal(search) ?? search.trim())
   const options = useMemo(() => filterOptions(tanks), [tanks])
+  // The other rows offer what the chosen brand and model have (RF-7)
+  const scoped = useMemo(
+    () =>
+      filterOptions(
+        filterTanks(tanks, {
+          ...NO_FILTERS,
+          brand: filters.brand,
+          model: filters.model,
+        })
+      ),
+    [tanks, filters.brand, filters.model]
+  )
+  /** A chosen value stays offered, even if the brand does not have it. */
+  const keep = <T,>(values: readonly T[], chosen: T | null) =>
+    chosen === null || values.includes(chosen) ? values : [chosen, ...values]
   const models = useMemo(
     () => (filters.brand === null ? [] : modelsOf(tanks, filters.brand)),
     [tanks, filters.brand]
@@ -218,7 +234,7 @@ export default function TankCatalog({
         <ChipRow
           label="Capacidad"
           allLabel="Todas"
-          options={options.capacities.map(value => ({
+          options={keep(scoped.capacities, filters.capacity).map(value => ({
             value,
             label: `${formatNumber(value)} gal`,
           }))}
@@ -230,7 +246,7 @@ export default function TankCatalog({
         <ChipRow
           label="Diámetro"
           allLabel="Todos"
-          options={options.diameters.map(value => ({
+          options={keep(scoped.diameters, filters.diameter).map(value => ({
             value,
             label: `${formatNumber(value)} pulg.`,
           }))}
@@ -242,7 +258,10 @@ export default function TankCatalog({
         <ChipRow
           label="Largo"
           allLabel="Todos"
-          options={options.lengths.map(range => ({
+          options={LENGTH_RANGES.filter(
+            range =>
+              scoped.lengths.includes(range) || range.id === filters.length
+          ).map(range => ({
             value: range.id,
             label: range.label,
           }))}
