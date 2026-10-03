@@ -708,6 +708,12 @@ test('a Volvo VNL (2024+) "D" tank is chosen by brand and model and saved as the
   expect(
     screen.getByRole('img', { name: /^Tanque en "D" de lado plano acostado/ })
   ).toBeInTheDocument()
+  // specs/0015 RF-9: measured adjusted to its factory capacity
+  expect(
+    screen.getByText(
+      'Tanque de fábrica: al medir, lleno marca 100 gal, su capacidad.'
+    )
+  ).toBeInTheDocument()
 
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
   await waitFor(() => {

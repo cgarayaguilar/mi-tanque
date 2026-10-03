@@ -278,7 +278,7 @@ export default function TankEditor({
                   <ModelPicker
                     id="templateId"
                     value={field.value}
-                    hint="Un tanque común: llena forma, medidas y capacidad."
+                    hint="Por la marca y el modelo de tu camión: llena forma, medidas y capacidad."
                     error={errors.templateId?.message}
                     disabled={!canWrite}
                     buttonRef={field.ref}
@@ -301,6 +301,7 @@ export default function TankEditor({
                       })}
                   length={template.dimensions.lengthIn}
                   capacity={template.capacityGal}
+                  adjusted={template.sourced}
                 />
               )}
             </>

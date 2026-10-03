@@ -27,6 +27,8 @@ export interface TankPreviewProps {
   capacity?: number | null
   /** The guide names each measure instead of showing its value. */
   labels?: 'values' | 'names'
+  /** A factory tank: measured adjusted to its capacity (specs/0015 RF-9). */
+  adjusted?: boolean
 }
 
 // A typical tank, drawn faintly until the measures are typed (RF-7)
@@ -73,6 +75,7 @@ export default function TankPreview({
   length,
   capacity,
   labels = 'values',
+  adjusted = false,
 }: TankPreviewProps) {
   const theme = useTheme()
   const cylinder = shape === 'cylinder'
@@ -314,7 +317,22 @@ export default function TankPreview({
                 medidas.
               </Typography>
               {stated !== null &&
-                (capacityMatches(volume, stated) ? (
+                (adjusted ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 1,
+                      color: 'success.main',
+                    }}
+                  >
+                    <CheckCircleIcon fontSize="small" aria-hidden="true" />
+                    Tanque de fábrica: al medir, lleno marca{' '}
+                    {formatNumber(stated)} gal, su capacidad.
+                  </Typography>
+                ) : capacityMatches(volume, stated) ? (
                   <Typography
                     variant="body2"
                     sx={{

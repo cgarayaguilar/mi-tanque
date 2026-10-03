@@ -100,6 +100,15 @@ export default function ModelPicker({
                 {fitsText(chosen, true)}
               </Typography>
             )}
+            {chosen.calculated && (
+              <Typography
+                variant="caption"
+                component="p"
+                sx={{ color: 'text.secondary', fontStyle: 'italic' }}
+              >
+                Medidas calculadas: confírmalas con una cinta
+              </Typography>
+            )}
           </Box>
           <Button
             id={id}
