@@ -3,11 +3,8 @@ import { CURRENCIES } from 'schemas/account'
 import { optionalOdometer } from 'schemas/measurementForm'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
-import {
-  LITERS_PER_GALLON,
-  refuelAmounts,
-  type VolumeUnit,
-} from 'utils/refuelMath'
+import { LITERS_PER_GALLON } from 'utils/converts'
+import { refuelAmounts, type VolumeUnit } from 'utils/refuelMath'
 
 // The refuel form (backend specs/0006 RF-2). Numbers are typed as in Central
 // America ("1,500.50"; utils/parseDecimal); messages show under each field

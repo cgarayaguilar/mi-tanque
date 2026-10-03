@@ -1,4 +1,5 @@
 import type { Currency } from 'schemas/account'
+import { LITERS_PER_GALLON } from 'utils/converts'
 import {
   fullVolumeGallons,
   gallonsAt,
@@ -9,8 +10,6 @@ import {
 // the same functions serve the basic mode and the organization's fleet.
 
 export type VolumeUnit = 'gallon' | 'liter'
-
-export const LITERS_PER_GALLON = 3.785411784
 
 const round2 = (value: number) => Math.round(value * 100) / 100
 
