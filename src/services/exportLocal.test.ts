@@ -57,6 +57,24 @@ test("exports this phone's measurements, newest first, without account columns (
   expect(rows[2]?.endsWith(',"León, Nicaragua"')).toBe(true)
 })
 
+// Regression (specs/0018, fixed in specs/0019 RF-10): the percent divided the
+// gallons adjusted to the capacity by the unadjusted volume, so a full
+// "Genérico" of 100 gal came out at about 91%
+test('the fill percent is by volume, also for a tank adjusted to its capacity', async () => {
+  const tankId = await db.tanks.add({ capacity: 100, diameter: 26, length: 48 })
+  await db.measurements.add({
+    date: new Date(Date.now() - DAY),
+    inches: 26,
+    gallons: '100.00',
+    liters: '378.54',
+    location: 'Sin ubicación',
+    tankId,
+  })
+  await exportLocalHistory({ kind: 'measurements', period })
+  const row = files.downloads[0]?.csv.split('\r\n')[1] ?? ''
+  expect(row).toContain(',26,100,378.54,100,')
+})
+
 test('exports the refuels saved without an account', async () => {
   const tankId = await db.tanks.add({ capacity: 50, diameter: 25, length: 26 })
   await db.refuels.add({

@@ -26,18 +26,18 @@ export interface TankTemplate {
 export const GENERIC_BRAND = 'Genérico'
 
 // The ids of the 15 stay as they were: fleet tanks already point to them
-const GENERIC_TEMPLATES: TankTemplate[] = PREDEFINED_TANKS.map(
-  ({ capacity, diameter, length }) => ({
-    id: `cyl-${String(capacity)}-${String(diameter)}x${String(length)}`,
-    brand: GENERIC_BRAND,
-    models: [],
-    shape: 'cylinder',
-    dimensions: { diameterIn: diameter, lengthIn: length },
-    capacityGal: capacity,
-    calculated: false,
-    sourced: false,
-  })
-)
+const GENERIC_TEMPLATES: TankTemplate[] = PREDEFINED_TANKS.flatMap(tank =>
+  tank.shape === 'cylinder' ? [tank] : []
+).map(({ capacity, diameter, length }) => ({
+  id: `cyl-${String(capacity)}-${String(diameter)}x${String(length)}`,
+  brand: GENERIC_BRAND,
+  models: [],
+  shape: 'cylinder',
+  dimensions: { diameterIn: diameter, lengthIn: length },
+  capacityGal: capacity,
+  calculated: false,
+  sourced: false,
+}))
 
 // Built and checked by scripts/build-truck-tanks.mjs: a test keeps the file
 // equal to what the script makes of the research (specs/0015 RNF-3)

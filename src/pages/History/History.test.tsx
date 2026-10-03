@@ -77,7 +77,8 @@ test('summarizes each tank and lists its measurements, newest first', async () =
   expect(
     await screen.findByRole('heading', { name: 'Tanque de 75 gls' })
   ).toBeInTheDocument()
-  expect(screen.getByText('2 mediciones')).toBeInTheDocument()
+  // With its shape and measures (specs/0019 RF-9)
+  expect(screen.getByText('Ø 24 × 41 pulg. · 2 mediciones')).toBeInTheDocument()
   // Difference from the first (40) to the last (30) measurement
   expect(screen.getByText('10.00')).toBeInTheDocument()
   expect(screen.getByText('gal. menos')).toBeInTheDocument()

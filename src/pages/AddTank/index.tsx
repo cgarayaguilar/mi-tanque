@@ -6,33 +6,22 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import NumberField from 'components/NumberField'
-import MeasureGuide from 'components/MeasureGuide'
-import MeasureHelp from 'components/MeasureHelp'
-import TankPreview from 'components/TankPreview'
-import { TANK_LIMITS, tankFormSchema, type TankFormValues } from 'schemas/tank'
+import TankFields from 'components/TankFields'
+import {
+  TANK_LIMITS,
+  tankFormSchema,
+  tankFromForm,
+  type TankFormValues,
+} from 'schemas/tank'
+import { EMPTY_TANK_MEASURES } from 'schemas/tankMeasures'
 import { TankAlreadyExistsError } from 'services/tanks'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import type { Tank } from 'types'
-import { measureHelp } from 'utils/measureHelp'
-import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 
-const EMPTY_FORM: TankFormValues = { capacity: '', diameter: '', length: '' }
 // Long enough to read the toast and reach its button
 const DUPLICATE_NOTICE_MS = 10_000
-
-const rangeHint = (dimension: keyof typeof TANK_LIMITS) => {
-  const { min, max, unit } = TANK_LIMITS[dimension]
-  return `Entre ${String(min)} y ${String(max)} ${unit}.`
-}
-
-/** A typed measure for the preview: null unless a positive number. */
-const positive = (value: string | undefined) => {
-  const number = parseDecimal(value ?? '')
-  return Number.isFinite(number) && number > 0 ? number : null
-}
 
 export default function AddTank() {
   const addTank = useTanksStore(state => state.addTank)
@@ -45,9 +34,9 @@ export default function AddTank() {
     formState: { errors, isSubmitting },
   } = useForm<TankFormValues>({
     resolver: zodResolver(tankFormSchema),
-    defaultValues: EMPTY_FORM,
+    defaultValues: EMPTY_TANK_MEASURES,
   })
-  const typed = useWatch({ control })
+  const values = useWatch({ control }) as TankFormValues
 
   const chooseTank = (tank: Tank) => {
     selectTank(tank)
@@ -56,11 +45,7 @@ export default function AddTank() {
 
   // isSubmitting disables the button until this resolves: one save per tap (§8.6)
   const onSubmit = async (values: TankFormValues) => {
-    const dimensions = {
-      capacity: parseDecimal(values.capacity),
-      diameter: parseDecimal(values.diameter),
-      length: parseDecimal(values.length),
-    }
+    const dimensions = tankFromForm(values)
 
     try {
       chooseTank(await addTank(dimensions))
@@ -110,70 +95,14 @@ export default function AddTank() {
           void handleSubmit(onSubmit)(event)
         }}
       >
+        {/* The same fields as the fleet's tank (specs/0019 RF-5) */}
         <Stack spacing={5}>
-          <NumberField
-            id="capacity"
-            label="Capacidad"
-            unit="gal."
-            placeholder="Ej. 120"
-            hint={rangeHint('capacity')}
-            help={
-              <MeasureHelp
-                label="la capacidad"
-                text={measureHelp('capacity', 'cylinder', 'horizontal')}
-              />
-            }
-            error={errors.capacity?.message}
-            registration={register('capacity')}
-          />
-          <MeasureGuide shape="cylinder" orientation="horizontal" />
-          {/* Both measures on one row, on a phone too (specs/0013 RF-3) */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: 2,
-            }}
-          >
-            <NumberField
-              id="diameter"
-              dense
-              label="Diámetro"
-              unit="pulg."
-              placeholder="24"
-              hint={rangeHint('diameter')}
-              help={
-                <MeasureHelp
-                  label="el diámetro"
-                  text={measureHelp('diameter', 'cylinder', 'horizontal')}
-                />
-              }
-              error={errors.diameter?.message}
-              registration={register('diameter')}
-            />
-            <NumberField
-              id="length"
-              dense
-              label="Largo"
-              unit="pulg."
-              placeholder="64"
-              hint={rangeHint('length')}
-              help={
-                <MeasureHelp
-                  label="el largo"
-                  text={measureHelp('length', 'cylinder', 'horizontal')}
-                />
-              }
-              error={errors.length?.message}
-              registration={register('length')}
-            />
-          </Box>
-          <TankPreview
-            shape="cylinder"
-            orientation="horizontal"
-            diameter={positive(typed.diameter)}
-            length={positive(typed.length)}
-            capacity={positive(typed.capacity)}
+          <TankFields
+            control={control}
+            register={register}
+            errors={errors}
+            values={values}
+            limits={TANK_LIMITS}
           />
         </Stack>
 

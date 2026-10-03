@@ -6,7 +6,14 @@ import { formatNumber } from 'utils/formatNumber'
  * The measurement form: the inches typed by the user, checked against the
  * tank they measured. Messages are shown inline under the field (§8.7).
  */
-export const measurementFormSchema = (tankDiameter: number) =>
+/**
+ * `maxInches` is the tank's inside height to the fuel: the diameter, the
+ * height or, standing, its length (backend specs/0019 RF-7), as `name` says.
+ */
+export const measurementFormSchema = (
+  maxInches: number,
+  name = 'el diámetro'
+) =>
   z.object({
     inches: z.string().check(
       z.refine(value => value.trim() !== '', {
@@ -21,8 +28,8 @@ export const measurementFormSchema = (tankDiameter: number) =>
         error: 'Ingresa un valor mayor que 0',
         abort: true,
       }),
-      z.refine(value => parseDecimal(value) <= tankDiameter, {
-        error: `Tu tanque mide ${formatNumber(tankDiameter)} pulgadas de diámetro. Ingresa hasta ${formatNumber(tankDiameter)}.`,
+      z.refine(value => parseDecimal(value) <= maxInches, {
+        error: `Tu tanque mide ${formatNumber(maxInches)} pulgadas de ${name.replace(/^(el|la) /, '')}. Ingresa hasta ${formatNumber(maxInches)}.`,
       })
     ),
   })

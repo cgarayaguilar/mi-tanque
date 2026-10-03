@@ -9,21 +9,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import AutocompleteField from 'components/AutocompleteField'
-import ChoiceButtons, { ChoiceButtonsBase } from 'components/ChoiceButtons'
+import { ChoiceButtonsBase } from 'components/ChoiceButtons'
 import MoreDetails, {
   countFilled,
   useMoreDetails,
 } from 'components/MoreDetails'
-import NumberField from 'components/NumberField'
-import SelectField from 'components/SelectField'
-import MeasureGuide from 'components/MeasureGuide'
-import MeasureHelp from 'components/MeasureHelp'
 import ModelPicker from 'components/ModelPicker'
+import TankFields from 'components/TankFields'
 import TankPreview from 'components/TankPreview'
 import TextField from 'components/TextField'
 import {
-  TANK_ORIENTATION_LABELS,
-  TANK_SHAPE_LABELS,
   tankFormSchema,
   tankFromForm,
   tankToForm,
@@ -33,11 +28,9 @@ import {
 import { useFleetStore } from 'store/fleet'
 import type { FleetSection } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
-import { measureHelp, type MeasureName } from 'utils/measureHelp'
 import { parseDecimal } from 'utils/parseDecimal'
 import { catalogFilterFor } from 'data/truckModels'
 import { templateById } from 'utils/tankTemplates'
-import { TANK_ORIENTATIONS, TANK_SHAPES } from 'utils/tankVolume'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
 
@@ -50,12 +43,6 @@ interface Props {
 }
 
 const FORM_ID = 'tank-form'
-
-/** A typed measure for the preview: null unless a positive number. */
-const positive = (value: string | undefined) => {
-  const number = parseDecimal(value ?? '')
-  return Number.isFinite(number) && number > 0 ? number : null
-}
 
 type Describe = 'template' | 'measures'
 
@@ -122,14 +109,6 @@ export default function TankEditor({
   )
   const template = templateById(values.templateId)
   const details = useMoreDetails<TankFormValues>(['description'], setFocus)
-  const cylinder = values.shape === 'cylinder'
-  const vertical = values.orientation === 'vertical'
-  const helpFor = (measure: MeasureName, name: string) => (
-    <MeasureHelp
-      label={name}
-      text={measureHelp(measure, values.shape, values.orientation)}
-    />
-  )
 
   const applyTemplate = (templateId: string) => {
     const template = templateById(templateId)
@@ -316,108 +295,13 @@ export default function TankEditor({
               )}
             </>
           ) : (
-            <>
-              <SelectField
-                id="shape"
-                label="Forma"
-                options={TANK_SHAPES.map(shape => ({
-                  value: shape,
-                  label: TANK_SHAPE_LABELS[shape],
-                }))}
-                control={control}
-                name="shape"
-                disabled={!canWrite}
-              />
-              <ChoiceButtons
-                id="orientation"
-                label="Posición"
-                options={TANK_ORIENTATIONS.map(orientation => ({
-                  value: orientation,
-                  label: TANK_ORIENTATION_LABELS[orientation],
-                }))}
-                control={control}
-                name="orientation"
-                disabled={!canWrite}
-              />
-
-              <NumberField
-                id="capacity"
-                label="Capacidad"
-                unit="gal"
-                placeholder="Ej. 120"
-                hint="La que indica la placa del tanque."
-                help={helpFor('capacity', 'la capacidad')}
-                error={errors.capacity?.message}
-                registration={register('capacity')}
-              />
-              <MeasureGuide
-                shape={values.shape}
-                orientation={values.orientation}
-              />
-              {/* All the measures on one row, on a phone too (specs/0013 RF-2) */}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${String(cylinder ? 2 : 3)}, minmax(0, 1fr))`,
-                  gap: 2,
-                }}
-              >
-                {cylinder ? (
-                  <NumberField
-                    id="diameter"
-                    dense
-                    label="Diámetro"
-                    unit="pulg."
-                    placeholder="25"
-                    help={helpFor('diameter', 'el diámetro')}
-                    error={errors.diameter?.message}
-                    registration={register('diameter')}
-                  />
-                ) : (
-                  <>
-                    <NumberField
-                      id="height"
-                      dense
-                      label="Alto"
-                      unit="pulg."
-                      placeholder="24"
-                      help={helpFor('height', 'el alto')}
-                      error={errors.height?.message}
-                      registration={register('height')}
-                    />
-                    <NumberField
-                      id="width"
-                      dense
-                      label="Ancho"
-                      unit="pulg."
-                      placeholder="30"
-                      help={helpFor('width', 'el ancho')}
-                      error={errors.width?.message}
-                      registration={register('width')}
-                    />
-                  </>
-                )}
-                <NumberField
-                  id="length"
-                  dense
-                  label={vertical ? 'Altura' : 'Largo'}
-                  unit="pulg."
-                  placeholder="48"
-                  help={helpFor('length', vertical ? 'la altura' : 'el largo')}
-                  error={errors.length?.message}
-                  registration={register('length')}
-                />
-              </Box>
-              <TankPreview
-                shape={values.shape}
-                orientation={values.orientation}
-                diameter={positive(values.diameter)}
-                height={positive(values.height)}
-                width={positive(values.width)}
-                length={positive(values.length)}
-                capacity={positive(values.capacity)}
-              />
-            </>
+            <TankFields
+              control={control}
+              register={register}
+              errors={errors}
+              values={values}
+              disabled={!canWrite}
+            />
           )}
           <MoreDetails
             open={details.open}

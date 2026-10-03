@@ -25,7 +25,16 @@ import { useSelectedTankStore } from 'store/selectedTank'
 import { useSessionStore } from 'store/session'
 import { layout, radius } from 'theme/tokens'
 import type { FuelReading, Tank } from 'types'
-import { calculateReading, localMismatch } from 'utils/fuelReading'
+import {
+  calculateReading,
+  localMaxInches,
+  localMismatch,
+} from 'utils/fuelReading'
+import {
+  maxInchesName,
+  spokenTankMeasures,
+  tankMeasuresText,
+} from 'utils/tankText'
 import { LEVEL_GROUND } from 'utils/measureHelp'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
@@ -52,8 +61,6 @@ const visuallyHidden = {
 /** The chosen tank in one row, so the reading fits on a phone screen. */
 function TankSummary({ tank, onChange }: { tank: Tank; onChange: () => void }) {
   const capacity = formatNumber(tank.capacity)
-  const diameter = formatNumber(tank.diameter)
-  const length = formatNumber(tank.length)
 
   return (
     <Box
@@ -82,13 +89,13 @@ function TankSummary({ tank, onChange }: { tank: Tank; onChange: () => void }) {
           {capacity} galones
         </Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {diameter} × {length} pulgadas
+          {tankMeasuresText(tank)}
         </Typography>
       </div>
       <Button
         variant="outlined"
         onClick={onChange}
-        aria-label={`Cambiar tanque: tanque de ${capacity} galones, ${diameter} por ${length} pulgadas`}
+        aria-label={`Cambiar tanque: tanque de ${capacity} galones, ${spokenTankMeasures(tank)}`}
       >
         Cambiar
       </Button>
@@ -149,7 +156,9 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<MeasurementFormValues>({
-    resolver: zodResolver(measurementFormSchema(tank.diameter)),
+    resolver: zodResolver(
+      measurementFormSchema(localMaxInches(tank), maxInchesName(tank))
+    ),
     defaultValues: { inches: '' },
   })
 
@@ -180,7 +189,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
           label="Pulgadas de combustible"
           unit="pulg."
           placeholder="Ej. 12.5"
-          hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque. ${LEVEL_GROUND}`}
+          hint={`Entre 0 y ${formatNumber(localMaxInches(tank))}, ${maxInchesName(tank)} de tu tanque. ${LEVEL_GROUND}`}
           error={errors.inches?.message}
           registration={register('inches')}
         />

@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import Box from '@mui/material/Box'
 import TankSolid from 'components/TankSolid'
-import type { CatalogShape } from 'utils/tankCatalog'
 import { projectTank, type PreviewSize } from 'utils/tankProjection'
+import type { TankOrientation, TankShape } from 'utils/tankVolume'
 
 export interface ThumbnailFrame {
   /** The projected size of the largest tank in the list. */
@@ -12,7 +12,9 @@ export interface ThumbnailFrame {
 
 /** What a thumbnail needs: the shape and its sizes, in inches. */
 export interface ThumbnailTank {
-  shape: CatalogShape
+  shape: TankShape
+  /** Lying unless said (the catalog's are; a phone's may stand, specs/0019). */
+  orientation?: TankOrientation
   /** A cylinder's diameter, or the height of a "D" or a box. */
   size: number
   width: number | null
@@ -38,7 +40,7 @@ export const thumbnailFrame = (
   for (const tank of tanks) {
     const drawing = projectTank(
       tank.shape,
-      'horizontal',
+      tank.orientation ?? 'horizontal',
       previewSize(tank),
       THUMBNAIL_STEPS
     )
@@ -63,7 +65,7 @@ interface TankThumbnailProps {
 function TankThumbnail({ tank, frame, height = 56 }: TankThumbnailProps) {
   const drawing = projectTank(
     tank.shape,
-    'horizontal',
+    tank.orientation ?? 'horizontal',
     previewSize(tank),
     THUMBNAIL_STEPS
   )

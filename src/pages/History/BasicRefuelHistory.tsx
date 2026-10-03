@@ -17,7 +17,7 @@ import {
 import { readTanks } from 'services/tanks'
 import { radius } from 'theme/tokens'
 import type { Period, Tank } from 'types'
-import { localGeometry, localScale } from 'utils/fuelReading'
+import { localGeometry, localMaxInches, localScale } from 'utils/fuelReading'
 import { reportError } from 'utils/reportError'
 
 const tankName = (tank: Tank | undefined) =>
@@ -99,7 +99,7 @@ export default function BasicRefuelHistory({
             ? {
                 geometry: localGeometry(tank),
                 scale: localScale(tank),
-                maxInches: tank.diameter,
+                maxInches: localMaxInches(tank),
                 capacityGal: tank.capacity,
                 odometer: null,
               }

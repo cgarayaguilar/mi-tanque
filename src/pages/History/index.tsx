@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useSessionStore } from 'store/session'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -13,6 +13,8 @@ import ExportButton from 'components/ExportButton'
 import HistoryTabs, { type HistoryTab } from 'components/HistoryTabs'
 import NavBar from 'components/NavBar'
 import TankHistoryCard from 'components/TankHistoryCard'
+import { thumbnailFrame } from 'components/TankThumbnail'
+import { thumbnailOf } from 'utils/tankText'
 import SessionErrorNotice from 'components/SessionErrorNotice'
 import { defaultPeriod, useHistoryStore } from 'store/history'
 import { layout, radius } from 'theme/tokens'
@@ -35,6 +37,11 @@ function BasicHistory() {
   const chosenPeriod = useHistoryStore(state => state.chosenPeriod)
   const status = useHistoryStore(state => state.status)
   const histories = useHistoryStore(state => state.histories)
+  // One scale for every tank of the page (specs/0019 RF-9)
+  const frame = useMemo(
+    () => thumbnailFrame(histories.map(history => thumbnailOf(history.tank))),
+    [histories]
+  )
   const load = useHistoryStore(state => state.load)
   const choosePeriod = useHistoryStore(state => state.choosePeriod)
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
@@ -94,6 +101,7 @@ function BasicHistory() {
           <TankHistoryCard
             key={history.tank.id}
             history={history}
+            frame={frame}
             // A single tank opens its measurements right away
             defaultExpanded={histories.length === 1}
           />

@@ -257,3 +257,35 @@ test('a tank whose capacity fits shows no warning', async () => {
   ).toBeInTheDocument()
   expect(screen.queryByRole('note')).toBeNull()
 })
+
+// backend specs/0019 RF-6, RF-7, CA-4: a standing box of this phone
+test('a standing box shows its shape and takes inches up to its height', async () => {
+  const box = {
+    capacity: 80,
+    shape: 'rectangular',
+    orientation: 'vertical',
+    height: 20,
+    width: 24,
+    length: 40,
+  }
+  const id = await db.tanks.add(box)
+  window.localStorage.setItem('defaultTank', JSON.stringify({ id, ...box }))
+  useSelectedTankStore.getState().rehydrate()
+  renderHome()
+
+  expect(
+    await screen.findByText('Rectangular de pie · 20 × 24 × 40 pulg.')
+  ).toBeInTheDocument()
+  calculate('41')
+  expect(
+    await screen.findByText(
+      'Tu tanque mide 40 pulgadas de altura. Ingresa hasta 40.'
+    )
+  ).toBeInTheDocument()
+
+  // 20 · 24 · 40 / 231 = 83.12 gal by its measures: 80 agree, so full is 80
+  calculate('20')
+  expect(
+    await screen.findByRole('img', { name: 'Tanque al 50%: 40.00 galones' })
+  ).toBeInTheDocument()
+})

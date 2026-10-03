@@ -123,10 +123,12 @@ en cada push y PR.
   con su ⓘ (`MeasureHelp`, textos en `utils/measureHelp`) y la guía `MeasureGuide`. La vista
   previa `TankPreview` dibuja el tanque en 3D a escala con `utils/tankProjection` (pura, con tests
   de proporciones) y compara el volumen con la capacidad (`capacityMatches` de `utils/tankVolume`).
-  La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
+  Los campos (forma, posición, capacidad, medidas, guía y vista previa) son un solo componente,
+  `components/TankFields`, con su validación en `schemas/tankMeasures` (límites por modo): lo usan
+  el tanque de la flota y "Agrega tu tanque" sin cuenta (specs/0019 RF-5).
 - **Catálogo de tanques (specs/0014, 0015):** `components/TankCatalog` (lógica pura en
   `utils/tankCatalog`) lo usan `ModelPicker` ("De un modelo", en un diálogo) y "Elige tu tanque"
-  sin cuenta (solo cilíndricos hasta specs/0019). Las plantillas (`utils/tankTemplates`) son los 15
+  sin cuenta (todas las formas desde specs/0019). Las plantillas (`utils/tankTemplates`) son los 15
   "Genérico" y los tanques de fábrica de `src/data/truckTanks.json`, que **no se edita a mano**:
   se regenera con `npm run build:tanks` desde `data/tank-research/` (un test exige que coincidan).
   Un tanque de fábrica con fuente se mide ajustado a su capacidad (specs/0015).
@@ -141,6 +143,12 @@ en cada push y PR.
   menú con "Todas" y las opciones (buscador con más de 10) y, elegido, muestra el valor con una ×;
   `FilterToggle` es un filtro sí/no ("Archivados"). Los usan `TankCatalog` y Flota. En los tests,
   `filterBy(filtro, opción)` y `filterChip(filtro)` de `src/testing/filterBy`.
+- **Tanques del teléfono (specs/0019):** `Tank` (en `types.ts`) tiene forma, posición y las medidas
+  de su forma (`diameter`, o `height` y `width`), como la flota. Lo guardado antes no tiene forma:
+  `readTankDimensions` (`schemas/tank`) lo lee como cilindro acostado, sin reescribir nada; para
+  escribir, `parseTankDimensions`. El cálculo sin cuenta pasa por `localGeometry` y
+  `localMaxInches` (`utils/fuelReading`), y el texto de un tanque por `utils/tankText`. En los
+  tests, `cylinder({…})` de `src/testing/localTank` arma un cilindro.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

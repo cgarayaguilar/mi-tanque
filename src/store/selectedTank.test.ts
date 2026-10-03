@@ -1,7 +1,8 @@
 import { sileo } from 'sileo'
 import { useSelectedTankStore } from 'store/selectedTank'
+import { cylinder } from '../testing/localTank'
 
-const tank = { id: 3, capacity: 75, diameter: 24, length: 41 }
+const tank = cylinder({ id: 3, capacity: 75, diameter: 24, length: 41 })
 
 beforeEach(() => {
   window.localStorage.clear()

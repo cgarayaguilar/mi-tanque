@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as z from 'zod/mini'
 import { sileo } from 'sileo'
+import { readTankDimensions } from 'schemas/tank'
 import type { Tank } from 'types'
 import { reportError } from 'utils/reportError'
 
@@ -8,12 +9,10 @@ import { reportError } from 'utils/reportError'
 // tank users already selected survives the migration
 const STORAGE_KEY = 'defaultTank'
 
-// Older builds stored dimensions as strings, and {} when nothing was selected
+// Older builds stored dimensions as strings, no shape (a lying cylinder,
+// specs/0019 RF-2), and {} when nothing was selected
 const storedTankSchema = z.object({
   id: z.number(),
-  capacity: z.coerce.number(),
-  diameter: z.coerce.number(),
-  length: z.coerce.number(),
   catalogId: z.optional(z.string()),
 })
 
@@ -22,10 +21,16 @@ const readStoredTank = (): Tank | null => {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (raw === null) return null
 
-    const parsed = storedTankSchema.safeParse(JSON.parse(raw))
-    if (!parsed.success) return null
-    const { catalogId, ...tank } = parsed.data
-    return catalogId === undefined ? tank : { ...tank, catalogId }
+    const json: unknown = JSON.parse(raw)
+    const parsed = storedTankSchema.safeParse(json)
+    const dimensions = readTankDimensions(json)
+    if (!parsed.success || dimensions === null) return null
+    const { id, catalogId } = parsed.data
+    return {
+      id,
+      ...dimensions,
+      ...(catalogId === undefined ? {} : { catalogId }),
+    }
   } catch (error) {
     // No toast: starting without a selected tank is a valid state
     reportError(error, { operation: 'readSelectedTank' })

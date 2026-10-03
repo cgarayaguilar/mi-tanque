@@ -18,7 +18,7 @@ import {
   type ExportKind,
   type ExportResult,
 } from 'utils/exportFile'
-import { fullVolumeGallons } from 'utils/tankVolume'
+import { volumePercent } from 'utils/fuelReading'
 
 // Same text the basic mode stores when the GPS did not answer
 const NO_LOCATION = 'Sin ubicación'
@@ -63,13 +63,6 @@ export const exportLocalHistory = async ({
     const rows: ExportMeasurement[] = items.map(measurement => {
       const tank = tanks.get(measurement.tankId)
       const gallons = Number(measurement.gallons)
-      const full = tank
-        ? fullVolumeGallons({
-            shape: 'cylinder',
-            orientation: 'horizontal',
-            dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
-          })
-        : 0
       return {
         takenAt: new Date(measurement.date),
         userName: null,
@@ -78,11 +71,12 @@ export const exportLocalHistory = async ({
         inches: measurement.inches,
         gallons,
         liters: Number(measurement.liters),
-        // By volume, like the cloud measurements
-        fillPercent:
-          full > 0
-            ? Math.round(Math.min(100, (gallons / full) * 100) * 100) / 100
-            : null,
+        // By volume from the inches and the tank's shape, like the screen
+        // (specs/0018 RF-1, specs/0019 RF-10): the stored gallons are
+        // adjusted to the capacity, its geometry's volume is not
+        fillPercent: tank
+          ? Math.round(volumePercent(tank, measurement.inches) * 100) / 100
+          : null,
         estimate: null,
         odometerKm: null,
         place: null,
