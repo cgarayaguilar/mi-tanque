@@ -3,7 +3,7 @@ import { sileo } from 'sileo'
 import App from '../../App'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
-import { gallonsAt } from 'utils/tankVolume'
+import { fullVolumeGallons, gallonsAt } from 'utils/tankVolume'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
@@ -166,14 +166,13 @@ test('a "D" tank at 12 inches shows its gallons and the truck range, and saves a
   expect(screen.queryByLabelText('Odómetro (opcional)')).toBeNull()
   measure('12')
 
-  const gallons = gallonsAt(
-    {
-      shape: 'd_flat_side',
-      orientation: 'horizontal',
-      dimensions: { heightIn: 24, widthIn: 30, lengthIn: 48 },
-    },
-    12
-  )
+  const geometry = {
+    shape: 'd_flat_side',
+    orientation: 'horizontal',
+    dimensions: { heightIn: 24, widthIn: 30, lengthIn: 48 },
+  } as const
+  // Its 135 gal agree with its measures: adjusted to them (specs/0018 RF-3)
+  const gallons = (gallonsAt(geometry, 12) * 135) / fullVolumeGallons(geometry)
   const km = Math.round(gallons * 9.5)
   expect(
     await screen.findByText(

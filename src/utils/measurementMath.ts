@@ -5,8 +5,10 @@ import {
   type Truck,
 } from 'schemas/fleet'
 import { convertGallonsToLiters } from 'utils/converts'
-import { capacityScale } from 'utils/tankTemplates'
+import { isFactoryTemplate } from 'utils/tankTemplates'
 import {
+  capacityMismatch,
+  capacityScale,
   fullVolumeGallons,
   gallonsAt,
   maxFuelHeight,
@@ -39,15 +41,19 @@ export const geometryOf = (tank: FleetTank): TankGeometry =>
       }
 
 /**
- * Gallons by shape times this give a factory tank its capacity when full
- * (backend specs/0015 RF-9); 1 for any other tank.
+ * Gallons by shape times this make the full tank hold its capacity
+ * (backend specs/0018 RF-3; specs/0015 RF-9 for factory tanks).
  */
 export const capacityScaleOf = (tank: FleetTank) =>
-  capacityScale(
-    tank.templateId,
-    tank.capacityGal,
-    fullVolumeGallons(geometryOf(tank))
-  )
+  capacityScale(tank.capacityGal, fullVolumeGallons(geometryOf(tank)), {
+    factory: isFactoryTemplate(tank.templateId),
+  })
+
+/** Measures and capacity of this tank disagree (specs/0018 RF-4). */
+export const capacityMismatchOf = (tank: FleetTank) =>
+  capacityMismatch(tank.capacityGal, fullVolumeGallons(geometryOf(tank)), {
+    factory: isFactoryTemplate(tank.templateId),
+  })
 
 /** The tallest fuel height the form accepts for this tank (RF-2). */
 export const maxInchesFor = (tank: FleetTank) => maxFuelHeight(geometryOf(tank))

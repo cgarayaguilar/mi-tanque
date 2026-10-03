@@ -86,16 +86,6 @@ export const toCatalogTank = (template: TankTemplate): CatalogTank => ({
   calculated: template.calculated,
 })
 
-/**
- * Gallons by geometry times this give a factory tank's capacity when full
- * (backend specs/0015 RF-9). 1 for a "Genérico", a tank typed by hand or one
- * whose measures were edited: those are measured as always.
- */
-export const capacityScale = (
-  templateId: string | null | undefined,
-  capacityGal: number,
-  fullGallons: number
-) =>
-  templateById(templateId)?.sourced === true && fullGallons > 0
-    ? capacityGal / fullGallons
-    : 1
+/** Whether the tank comes from a factory source (backend specs/0015 RF-9). */
+export const isFactoryTemplate = (templateId: string | null | undefined) =>
+  templateById(templateId)?.sourced === true

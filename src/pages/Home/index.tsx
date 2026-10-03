@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
@@ -6,6 +6,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
+import CapacityMismatchNote from 'components/CapacityMismatchNote'
 import EmptyState from 'components/EmptyState'
 import ModeToggle, { type MeasureMode } from 'components/ModeToggle'
 import RecaptchaNotice from 'components/RecaptchaNotice'
@@ -14,6 +15,7 @@ import NavBar from 'components/NavBar'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
 import SessionErrorNotice from 'components/SessionErrorNotice'
+import { usePrecisionNotice } from 'hooks/usePrecisionNotice'
 import { useSaveMeasurement } from 'hooks/useSaveMeasurement'
 import {
   measurementFormSchema,
@@ -23,7 +25,8 @@ import { useSelectedTankStore } from 'store/selectedTank'
 import { useSessionStore } from 'store/session'
 import { layout, radius } from 'theme/tokens'
 import type { FuelReading, Tank } from 'types'
-import { calculateReading } from 'utils/fuelReading'
+import { calculateReading, localMismatch } from 'utils/fuelReading'
+import { LEVEL_GROUND } from 'utils/measureHelp'
 import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 
@@ -93,7 +96,13 @@ function TankSummary({ tank, onChange }: { tank: Tank; onChange: () => void }) {
   )
 }
 
-function Results({ reading }: { reading: FuelReading | null }) {
+function Results({
+  reading,
+  mismatch,
+}: {
+  reading: FuelReading | null
+  mismatch?: ReactNode
+}) {
   return (
     <Box component="section" aria-labelledby="results-title">
       <Typography id="results-title" component="h2" sx={visuallyHidden}>
@@ -122,6 +131,7 @@ function Results({ reading }: { reading: FuelReading | null }) {
           value={reading ? formatNumber(reading.liters, 2) : NOT_MEASURED}
         />
       </Box>
+      {reading && mismatch}
     </Box>
   )
 }
@@ -170,7 +180,7 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
           label="Pulgadas de combustible"
           unit="pulg."
           placeholder="Ej. 12.5"
-          hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque.`}
+          hint={`Entre 0 y ${formatNumber(tank.diameter)}, el diámetro de tu tanque. ${LEVEL_GROUND}`}
           error={errors.inches?.message}
           registration={register('inches')}
         />
@@ -186,7 +196,17 @@ function Measurement({ tank, onChangeTank }: MeasurementProps) {
         </Button>
       </Box>
 
-      <Results reading={reading} />
+      <Results
+        reading={reading}
+        mismatch={
+          localMismatch(tank) && (
+            <CapacityMismatchNote
+              actionLabel="Cambiar tanque"
+              onAction={onChangeTank}
+            />
+          )
+        }
+      />
       {/* The place of a measurement uses App Check (specs/0008 RF-12) */}
       <RecaptchaNotice />
     </>
@@ -198,6 +218,7 @@ export default function Home() {
   const [mode, setMode] = useState<MeasureMode>('measure')
   const sessionStatus = useSessionStore(state => state.status)
   const [, navigate] = useLocation()
+  usePrecisionNotice()
 
   const chooseTank = () => {
     navigate('/tanques')

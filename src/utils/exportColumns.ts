@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { KM_PER_MILE } from 'schemas/fleet'
 import type { CsvColumn } from 'utils/csv'
-import { LITERS_PER_GALLON } from 'utils/refuelMath'
+import { LITERS_PER_GALLON } from 'utils/converts'
 
 // The columns of the exported files (backend specs/0007 RF-4–RF-6), the
 // same with and without an account: what does not apply stays empty.

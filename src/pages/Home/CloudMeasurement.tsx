@@ -1,4 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
@@ -16,6 +23,7 @@ import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
 import ModeToggle, { type MeasureMode } from 'components/ModeToggle'
 import CloudRefuel from 'pages/Home/CloudRefuel'
+import CapacityMismatchNote from 'components/CapacityMismatchNote'
 import FuelGauge from 'components/FuelGauge'
 import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
@@ -32,10 +40,12 @@ import { selectActiveRole, useSessionStore } from 'store/session'
 import { radius } from 'theme/tokens'
 import { tankMeasures } from 'utils/fleetLabels'
 import { formatNumber } from 'utils/formatNumber'
+import { LEVEL_GROUND } from 'utils/measureHelp'
 import {
   maxInchesFor,
   rangeTruckFor,
   readingFor,
+  capacityMismatchOf,
   type CloudReading,
 } from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
@@ -74,9 +84,11 @@ const equipmentKey = (tank: FleetTank) =>
 function CloudResults({
   reading,
   truck,
+  mismatch,
 }: {
   reading: CloudReading | null
   truck: Truck | null
+  mismatch?: ReactNode
 }) {
   const unit = useDistanceUnit()
   const range = reading?.estimate
@@ -132,6 +144,7 @@ function CloudResults({
               : 'Este tanque no es de un camión: no hay estimación de distancia.'}
         </Typography>
       )}
+      {reading && mismatch}
     </Box>
   )
 }
@@ -252,6 +265,7 @@ function MeasureForm({
   save: (tank: FleetTank, reading: CloudReading) => void
 }) {
   const [reading, setReading] = useState<CloudReading | null>(null)
+  const [, navigate] = useLocation()
   const maxInches = maxInchesFor(tank)
   const {
     register,
@@ -292,7 +306,7 @@ function MeasureForm({
           label="Pulgadas de combustible"
           unit="pulg."
           placeholder="Ej. 12.5"
-          hint={`Entre 0 y ${formatNumber(maxInches)}.`}
+          hint={`Entre 0 y ${formatNumber(maxInches)}. ${LEVEL_GROUND}`}
           error={errors.inches?.message}
           registration={register('inches')}
         />
@@ -309,7 +323,20 @@ function MeasureForm({
           </Typography>
         )}
       </Box>
-      <CloudResults reading={reading} truck={truck} />
+      <CloudResults
+        reading={reading}
+        truck={truck}
+        mismatch={
+          capacityMismatchOf(tank) && (
+            <CapacityMismatchNote
+              actionLabel="Revisar el tanque"
+              onAction={() => {
+                navigate(`/flota/tanques/${tank.id}`)
+              }}
+            />
+          )
+        }
+      />
     </>
   )
 }

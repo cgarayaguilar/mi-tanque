@@ -338,13 +338,15 @@ export default function TankPreview({
                     sx={{
                       mt: 1,
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: 1,
                       color: 'success.main',
                     }}
                   >
                     <CheckCircleIcon fontSize="small" aria-hidden="true" />
-                    Coincide con la capacidad ({formatNumber(stated)} gal).
+                    {/* Measured adjusted to it (specs/0018 RF-3, RF-5) */}
+                    Coincide con la capacidad: al medir, lleno marca{' '}
+                    {formatNumber(stated)} gal.
                   </Typography>
                 ) : (
                   <Typography
@@ -359,7 +361,8 @@ export default function TankPreview({
                   >
                     <ErrorOutlineIcon fontSize="small" aria-hidden="true" />
                     La capacidad dice {formatNumber(stated)} gal. Revisa las
-                    medidas o la capacidad.
+                    medidas o la capacidad: mientras no cuadren, al medir se
+                    usan las medidas.
                   </Typography>
                 ))}
             </>

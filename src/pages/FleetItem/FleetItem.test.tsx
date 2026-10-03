@@ -214,7 +214,7 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
     })
   ).toBeInTheDocument()
   expect(
-    screen.getByText('Coincide con la capacidad (75 gal).')
+    screen.getByText('Coincide con la capacidad: al medir, lleno marca 75 gal.')
   ).toBeInTheDocument()
 
   await choose('¿Cómo lo describes?', 'Con sus medidas')
@@ -232,7 +232,7 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
   ).toBeInTheDocument()
   expect(
     screen.getByText(
-      'La capacidad dice 75 gal. Revisa las medidas o la capacidad.'
+      'La capacidad dice 75 gal. Revisa las medidas o la capacidad: mientras no cuadren, al medir se usan las medidas.'
     )
   ).toBeInTheDocument()
   expect(
@@ -241,7 +241,9 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
 
   type('Capacidad', '135')
   expect(
-    screen.getByText('Coincide con la capacidad (135 gal).')
+    screen.getByText(
+      'Coincide con la capacidad: al medir, lleno marca 135 gal.'
+    )
   ).toBeInTheDocument()
   await choose('Pertenece a', 'Camión · Unidad 12')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
