@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Typography from '@mui/material/Typography'
@@ -19,6 +20,20 @@ export default function ChipRow<T extends string | number>({
   value: T | null
   onChange: (value: T | null) => void
 }) {
+  const row = useRef<HTMLDivElement>(null)
+  // A row that opens already filtered (backend specs/0016 RF-6) slides to its
+  // chosen chip, which may start past the edge of a phone
+  useEffect(() => {
+    const element = row.current
+    const pressed = element?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!element || !pressed) return
+    const start = pressed.offsetLeft
+    const end = start + pressed.offsetWidth
+    const visible =
+      start >= element.scrollLeft &&
+      end <= element.scrollLeft + element.clientWidth
+    if (!visible) element.scrollLeft = start - element.clientWidth / 4
+  }, [value])
   const chip = (
     key: string,
     text: string,
@@ -51,7 +66,9 @@ export default function ChipRow<T extends string | number>({
       </Typography>
       {/* One line that slides sideways on a phone (specs/0014 RF-3) */}
       <Box
+        ref={row}
         sx={{
+          position: 'relative',
           display: 'flex',
           gap: 1,
           overflowX: 'auto',
