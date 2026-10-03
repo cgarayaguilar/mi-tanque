@@ -1,11 +1,15 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
-import { matchBrand, matchModel } from 'data/truckModels'
 import {
-  fullVolumeGallons,
-  type TankOrientation,
-  type TankShape,
-} from 'utils/tankVolume'
+  checkTankMeasures,
+  TANK_ORIENTATION_LABELS,
+  TANK_SHAPE_LABELS,
+  tankGeometryFromForm,
+  tankMeasureFields,
+  type TankMeasureLimits,
+} from 'schemas/tankMeasures'
+import { matchBrand, matchModel } from 'data/truckModels'
+import type { TankOrientation } from 'utils/tankVolume'
 import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { isPlainDate } from 'utils/plainDate'
@@ -46,17 +50,7 @@ export type TrailerType = (typeof TRAILER_TYPES)[number]['id']
 
 export type DistanceUnit = 'km' | 'mi'
 
-export const TANK_SHAPE_LABELS: Record<TankShape, string> = {
-  cylinder: 'Cilíndrico (redondo)',
-  rectangular: 'Cuadrado o rectangular',
-  d_flat_side: 'En "D", lado plano contra el chasis',
-  d_flat_bottom: 'En "D", fondo plano',
-}
-
-export const TANK_ORIENTATION_LABELS: Record<TankOrientation, string> = {
-  horizontal: 'Horizontal (acostado)',
-  vertical: 'Vertical (de pie)',
-}
+export { TANK_ORIENTATION_LABELS, TANK_SHAPE_LABELS }
 
 export const FLEET_LIMITS = {
   name: 40,
@@ -75,6 +69,13 @@ export const FLEET_LIMITS = {
   tankLength: { min: 5, max: 600 },
   capacity: { min: 10, max: 2000 },
 } as const
+
+/** The fleet's limits for a tank's measures (specs/0003). */
+const FLEET_TANK_LIMITS: TankMeasureLimits = {
+  capacity: FLEET_LIMITS.capacity,
+  section: FLEET_LIMITS.section,
+  length: FLEET_LIMITS.tankLength,
+}
 
 // ---- Stored documents (what the app reads and writes) --------------------
 
@@ -324,112 +325,15 @@ export const trailerFormSchema = z
   )
 export type TrailerFormValues = z.infer<typeof trailerFormSchema>
 
-const dimensionMessage = (label: string, min: number, max: number) =>
-  `Escribe ${label} entre ${String(min)} y ${String(max)} pulgadas`
-
-const inRange = (value: string, min: number, max: number) => {
-  const number = parseDecimal(value)
-  return !Number.isNaN(number) && number >= min && number <= max
-}
-
-/**
- * The rules hold every reading to twice the capacity (backend specs/0004):
- * measures that give more, like centimeters typed as inches, would have
- * every measurement of the tank refused after it said "saved".
- */
-const fitsCapacity = (
-  values: { capacity: string } & Parameters<typeof tankGeometryFromForm>[0],
-  ctx: { issues: unknown[] }
-) => {
-  const capacity = parseDecimal(values.capacity)
-  if (!Number.isFinite(capacity) || capacity <= 0) return
-  const volume = fullVolumeGallons(tankGeometryFromForm(values))
-  if (!Number.isFinite(volume) || volume <= capacity * 2) return
-  ctx.issues.push({
-    code: 'custom',
-    input: values.capacity,
-    path: ['capacity'],
-    message: `Las medidas dan ${formatNumber(volume, 0)} gal, más del doble de la capacidad. Revisa que estén en pulgadas`,
-  })
-}
-
 export const tankFormSchema = z
   .object({
     name: requiredText('Escribe el nombre del tanque', FLEET_LIMITS.name),
     templateId: z.string(),
-    shape: z.enum(['cylinder', 'rectangular', 'd_flat_side', 'd_flat_bottom']),
-    orientation: z.enum(['horizontal', 'vertical']),
-    diameter: z.string(),
-    height: z.string(),
-    width: z.string(),
-    length: z.string(),
-    capacity: z.string().check(
-      z.trim(),
-      z.refine(
-        value =>
-          inRange(value, FLEET_LIMITS.capacity.min, FLEET_LIMITS.capacity.max),
-        {
-          error: `Escribe la capacidad entre ${String(FLEET_LIMITS.capacity.min)} y ${String(FLEET_LIMITS.capacity.max)} galones`,
-        }
-      )
-    ),
+    ...tankMeasureFields(FLEET_TANK_LIMITS),
     equipment: z.string(),
     description: optionalText(FLEET_LIMITS.description),
   })
-  .check(
-    // Each shape asks for its own measurements (specs/0003, Geometría)
-    z.superRefine((values, ctx) => {
-      const { min, max } = FLEET_LIMITS.section
-      const check = (
-        field: 'diameter' | 'height' | 'width' | 'length',
-        label: string,
-        low: number,
-        high: number
-      ) => {
-        if (!inRange(values[field], low, high)) {
-          ctx.issues.push({
-            code: 'custom',
-            input: values[field],
-            path: [field],
-            message: dimensionMessage(label, low, high),
-          })
-          return false
-        }
-        return true
-      }
-      const { min: lMin, max: lMax } = FLEET_LIMITS.tankLength
-      const lengthOk = check('length', 'el largo', lMin, lMax)
-
-      if (values.shape === 'cylinder') {
-        if (check('diameter', 'el diámetro', min, max) && lengthOk)
-          fitsCapacity(values, ctx)
-        return
-      }
-      const heightOk = check('height', 'el alto', min, max)
-      const widthOk = check('width', 'el ancho', min, max)
-      if (!heightOk || !widthOk || !lengthOk) return
-
-      const height = parseDecimal(values.height)
-      const width = parseDecimal(values.width)
-      if (values.shape === 'd_flat_side' && width < height / 2) {
-        ctx.issues.push({
-          code: 'custom',
-          input: values.width,
-          path: ['width'],
-          message: 'El ancho debe ser al menos la mitad del alto',
-        })
-      }
-      if (values.shape === 'd_flat_bottom' && height < width / 2) {
-        ctx.issues.push({
-          code: 'custom',
-          input: values.height,
-          path: ['height'],
-          message: 'El alto debe ser al menos la mitad del ancho',
-        })
-      }
-      fitsCapacity(values, ctx)
-    })
-  )
+  .check(checkTankMeasures(FLEET_TANK_LIMITS))
 export type TankFormValues = z.infer<typeof tankFormSchema>
 
 // ---- Mappers between forms and documents ---------------------------------
@@ -620,25 +524,7 @@ export const equipmentFromValue = (value: string): TankEquipment => {
   return { kind: 'none', id: null }
 }
 
-export const tankGeometryFromForm = (values: TankFormValues) =>
-  values.shape === 'cylinder'
-    ? {
-        shape: values.shape,
-        orientation: values.orientation,
-        dimensions: {
-          diameterIn: parseDecimal(values.diameter),
-          lengthIn: parseDecimal(values.length),
-        },
-      }
-    : {
-        shape: values.shape,
-        orientation: values.orientation,
-        dimensions: {
-          heightIn: parseDecimal(values.height),
-          widthIn: parseDecimal(values.width),
-          lengthIn: parseDecimal(values.length),
-        },
-      }
+export { tankGeometryFromForm }
 
 export const tankFromForm = (values: TankFormValues) => ({
   name: values.name.trim(),
