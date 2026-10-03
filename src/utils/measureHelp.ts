@@ -3,6 +3,13 @@ import type { TankOrientation, TankShape } from 'utils/tankVolume'
 // What each measure is and how to take it (backend specs/0013 RF-4, RF-5).
 // The same words in the ⓘ of each field and in the guide.
 
+/**
+ * How to read the fuel with the dipstick (backend specs/0018 RF-11): a tilted
+ * truck or a slanted stick reads more or less than there is.
+ */
+export const LEVEL_GROUND =
+  'Mide con el camión en terreno plano y la varilla recta, por el centro de la boca del tanque.'
+
 export type MeasureName =
   'capacity' | 'diameter' | 'height' | 'width' | 'length'
 
@@ -51,5 +58,6 @@ export const measureSteps = (
     measures.replace(/\.\)/g, ')'),
     `Mide ${orientation === 'vertical' ? 'la altura' : 'el largo'}: ${measureHelp('length', shape, orientation).toLowerCase()}`,
     'La capacidad está en la placa del tanque. Si no la encuentras, la vista previa te dice cuánto cabe según las medidas.',
+    `Al medir el combustible: ${LEVEL_GROUND.charAt(0).toLowerCase()}${LEVEL_GROUND.slice(1)}`,
   ]
 }

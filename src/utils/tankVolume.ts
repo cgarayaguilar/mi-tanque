@@ -1,4 +1,5 @@
-import { calcFuelLevel } from 'utils/calcFuelLevel'
+import { calcFuelLevel, circularSegment } from 'utils/calcFuelLevel'
+import { CUBIC_INCHES_PER_GALLON } from 'utils/converts'
 
 // Volume of the fleet's tanks by shape and orientation (backend specs/0003,
 // "Geometría y volumen"). Inches in, US gallons out.
@@ -37,13 +38,6 @@ export type TankGeometry =
       orientation: TankOrientation
       dimensions: BoxDimensions
     }
-
-const CUBIC_INCHES_PER_GALLON = 231
-
-/** Area of the circular segment of height h (0 ≤ h ≤ 2r), from the bottom. */
-const circularSegment = (radius: number, h: number) =>
-  radius ** 2 * Math.acos((radius - h) / radius) -
-  (radius - h) * Math.sqrt(Math.max(0, 2 * radius * h - h ** 2))
 
 /** Cross-section area filled up to h, for the tank lying on its length. */
 const filledArea = (geometry: TankGeometry, h: number): number => {
@@ -100,7 +94,7 @@ export const gallonsAt = (geometry: TankGeometry, inches: number): number => {
   }
 
   if (geometry.shape === 'cylinder') {
-    // Unchanged: the calculation the app has always used (specs/0003)
+    // The app's cylinder calculation (specs/0003), exact since specs/0018
     return calcFuelLevel({
       tankDiameter: geometry.dimensions.diameterIn,
       tankLength: geometry.dimensions.lengthIn,
@@ -125,3 +119,33 @@ export const CAPACITY_TOLERANCE = 0.15
 /** Whether the stated capacity agrees with the volume the measures give. */
 export const capacityMatches = (volume: number, capacity: number) =>
   Math.abs(capacity - volume) / volume <= CAPACITY_TOLERANCE
+
+/**
+ * Gallons by measures times this make a full tank hold its capacity
+ * (backend specs/0018 RF-3, RF-4): outside measures hold a bit more than the
+ * tank does. Any tank whose measures and capacity agree is adjusted; one that
+ * does not keeps its measures, since one of the two is wrong. A factory tank
+ * is always adjusted (specs/0015 RF-9).
+ */
+export const capacityScale = (
+  capacity: number | null | undefined,
+  fullGallons: number,
+  { factory = false }: { factory?: boolean } = {}
+): number => {
+  if (!capacity || capacity <= 0 || !(fullGallons > 0)) return 1
+  return factory || capacityMatches(fullGallons, capacity)
+    ? capacity / fullGallons
+    : 1
+}
+
+/** Measures and capacity that disagree: the reading says so (RF-4). */
+export const capacityMismatch = (
+  capacity: number | null | undefined,
+  fullGallons: number,
+  { factory = false }: { factory?: boolean } = {}
+): boolean =>
+  !factory &&
+  capacity != null &&
+  capacity > 0 &&
+  fullGallons > 0 &&
+  !capacityMatches(fullGallons, capacity)

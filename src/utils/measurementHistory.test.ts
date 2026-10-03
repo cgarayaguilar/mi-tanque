@@ -58,12 +58,22 @@ test('leaves out measurements of tanks that no longer exist', () => {
   expect(groupByTank([measurement(99, '10.00', 1)], [small])).toEqual([])
 })
 
-test('fillPercent uses the stored height, or derives it from the inches', () => {
-  expect(fillPercent(measurement(1, '10.00', 1), small)).toBe(40)
+// specs/0018 RF-2, CA-2: readings stored with the height's percent are shown
+// by volume, worked out again from their inches and tank
+test('fillPercent is by volume, whatever was stored', () => {
+  // 10 of 25 inches: 40% of the height, 37.35% of the volume
+  expect(fillPercent(measurement(1, '10.00', 1), small)).toBe(37)
   expect(
     fillPercent({ ...measurement(1, '10.00', 1), fuelHeight: '' }, small)
-  ).toBe(40)
+  ).toBe(37)
   expect(
-    fillPercent({ ...measurement(1, '10.00', 1), fuelHeight: '130' }, small)
+    fillPercent({ ...measurement(1, '10.00', 1), inches: 25 }, small)
+  ).toBe(100)
+  // Without inches, what was stored
+  expect(
+    fillPercent(
+      { ...measurement(1, '10.00', 1), inches: Number.NaN, fuelHeight: '130' },
+      small
+    )
   ).toBe(100)
 })

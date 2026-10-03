@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { sileo } from 'sileo'
 import type { MockInstance } from 'vitest'
 import App from '../../App'
@@ -117,8 +123,10 @@ test('saves the measurement with the city name and shows the reading', async () 
   expect(places.lookupPlace).toHaveBeenCalledWith(
     expect.objectContaining({ latitude: 12.13, longitude: -86.25 })
   )
+  // 50 gal that the 55.25 of its measures agree with: full holds 50, and the
+  // percent is by volume (specs/0018 RF-1, RF-3)
   expect(
-    screen.getByRole('img', { name: 'Tanque al 48%: 26.22 galones' })
+    screen.getByRole('img', { name: 'Tanque al 47%: 23.73 galones' })
   ).toBeInTheDocument()
 })
 
@@ -193,7 +201,9 @@ test('tells the user when the measurement could not be saved', async () => {
       description: 'Reintenta en un momento.',
     })
   })
-  expect(sileo.success).not.toHaveBeenCalled()
+  expect(sileo.success).not.toHaveBeenCalledWith({
+    title: 'Medición guardada',
+  })
   expect(await db.measurements.count()).toBe(0)
 })
 
@@ -213,4 +223,37 @@ test('a double tap on Calcular saves the measurement once', async () => {
   await settle()
   expect(await db.measurements.count()).toBe(1)
   expect(screen.getByRole('button', { name: 'Calcular' })).toBeEnabled()
+})
+
+// backend specs/0018 RF-4, CA-4: measures and capacity that disagree
+test('a tank whose capacity does not fit its measures says so, by the measures', async () => {
+  const wrong = { capacity: 70, diameter: 26, length: 48 }
+  const id = await db.tanks.add(wrong)
+  window.localStorage.setItem('defaultTank', JSON.stringify({ id, ...wrong }))
+  useSelectedTankStore.getState().rehydrate()
+  renderHome()
+
+  calculate('26')
+
+  // π · 13² · 48 / 231 = 110.32 gal by its measures, not its 70
+  expect(
+    await screen.findByRole('img', { name: 'Tanque al 100%: 110.32 galones' })
+  ).toBeInTheDocument()
+  const note = screen.getByRole('note')
+  expect(note).toHaveTextContent(
+    'Las medidas y la capacidad de este tanque no cuadran: revísalas.'
+  )
+  expect(
+    within(note).getByRole('button', { name: 'Cambiar tanque' })
+  ).toBeInTheDocument()
+})
+
+test('a tank whose capacity fits shows no warning', async () => {
+  await selectTank()
+  renderHome()
+  calculate('25')
+  expect(
+    await screen.findByRole('img', { name: 'Tanque al 100%: 50.00 galones' })
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('note')).toBeNull()
 })

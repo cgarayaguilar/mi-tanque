@@ -22,7 +22,10 @@ export interface FuelReading {
   inches: number
   gallons: string
   liters: string
-  /** Fill percentage of the tank height. */
+  /**
+   * How full the tank is, 0–100. By volume since backend specs/0018 RF-1; the
+   * name is kept for the readings already stored, which hold the height's.
+   */
   fuelHeight: string
 }
 

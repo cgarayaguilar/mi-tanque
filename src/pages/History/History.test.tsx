@@ -92,7 +92,8 @@ test('summarizes each tank and lists its measurements, newest first', async () =
   expect(newest).toHaveTextContent(/litros · \d+ pulg\./)
   expect(oldest).toHaveTextContent('40.00 gal de 75')
   expect(
-    screen.getAllByRole('progressbar', { name: 'Nivel del tanque: 42%' })
+    // By volume from the inches; 41.67 was stored by height (specs/0018 RF-2)
+    screen.getAllByRole('progressbar', { name: 'Nivel del tanque: 39%' })
   ).toHaveLength(2)
   expect(console.error).not.toHaveBeenCalled()
 })

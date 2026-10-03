@@ -78,7 +78,7 @@ test('the preview draws the tank as it is typed and checks the capacity', async 
     })
   ).toBeInTheDocument()
   expect(
-    screen.getByText('Coincide con la capacidad (95 gal).')
+    screen.getByText('Coincide con la capacidad: al medir, lleno marca 95 gal.')
   ).toBeInTheDocument()
 })
 
@@ -117,10 +117,17 @@ test('a double tap on Guardar creates the tank once', async () => {
   fireEvent.click(busyButton)
 
   await waitFor(() => {
-    expect(sileo.success).toHaveBeenCalledTimes(1)
+    expect(sileo.success).toHaveBeenCalled()
   })
   await settle()
 
+  // Only one "saved" toast (the Measurement page may add the one-time
+  // precision notice, specs/0018 RF-7)
+  expect(
+    vi
+      .mocked(sileo.success)
+      .mock.calls.filter(([toast]) => toast.title !== 'Mejoramos la precisión')
+  ).toHaveLength(1)
   expect(await db.tanks.count()).toBe(1)
 })
 

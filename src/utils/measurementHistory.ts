@@ -1,4 +1,5 @@
 import type { Measurement, Tank } from 'types'
+import { volumePercent } from 'utils/fuelReading'
 
 export interface TankHistory {
   tank: Tank
@@ -50,11 +51,17 @@ export const groupByTank = (
   return histories.sort((a, b) => lastTime(b) - lastTime(a))
 }
 
-/** Fill percentage of the tank height, rounded; derived when not stored. */
+/**
+ * How full the tank was, by volume, rounded (backend specs/0018 RF-2). Worked
+ * out again from the inches and the tank: readings stored before that spec
+ * hold the percent of the height. Without both, what was stored.
+ */
 export const fillPercent = (measurement: Measurement, tank: Tank): number => {
-  const stored = Number.parseFloat(measurement.fuelHeight)
-  const percent = Number.isFinite(stored)
-    ? stored
-    : (measurement.inches / tank.diameter) * 100
-  return Math.min(100, Math.max(0, Math.round(percent)))
+  const percent =
+    Number.isFinite(measurement.inches) && tank.diameter > 0
+      ? volumePercent(tank, measurement.inches)
+      : Number.parseFloat(measurement.fuelHeight)
+  return Number.isFinite(percent)
+    ? Math.min(100, Math.max(0, Math.round(percent)))
+    : 0
 }

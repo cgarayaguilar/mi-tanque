@@ -28,7 +28,7 @@ export type SessionStatus =
 // Without the flag the SDK is never downloaded (specs/0002 RF-5).
 const HINT_KEY = 'sessionActive'
 
-const hasHint = () => {
+export const hasHint = () => {
   try {
     return window.localStorage.getItem(HINT_KEY) === 'true'
   } catch {
