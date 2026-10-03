@@ -14,6 +14,7 @@ const storedTankSchema = z.object({
   capacity: z.coerce.number(),
   diameter: z.coerce.number(),
   length: z.coerce.number(),
+  catalogId: z.optional(z.string()),
 })
 
 const readStoredTank = (): Tank | null => {
@@ -22,7 +23,9 @@ const readStoredTank = (): Tank | null => {
     if (raw === null) return null
 
     const parsed = storedTankSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data : null
+    if (!parsed.success) return null
+    const { catalogId, ...tank } = parsed.data
+    return catalogId === undefined ? tank : { ...tank, catalogId }
   } catch (error) {
     // No toast: starting without a selected tank is a valid state
     reportError(error, { operation: 'readSelectedTank' })

@@ -1,24 +1,29 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useLocation } from 'wouter'
+import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import InputAdornment from '@mui/material/InputAdornment'
-import OutlinedInput from '@mui/material/OutlinedInput'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
-import SearchIcon from '@mui/icons-material/Search'
-import SearchOffIcon from '@mui/icons-material/SearchOff'
 import EmptyState from 'components/EmptyState'
-import TankCard from 'components/TankCard'
+import TankCatalog from 'components/TankCatalog'
+import { PREDEFINED_TANKS } from 'services/tanks'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { radius } from 'theme/tokens'
-import { normalizeDecimal } from 'utils/parseDecimal'
 import type { Tank } from 'types'
+import { reportError } from 'utils/reportError'
+import type { CatalogTank } from 'utils/tankCatalog'
+import {
+  GENERIC_BRAND,
+  TANK_TEMPLATES,
+  templateById,
+  toCatalogTank,
+} from 'utils/tankTemplates'
 
 // Roughly a TankCard, so the page does not jump when the list arrives
 const CARD_HEIGHT = 72
@@ -31,34 +36,88 @@ const tileGrid = {
   gap: 2,
 } as const
 
-/** "24.5" and "24,5" find the same tank, and "1,500" finds 1500. */
-const matches = (tank: Tank, query: string) =>
-  [tank.capacity, tank.diameter, tank.length].some(value =>
-    String(value).includes(query)
+/** One of the 15 predefined tanks, or one the user added ("Tuyo"). */
+const isPredefined = (tank: Tank) =>
+  PREDEFINED_TANKS.some(
+    predefined =>
+      predefined.capacity === tank.capacity &&
+      predefined.diameter === tank.diameter &&
+      predefined.length === tank.length
   )
 
 export default function TankSearch() {
   const tanks = useTanksStore(state => state.tanks)
   const status = useTanksStore(state => state.status)
   const load = useTanksStore(state => state.load)
+  const addCatalogTank = useTanksStore(state => state.addCatalogTank)
   const selectTank = useSelectedTankStore(state => state.selectTank)
   const selectedTankId = useSelectedTankStore(state => state.selectedTank?.id)
   const [, navigate] = useLocation()
-  const [search, setSearch] = useState('')
-  const query = useDeferredValue(normalizeDecimal(search) ?? search.trim())
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const visibleTanks = useMemo(
-    () => (query ? tanks.filter(tank => matches(tank, query)) : tanks),
-    [tanks, query]
-  )
+  // This phone's tanks, then the catalog's cylinders not saved yet
+  // (specs/0015 RF-11: without an account, only cylinders for now)
+  const catalog = useMemo<CatalogTank[]>(() => {
+    const saved = new Set(tanks.flatMap(tank => tank.catalogId ?? []))
+    const local = tanks.map((tank): CatalogTank => {
+      const template = templateById(tank.catalogId)
+      if (template)
+        return { ...toCatalogTank(template), key: `t:${String(tank.id)}` }
+      return {
+        key: `t:${String(tank.id)}`,
+        shape: 'cylinder',
+        size: tank.diameter,
+        width: null,
+        length: tank.length,
+        capacity: tank.capacity,
+        ...(isPredefined(tank)
+          ? { brand: GENERIC_BRAND, models: [] }
+          : { own: true }),
+      }
+    })
+    const fromCatalog = TANK_TEMPLATES.filter(
+      template =>
+        template.sourced &&
+        template.shape === 'cylinder' &&
+        !saved.has(template.id)
+    ).map(template => ({ ...toCatalogTank(template), key: `c:${template.id}` }))
+    return [...local, ...fromCatalog]
+  }, [tanks])
 
   const choose = (tank: Tank) => {
     selectTank(tank)
     navigate('/')
+  }
+
+  const chooseKey = async (key: string) => {
+    const tank = tanks.find(item => `t:${String(item.id)}` === key)
+    if (tank) {
+      choose(tank)
+      return
+    }
+    const template = templateById(key.replace(/^c:/, ''))
+    if (!template || !('diameterIn' in template.dimensions)) return
+    try {
+      choose(
+        await addCatalogTank(template.id, {
+          capacity: template.capacityGal,
+          diameter: template.dimensions.diameterIn,
+          length: template.dimensions.lengthIn,
+        })
+      )
+    } catch (error) {
+      reportError(error, {
+        operation: 'saveCatalogTank',
+        catalogId: template.id,
+      })
+      sileo.error({
+        title: 'No pudimos guardar el tanque',
+        description: 'Reintenta en un momento.',
+      })
+    }
   }
 
   const addTank = () => {
@@ -104,41 +163,18 @@ export default function TankSearch() {
         </Box>
       )
 
-    if (visibleTanks.length === 0)
-      return (
-        <EmptyState
-          headingLevel="h2"
-          icon={<SearchOffIcon />}
-          title="No encontramos ese tanque"
-          description={`Ningún tanque mide “${search.trim()}”. Prueba con otra medida o agrega el tuyo.`}
-          action={{
-            label: 'Limpiar búsqueda',
-            onClick: () => {
-              setSearch('')
-            },
-          }}
-        />
-      )
-
     return (
-      <Box
-        component="ul"
-        aria-label="Tanques"
-        sx={{ ...tileGrid, listStyle: 'none', m: 0, p: 0 }}
-      >
-        {visibleTanks.map(tank => (
-          <li key={tank.id}>
-            <TankCard
-              tank={tank}
-              actionLabel="Seleccionar"
-              selected={tank.id === selectedTankId}
-              onClick={() => {
-                choose(tank)
-              }}
-            />
-          </li>
-        ))}
-      </Box>
+      <TankCatalog
+        tanks={catalog}
+        selectedKey={
+          selectedTankId === undefined ? null : `t:${String(selectedTankId)}`
+        }
+        noun="tanque"
+        actionLabel="Seleccionar"
+        onChoose={key => {
+          void chooseKey(key)
+        }}
+      />
     )
   }
 
@@ -148,42 +184,7 @@ export default function TankSearch() {
         Elige tu tanque
       </Typography>
       <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
-        Busca por capacidad, diámetro o longitud.
-      </Typography>
-
-      <OutlinedInput
-        type="search"
-        fullWidth
-        placeholder="Ej. 100"
-        value={search}
-        onChange={event => {
-          setSearch(event.target.value)
-        }}
-        startAdornment={
-          <InputAdornment position="start">
-            <SearchIcon />
-          </InputAdornment>
-        }
-        slotProps={{
-          input: {
-            'aria-label': 'Buscar tanque',
-            inputMode: 'decimal',
-            autoComplete: 'off',
-          },
-        }}
-      />
-
-      {/* Announces how many tanks match while the user types */}
-      <Typography
-        role="status"
-        variant="caption"
-        component="p"
-        sx={{ color: 'text.secondary', mt: 2, mb: 3, minHeight: '1.5em' }}
-      >
-        {hasTanks &&
-          (visibleTanks.length === 1
-            ? '1 tanque'
-            : `${String(visibleTanks.length)} tanques`)}
+        Agrupados por capacidad. Filtra por galones, diámetro o largo.
       </Typography>
 
       {renderList()}

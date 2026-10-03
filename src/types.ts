@@ -13,6 +13,8 @@ export interface TankDimensions {
 
 export interface Tank extends TankDimensions {
   id: number
+  /** Chosen from the truck catalog: measured with its capacity (specs/0015). */
+  catalogId?: string
 }
 
 /** A fuel calculation as shown and stored: amounts are fixed to 2 decimals. */

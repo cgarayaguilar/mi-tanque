@@ -1,10 +1,12 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import Box from '@mui/material/Box'
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormLabel from '@mui/material/FormLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import type { UseFormRegisterReturn } from 'react-hook-form'
+import { space } from 'theme/tokens'
 
 export interface TextFieldProps {
   id: string
@@ -24,6 +26,10 @@ export interface TextFieldProps {
   disabled?: boolean
   /** Id of a <datalist> with suggestions (free text still allowed). */
   list?: string
+  /** Next to the label, e.g. the ⓘ of a measure (specs/0013 RF-4). */
+  help?: ReactNode
+  /** Less inner padding, for three fields on a phone's row (specs/0013). */
+  dense?: boolean
 }
 
 /**
@@ -45,20 +51,49 @@ export default function TextField({
   endAdornment,
   disabled = false,
   list,
+  help,
+  dense = false,
 }: TextFieldProps) {
   const { ref, ...field } = registration
   const helpId = `${id}-help`
-  const help = error ?? hint
+  const message = error ?? hint
 
   return (
     <FormControl fullWidth error={error !== undefined} disabled={disabled}>
-      <FormLabel htmlFor={id}>{label}</FormLabel>
+      {help === undefined ? (
+        <FormLabel htmlFor={id}>{label}</FormLabel>
+      ) : (
+        // The label's own bottom margin, on the row with its help
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            mb: `${String(space.xs)}px`,
+          }}
+        >
+          <FormLabel htmlFor={id} sx={{ mb: 0 }}>
+            {label}
+          </FormLabel>
+          {help}
+        </Box>
+      )}
       <OutlinedInput
         id={id}
         type={type}
         placeholder={placeholder}
         inputRef={ref}
         {...field}
+        sx={
+          dense
+            ? {
+                pl: 0,
+                pr: 2,
+                '& .MuiInputBase-input': { pl: 2 },
+                '& .MuiInputAdornment-positionEnd': { ml: 1 },
+              }
+            : undefined
+        }
         startAdornment={
           startAdornment !== undefined && (
             <InputAdornment position="start">{startAdornment}</InputAdornment>
@@ -75,12 +110,12 @@ export default function TextField({
             autoComplete,
             maxLength,
             list,
-            'aria-describedby': help === undefined ? undefined : helpId,
+            'aria-describedby': message === undefined ? undefined : helpId,
           },
         }}
       />
-      {help !== undefined && (
-        <FormHelperText id={helpId}>{help}</FormHelperText>
+      {message !== undefined && (
+        <FormHelperText id={helpId}>{message}</FormHelperText>
       )}
     </FormControl>
   )

@@ -45,6 +45,8 @@ import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import ChipRow from 'components/ChipRow'
+import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
 import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
 
@@ -128,6 +130,21 @@ function FleetCard({
 const lastMeasurementLine = (last: LastMeasurement) =>
   `${formatNumber(Math.round(last.fillPercent))} % · ${formatNumber(Math.round(last.gallons))} gal · ${formatTimeAgo(last.takenAt)}`
 
+/** The list's brand, or what was typed (specs/0016 RF-8). */
+const truckBrand = (truck: Truck) =>
+  matchBrand(truck.brand) ?? (truck.brand?.trim() || null)
+
+const truckModel = (truck: Truck) => {
+  const brand = matchBrand(truck.brand)
+  return matchModel(brand, truck.model) ?? (truck.model?.trim() || null)
+}
+
+/** The names for a row of chips, once each, in order. */
+const distinctNames = (names: (string | null)[]) =>
+  [...new Set(names.flatMap(name => (name ? [name] : [])))].sort((a, b) =>
+    a.localeCompare(b, 'es', { numeric: true })
+  )
+
 const matches = (
   query: string,
   ...fields: (string | number | null | undefined)[]
@@ -149,6 +166,9 @@ function FleetScreen() {
   const today = new Date()
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  // Trucks by brand and model, typed names recognized (specs/0016 RF-8)
+  const [brand, setBrand] = useState<string | null>(null)
+  const [model, setModel] = useState<string | null>(null)
   const query = useDeferredValue(search.trim().toLowerCase())
   const canWrite = canWriteFleet(role)
 
@@ -188,15 +208,27 @@ function FleetScreen() {
   const visible = <T extends { archived: boolean }>(
     items: T[],
     match: (item: T) => boolean
-  ) =>
-    items.filter(
-      item => item.archived === showArchived && (!query || match(item))
-    )
+  ) => items.filter(item => item.archived === showArchived && match(item))
+
+  const shownTrucks = trucks.filter(truck => truck.archived === showArchived)
+  const brandOptions = distinctNames(shownTrucks.map(truckBrand))
+  const modelOptions =
+    brand === null
+      ? []
+      : distinctNames(
+          shownTrucks
+            .filter(truck => truckBrand(truck) === brand)
+            .map(truckModel)
+        )
 
   const cards: { id: string; card: ReactNode }[] =
     section.collection === 'trucks'
-      ? visible(trucks, (t: Truck) =>
-          matches(query, t.name, t.plate, t.brand, t.model, t.color?.label)
+      ? visible(
+          trucks,
+          (t: Truck) =>
+            (brand === null || truckBrand(t) === brand) &&
+            (model === null || truckModel(t) === model) &&
+            matches(query, t.name, t.plate, t.brand, t.model, t.color?.label)
         ).map(truck => {
           const { efficiency, odometer } = truckFigures(truck, distanceUnit)
           const tankCount = tanksPerTruck.get(truck.id) ?? 0
@@ -445,6 +477,8 @@ function FleetScreen() {
           value={section.slug}
           onChange={(_, slug: string) => {
             setSearch('')
+            setBrand(null)
+            setModel(null)
             navigate(`/flota/${slug}`)
           }}
           variant="fullWidth"
@@ -473,6 +507,30 @@ function FleetScreen() {
             input: { 'aria-label': `Buscar ${section.label.toLowerCase()}` },
           }}
         />
+
+        {section.collection === 'trucks' && brandOptions.length > 1 && (
+          <Box sx={{ display: 'grid', gap: 2, mt: 3 }}>
+            <ChipRow
+              label="Marca"
+              allLabel="Todas"
+              options={brandOptions.map(value => ({ value, label: value }))}
+              value={brand}
+              onChange={next => {
+                setBrand(next)
+                setModel(null)
+              }}
+            />
+            {brand !== null && modelOptions.length > 1 && (
+              <ChipRow
+                label="Modelo"
+                allLabel="Todos"
+                options={modelOptions.map(value => ({ value, label: value }))}
+                value={model}
+                onChange={setModel}
+              />
+            )}
+          </Box>
+        )}
         <FormControlLabel
           control={
             <Switch

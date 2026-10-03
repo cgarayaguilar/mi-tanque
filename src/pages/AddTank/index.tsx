@@ -7,13 +7,15 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import NumberField from 'components/NumberField'
-import TankDiagram from 'components/TankDiagram'
+import MeasureGuide from 'components/MeasureGuide'
+import MeasureHelp from 'components/MeasureHelp'
+import TankPreview from 'components/TankPreview'
 import { TANK_LIMITS, tankFormSchema, type TankFormValues } from 'schemas/tank'
 import { TankAlreadyExistsError } from 'services/tanks'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
-import { radius } from 'theme/tokens'
 import type { Tank } from 'types'
+import { measureHelp } from 'utils/measureHelp'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 
@@ -26,8 +28,11 @@ const rangeHint = (dimension: keyof typeof TANK_LIMITS) => {
   return `Entre ${String(min)} y ${String(max)} ${unit}.`
 }
 
-/** The preview shows what the user typed, or a dash until they do. */
-const preview = (value: string) => value.trim() || '—'
+/** A typed measure for the preview: null unless a positive number. */
+const positive = (value: string | undefined) => {
+  const number = parseDecimal(value ?? '')
+  return Number.isFinite(number) && number > 0 ? number : null
+}
 
 export default function AddTank() {
   const addTank = useTanksStore(state => state.addTank)
@@ -98,25 +103,6 @@ export default function AddTank() {
       </Typography>
 
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          py: 6,
-          mb: 6,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: `${String(radius.lg)}px`,
-          bgcolor: 'background.paper',
-        }}
-      >
-        <TankDiagram
-          capacity={preview(typed.capacity ?? '')}
-          diameter={preview(typed.diameter ?? '')}
-          length={preview(typed.length ?? '')}
-        />
-      </Box>
-
-      <Box
         component="form"
         noValidate
         aria-label="Nuevo tanque"
@@ -131,26 +117,63 @@ export default function AddTank() {
             unit="gal."
             placeholder="Ej. 120"
             hint={rangeHint('capacity')}
+            help={
+              <MeasureHelp
+                label="la capacidad"
+                text={measureHelp('capacity', 'cylinder', 'horizontal')}
+              />
+            }
             error={errors.capacity?.message}
             registration={register('capacity')}
           />
-          <NumberField
-            id="diameter"
-            label="Diámetro"
-            unit="pulg."
-            placeholder="Ej. 24"
-            hint={`${rangeHint('diameter')} Es la altura del tanque acostado.`}
-            error={errors.diameter?.message}
-            registration={register('diameter')}
-          />
-          <NumberField
-            id="length"
-            label="Longitud"
-            unit="pulg."
-            placeholder="Ej. 64"
-            hint={rangeHint('length')}
-            error={errors.length?.message}
-            registration={register('length')}
+          <MeasureGuide shape="cylinder" orientation="horizontal" />
+          {/* Both measures on one row, on a phone too (specs/0013 RF-3) */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 2,
+            }}
+          >
+            <NumberField
+              id="diameter"
+              dense
+              label="Diámetro"
+              unit="pulg."
+              placeholder="24"
+              hint={rangeHint('diameter')}
+              help={
+                <MeasureHelp
+                  label="el diámetro"
+                  text={measureHelp('diameter', 'cylinder', 'horizontal')}
+                />
+              }
+              error={errors.diameter?.message}
+              registration={register('diameter')}
+            />
+            <NumberField
+              id="length"
+              dense
+              label="Largo"
+              unit="pulg."
+              placeholder="64"
+              hint={rangeHint('length')}
+              help={
+                <MeasureHelp
+                  label="el largo"
+                  text={measureHelp('length', 'cylinder', 'horizontal')}
+                />
+              }
+              error={errors.length?.message}
+              registration={register('length')}
+            />
+          </Box>
+          <TankPreview
+            shape="cylinder"
+            orientation="horizontal"
+            diameter={positive(typed.diameter)}
+            length={positive(typed.length)}
+            capacity={positive(typed.capacity)}
           />
         </Stack>
 

@@ -119,6 +119,25 @@ en cada push y PR.
   "C$9,274.26 NIO"; `unitPrice`/`unitPrices` para precios por galón y litro). Nombre, símbolo y
   países de cada moneda viven en `CURRENCY_DETAILS` (`schemas/account`). Litros se escribe
   completo, nunca "L" (es el símbolo del lempira). El CSV no lleva símbolos.
+- **Formulario de tanque (specs/0013):** capacidad primero y las medidas en una fila; cada medida
+  con su ⓘ (`MeasureHelp`, textos en `utils/measureHelp`) y la guía `MeasureGuide`. La vista
+  previa `TankPreview` dibuja el tanque en 3D a escala con `utils/tankProjection` (pura, con tests
+  de proporciones) y compara el volumen con la capacidad (`capacityMatches` de `utils/tankVolume`).
+  La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
+- **Catálogo de tanques (specs/0014, 0015):** `components/TankCatalog` (lógica pura en
+  `utils/tankCatalog`) lo usan `ModelPicker` ("De un modelo", en un diálogo) y "Elige tu tanque"
+  sin cuenta (solo cilíndricos hasta specs/0017). Las plantillas (`utils/tankTemplates`) son los 15
+  "Genérico" y los tanques de fábrica de `src/data/truckTanks.json`, que **no se edita a mano**:
+  se regenera con `npm run build:tanks` desde `data/tank-research/` (un test exige que coincidan).
+  Un tanque de fábrica con fuente se mide ajustado a su capacidad (`capacityScale`; sin cuenta,
+  `localScale` por su `catalogId`); los Genéricos y los registrados a mano, como siempre.
+  `TankSolid` dibuja el sólido para la vista previa y las miniaturas.
+- **Marca y modelo del camión (specs/0016):** se eligen de `src/data/truckModels.ts` (marcas,
+  modelos y la generación del catálogo por año; un test exige que cubra el catálogo), con
+  "Otra marca…"/"Otro modelo…" (`OTHER_CHOICE`) y un campo de texto. Se guarda el texto, como
+  antes: lo escrito a mano se reconoce con `matchBrand`/`matchModel` al abrir el camión y en los
+  chips de Flota. `catalogFilterFor` da el filtro inicial de `TankCatalog` para el tanque de un
+  camión. `ChipRow` es la fila de chips de los dos.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

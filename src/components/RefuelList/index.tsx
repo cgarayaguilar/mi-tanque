@@ -47,6 +47,8 @@ export interface RefuelItem extends RefuelValues {
 /** What editing a refuel needs to know about its tank (RF-11). */
 export interface RefuelTankContext {
   geometry: TankGeometry
+  /** Adjusts a factory tank to its capacity (specs/0015 RF-9). */
+  scale: number
   maxInches: number
   capacityGal: number
   odometer: { unit: 'km' | 'mi'; truckName: string } | null
@@ -419,6 +421,7 @@ export default function RefuelList({
             <Stack>
               <RefuelForm
                 geometry={context.geometry}
+                scale={context.scale}
                 maxInches={context.maxInches}
                 capacityGal={context.capacityGal}
                 defaultCurrency={editing.currency}

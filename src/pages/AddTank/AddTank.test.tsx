@@ -22,7 +22,7 @@ const fill = async ({ capacity, diameter, length }: Dimensions) => {
   fireEvent.change(screen.getByLabelText('Diámetro'), {
     target: { value: diameter },
   })
-  fireEvent.change(screen.getByLabelText('Longitud'), {
+  fireEvent.change(screen.getByLabelText('Largo'), {
     target: { value: length },
   })
 }
@@ -62,13 +62,23 @@ test('saves the tank, selects it with numeric dimensions and confirms', async ()
   expect(window.location.pathname).toBe('/')
 })
 
-test('the preview draws the dimensions as they are typed', async () => {
-  await fill({ capacity: '80', diameter: '24,5', length: '' })
-
+// specs/0013 CA-7: the same preview as the fleet's tanks
+test('the preview draws the tank as it is typed and checks the capacity', async () => {
+  await fill({ capacity: '95', diameter: '24.5', length: '' })
   expect(
     screen.getByRole('img', {
-      name: 'Tanque de 80 galones, 24,5 pulgadas de diámetro y — de largo',
+      name: 'Cilindro acostado, sin todas sus medidas',
     })
+  ).toBeInTheDocument()
+
+  fireEvent.change(screen.getByLabelText('Largo'), { target: { value: '48' } })
+  expect(
+    screen.getByRole('img', {
+      name: 'Cilindro acostado: 24.5 pulgadas de diámetro, 48 de largo; caben unos 98 galones',
+    })
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText('Coincide con la capacidad (95 gal).')
   ).toBeInTheDocument()
 })
 

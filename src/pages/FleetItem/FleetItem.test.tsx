@@ -17,7 +17,7 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
+import { choose, chosen } from '../../testing/choose'
 
 const api = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -70,6 +70,31 @@ afterEach(() => {
 })
 
 // The organization reads miles (backend specs/0010 CA-3)
+
+/** Picks a model in the catalog dialog (backend specs/0014 RF-7, RF-8). */
+const pickModel = async (
+  capacity: number,
+  diameter: number,
+  length: number
+) => {
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: /^(Elegir modelo|Cambiar modelo)/,
+    })
+  )
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+  // The 15 tanks of before are the "Genérico" brand (specs/0015 RF-6)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Genérico' }))
+  fireEvent.click(
+    within(dialog).getByRole('button', {
+      name: `Elegir: tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`,
+    })
+  )
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+}
+
 test('a new truck in miles is saved in kilometers and the list opens (CA-2)', async () => {
   useSessionStore.setState(state => ({
     organization: state.organization && {
@@ -180,9 +205,15 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
     'Tanque derecho'
   )
   // A new tank starts from a model (backend specs/0009 RF-9)
-  await choose('Modelo', '75 gal · 25 × 39 pulg.')
+  await pickModel(75, 25, 39)
+  // specs/0013 RF-9: the model's tank, drawn to scale
   expect(
-    screen.getByText('Cilíndrico, horizontal · 75 gal · 25 × 39 pulg.')
+    screen.getByRole('img', {
+      name: /^Cilindro acostado: 25 pulgadas de diámetro, 39 de largo; caben unos \d+ galones$/,
+    })
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText('Coincide con la capacidad (75 gal).')
   ).toBeInTheDocument()
 
   await choose('¿Cómo lo describes?', 'Con sus medidas')
@@ -194,16 +225,23 @@ test('a tank from a template, turned into a D tank, shows the volume and warns a
   type('Ancho', '30')
   type('Largo', '48')
 
+  // specs/0013 RF-8: the preview compares the measures with the capacity
   expect(
-    await screen.findByText('Según las medidas caben unos 137 galones.')
+    await screen.findByText('Caben unos 137 gal según las medidas.')
   ).toBeInTheDocument()
   expect(
     screen.getByText(
-      'Las medidas dan unos 137 galones. Revisa las medidas o la capacidad.'
+      'La capacidad dice 75 gal. Revisa las medidas o la capacidad.'
     )
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('img', { name: /^Tanque en "D" de lado plano acostado/ })
   ).toBeInTheDocument()
 
   type('Capacidad', '135')
+  expect(
+    screen.getByText('Coincide con la capacidad (135 gal).')
+  ).toBeInTheDocument()
   await choose('Pertenece a', 'Camión · Unidad 12')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
 
@@ -477,8 +515,18 @@ describe('simpler forms (backend specs/0009)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
     expect(api.createFleetItem).not.toHaveBeenCalled()
+    // specs/0014 CA-6: the focus goes to the button
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Elegir modelo' })
+      ).toHaveFocus()
+    })
 
-    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    await pickModel(75, 25, 39)
+    // specs/0014 CA-5: the chosen model, with "Cambiar"
+    expect(
+      screen.getByRole('button', { name: 'Cambiar modelo: 75 galones' })
+    ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     await waitFor(() => {
       expect(api.createFleetItem).toHaveBeenCalledWith(
@@ -530,7 +578,7 @@ describe('simpler forms (backend specs/0009)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
     expect(await screen.findByText('Elige un modelo')).toBeInTheDocument()
 
-    await choose('Modelo', '75 gal · 25 × 39 pulg.')
+    await pickModel(75, 25, 39)
     await waitFor(() => {
       expect(screen.queryByText('Elige un modelo')).toBeNull()
     })
@@ -559,4 +607,243 @@ test('no native select is left in the app', () => {
     .filter(([, source]) => /NativeSelect|<select[\s>]/.test(source))
     .map(([path]) => path)
   expect(native).toEqual([])
+})
+
+// specs/0013 CA-1, CA-2, CA-3: the measures share a row, each one explained
+test('each measure has its ⓘ and the guide shows how to measure', async () => {
+  renderAt('/flota/tanques/nuevo')
+  await choose('¿Cómo lo describes?', 'Con sus medidas')
+  await choose('Forma', 'En "D", lado plano contra el chasis')
+
+  // Alto, ancho y largo in one row
+  const row = screen.getByLabelText('Alto').closest('.MuiFormControl-root')
+    ?.parentElement as HTMLElement
+  expect(within(row).getByLabelText('Ancho')).toBeInTheDocument()
+  expect(within(row).getByLabelText('Largo')).toBeInTheDocument()
+
+  fireEvent.mouseOver(screen.getByRole('button', { name: '¿Qué es el ancho?' }))
+  expect(
+    await screen.findByRole('tooltip', {
+      name: /Del lado plano al punto más saliente de la curva/,
+    })
+  ).toBeInTheDocument()
+
+  fireEvent.click(
+    screen.getByRole('button', { name: '¿Cómo medir mi tanque?' })
+  )
+  const guide = await screen.findByRole('dialog', {
+    name: 'Cómo medir tu tanque',
+  })
+  expect(within(guide).getByText(/Usa una cinta métrica/)).toBeInTheDocument()
+  fireEvent.click(within(guide).getByRole('button', { name: 'Entendido' }))
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+})
+
+// specs/0014 CA-1, CA-2: the catalog dialog, grouped and filtered
+test('the model catalog is grouped by capacity and filters combine', async () => {
+  renderAt('/flota/tanques/nuevo')
+  fireEvent.click(await screen.findByRole('button', { name: 'Elegir modelo' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+
+  // The 15 "Genérico" and the 194 factory tanks (specs/0015)
+  expect(within(dialog).getByText('209 modelos')).toBeInTheDocument()
+
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Capacidad' })).getByRole(
+      'button',
+      { name: '100 gal' }
+    )
+  )
+  expect(
+    await within(dialog).findByRole('region', { name: '100 galones' })
+  ).toHaveTextContent('100 gal · 21 modelos')
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Diámetro' })).getByRole(
+      'button',
+      { name: '24 pulg.' }
+    )
+  )
+  expect(await within(dialog).findByText('3 modelos')).toBeInTheDocument()
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Limpiar' }))
+  expect(await within(dialog).findByText('209 modelos')).toBeInTheDocument()
+})
+
+// specs/0015 CA-2, CA-3, CA-5: a factory "D" tank of a Volvo, by brand and model
+test('a Volvo VNL (2024+) "D" tank is chosen by brand and model and saved as the model', async () => {
+  renderAt('/flota/tanques/nuevo')
+  type(
+    await screen
+      .findByLabelText('Nombre del tanque')
+      .then(() => 'Nombre del tanque'),
+    'Tanque Volvo'
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Elegir modelo' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Elige un modelo' })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Volvo' }))
+  fireEvent.click(
+    within(within(dialog).getByRole('group', { name: 'Modelo' })).getByRole(
+      'button',
+      { name: 'VNL (2024+)' }
+    )
+  )
+  expect(
+    within(dialog).getByText(/^Volvo VNL \(2024\+\) · \d+ tanques$/)
+  ).toBeInTheDocument()
+  // Its width was computed: the card says so
+  expect(
+    within(dialog).getAllByText('Medidas calculadas: confírmalas con una cinta')
+      .length
+  ).toBeGreaterThan(0)
+  fireEvent.click(
+    within(dialog).getByRole('button', {
+      name: /tanque de 100 galones, en D, 26 de alto/,
+    })
+  )
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  expect(
+    screen.getByRole('img', { name: /^Tanque en "D" de lado plano acostado/ })
+  ).toBeInTheDocument()
+  // specs/0015 RF-9: measured adjusted to its factory capacity
+  expect(
+    screen.getByText(
+      'Tanque de fábrica: al medir, lleno marca 100 gal, su capacidad.'
+    )
+  ).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+  await waitFor(() => {
+    expect(api.createFleetItem).toHaveBeenCalledWith(
+      'tanks',
+      'new-id',
+      ORG_ID,
+      expect.objectContaining({
+        shape: 'd_flat_side',
+        orientation: 'horizontal',
+        capacityGal: 100,
+        templateId: expect.stringMatching(/^vo-d26x/) as unknown,
+      })
+    )
+  })
+})
+
+describe('truck brand and model from the list (backend specs/0016)', () => {
+  const newTruck = async () => {
+    renderAt('/flota/camiones/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre o número de unidad')
+        .then(() => 'Nombre o número de unidad'),
+      'Unidad 30'
+    )
+  }
+  const save = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
+  }
+
+  // CA-1
+  test('a brand and a model of the list are saved by their names', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Freightliner')
+    await choose('Modelo (opcional)', 'Cascadia')
+    save()
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({ brand: 'Freightliner', model: 'Cascadia' })
+      )
+    })
+  })
+
+  test('"Otra marca…" asks for it, and the model is typed', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Otra marca…')
+    save()
+    expect(await screen.findByText('Escribe la marca')).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+
+    type('¿Qué marca?', 'Hino')
+    type('Modelo (opcional)', '500')
+    save()
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({ brand: 'Hino', model: '500' })
+      )
+    })
+  })
+
+  // CA-2
+  test('another brand clears a model that is not its own', async () => {
+    await newTruck()
+    await choose('Marca (opcional)', 'Freightliner')
+    await choose('Modelo (opcional)', 'Cascadia')
+    await choose('Marca (opcional)', 'Volvo')
+    expect(chosen('Modelo (opcional)')).toBe('Sin modelo')
+    await choose('Modelo (opcional)', 'VNL')
+    expect(chosen('Modelo (opcional)')).toBe('VNL')
+  })
+
+  // CA-3
+  test('typed names are recognized; others open as "Otra"', async () => {
+    api.readFleet.mockResolvedValue({
+      trucks: [
+        truck({ brand: 'freightliner', model: 'CASCADIA' }),
+        truck({
+          id: 'truck-2',
+          name: 'Unidad 40',
+          brand: 'Hino',
+          model: '500',
+        }),
+      ],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByLabelText('Nombre o número de unidad')
+    expect(chosen('Marca (opcional)')).toBe('Freightliner')
+    expect(chosen('Modelo (opcional)')).toBe('Cascadia')
+  })
+
+  test('a brand that is not in the list opens as "Otra marca…"', async () => {
+    api.readFleet.mockResolvedValue({
+      trucks: [truck({ brand: 'Hino', model: '500' })],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/camiones/truck-1')
+    await screen.findByLabelText('Nombre o número de unidad')
+    expect(chosen('Marca (opcional)')).toBe('Otra marca…')
+    expect(screen.getByLabelText('¿Qué marca?')).toHaveValue('Hino')
+    expect(screen.getByLabelText('Modelo (opcional)')).toHaveValue('500')
+  })
+
+  // CA-4: the fixture truck is a Freightliner Cascadia 2019
+  test("a truck's tank opens the catalog on that truck", async () => {
+    renderAt('/flota/tanques/nuevo')
+    await choose('Pertenece a', 'Camión · Unidad 12')
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir modelo' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Elige un modelo',
+    })
+    expect(
+      within(dialog).getByText(
+        /Filtrado por tu camión: Freightliner Cascadia \(2018\+\)/
+      )
+    ).toBeInTheDocument()
+    expect(chosen('Modelo', dialog)).toBe('Cascadia (2018+)')
+    expect(
+      within(dialog).getByText(
+        /^Freightliner Cascadia \(2018\+\) · \d+ tanques$/
+      )
+    ).toBeInTheDocument()
+  })
 })

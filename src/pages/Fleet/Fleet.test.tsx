@@ -212,3 +212,34 @@ test('trucks and trailers say when their insurance is due, not when archived', a
   fireEvent.click(screen.getByRole('tab', { name: 'Remolques' }))
   expect(await screen.findByText('Seguro vencido')).toBeInTheDocument()
 })
+
+// backend specs/0016 CA-5: trucks by brand and model, typed names recognized
+test('trucks filter by brand, then model', async () => {
+  api.readFleet.mockResolvedValue({
+    trucks: [
+      truck(),
+      truck({
+        id: 'truck-2',
+        name: 'Unidad 15',
+        brand: 'freightliner',
+        model: 'Columbia',
+      }),
+      truck({ id: 'truck-3', name: 'Unidad 16', brand: 'Volvo', model: 'VNL' }),
+    ],
+    trailers: [],
+    tanks: [],
+  })
+  renderAt('/flota/camiones')
+  await screen.findByText('Unidad 16')
+
+  const brands = screen.getByRole('group', { name: 'Marca' })
+  fireEvent.click(within(brands).getByRole('button', { name: 'Freightliner' }))
+  expect(screen.queryByText('Unidad 16')).toBeNull()
+  expect(screen.getByText('Unidad 12')).toBeInTheDocument()
+  expect(screen.getByText('Unidad 15')).toBeInTheDocument()
+
+  const models = screen.getByRole('group', { name: 'Modelo' })
+  fireEvent.click(within(models).getByRole('button', { name: 'Cascadia' }))
+  expect(screen.queryByText('Unidad 15')).toBeNull()
+  expect(screen.getByText('Unidad 12')).toBeInTheDocument()
+})

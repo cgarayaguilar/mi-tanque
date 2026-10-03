@@ -10,7 +10,10 @@ import MoreDetails, {
 import NumberField from 'components/NumberField'
 import AutocompleteField from 'components/AutocompleteField'
 import TextField from 'components/TextField'
+import { TRUCK_BRANDS, TRUCK_MODELS } from 'data/truckModels'
 import {
+  FLEET_LIMITS,
+  OTHER_CHOICE,
   truckFormSchema,
   truckFromForm,
   truckToForm,
@@ -37,6 +40,21 @@ interface Props {
 
 const FORM_ID = 'truck-form'
 
+const BRAND_OPTIONS = [
+  { value: '', label: 'Sin marca' },
+  ...TRUCK_BRANDS.map(brand => ({ value: brand, label: brand })),
+  { value: OTHER_CHOICE, label: 'Otra marca…' },
+]
+
+const modelOptions = (brand: string) => [
+  { value: '', label: 'Sin modelo' },
+  ...(TRUCK_MODELS[brand] ?? []).map(model => ({
+    value: model.name,
+    label: model.name,
+  })),
+  { value: OTHER_CHOICE, label: 'Otro modelo…' },
+]
+
 // Behind "Ver más detalles" (backend specs/0009 RF-7)
 const DETAILS = [
   'efficiency',
@@ -62,6 +80,7 @@ export default function TruckEditor({
     handleSubmit,
     control,
     setFocus,
+    setValue,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckFormSchema),
@@ -69,6 +88,10 @@ export default function TruckEditor({
     disabled: !canWrite,
   })
   const values = useWatch({ control })
+  const listedBrand =
+    values.brandChoice !== undefined &&
+    values.brandChoice !== '' &&
+    values.brandChoice !== OTHER_CHOICE
   // The same notice as the fleet card (backend specs/0011 RF-5)
   const notice = truck
     ? insuranceNotice(truck.insuranceExpiresOn, new Date(), truck.archived)
@@ -148,22 +171,64 @@ export default function TruckEditor({
             error={errors.plate?.message}
             registration={register('plate')}
           />
-          <Stack direction="row" spacing={3}>
+          {/* From the list, or "Otra…" and typed (specs/0016 RF-2, RF-3) */}
+          <AutocompleteField
+            id="brandChoice"
+            label="Marca (opcional)"
+            placeholder="Elige la marca"
+            options={BRAND_OPTIONS}
+            control={control}
+            name="brandChoice"
+            disabled={!canWrite}
+            onChange={brand => {
+              // A model belongs to one brand
+              const models = TRUCK_MODELS[brand] ?? []
+              if (!models.some(model => model.name === values.modelChoice))
+                setValue('modelChoice', '')
+            }}
+          />
+          {values.brandChoice === OTHER_CHOICE && (
             <TextField
               id="brand"
-              label="Marca (opcional)"
-              placeholder="Freightliner"
+              label="¿Qué marca?"
+              placeholder="Hino"
+              maxLength={FLEET_LIMITS.brandModel}
               error={errors.brand?.message}
               registration={register('brand')}
             />
+          )}
+          {listedBrand ? (
+            <>
+              <AutocompleteField
+                id="modelChoice"
+                label="Modelo (opcional)"
+                placeholder="Elige el modelo"
+                options={modelOptions(values.brandChoice ?? '')}
+                control={control}
+                name="modelChoice"
+                disabled={!canWrite}
+              />
+              {values.modelChoice === OTHER_CHOICE && (
+                <TextField
+                  id="model"
+                  label="¿Qué modelo?"
+                  placeholder="Cascadia"
+                  maxLength={FLEET_LIMITS.brandModel}
+                  error={errors.model?.message}
+                  registration={register('model')}
+                />
+              )}
+            </>
+          ) : (
             <TextField
               id="model"
               label="Modelo (opcional)"
               placeholder="Cascadia"
+              maxLength={FLEET_LIMITS.brandModel}
               error={errors.model?.message}
               registration={register('model')}
             />
-          </Stack>
+          )}
           <TextField
             id="year"
             label="Año (opcional)"

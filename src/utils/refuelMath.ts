@@ -63,13 +63,17 @@ export const fillPercent = (
   return full <= 0 ? null : round2(Math.min(100, (gallons / full) * 100))
 }
 
-/** A level typed in inches, shown live (backend specs/0012 RF-8, RF-10). */
-export const levelAt = (geometry: TankGeometry, inches: number) => {
-  const gallons = gallonsAt(geometry, inches)
+/**
+ * A level typed in inches, shown live (backend specs/0012 RF-8, RF-10).
+ * `scale` adjusts a factory tank to its capacity (specs/0015 RF-9).
+ */
+export const levelAt = (geometry: TankGeometry, inches: number, scale = 1) => {
+  const byShape = gallonsAt(geometry, inches)
+  const gallons = byShape * scale
   return {
     gallons: round2(gallons),
     liters: round2(gallons * LITERS_PER_GALLON),
-    percent: fillPercent(geometry, gallons),
+    percent: fillPercent(geometry, byShape),
   }
 }
 
@@ -91,24 +95,29 @@ export const refuelLevels = ({
   inchesBefore,
   inchesAfter,
   lastGallons,
+  scale = 1,
 }: {
   geometry: TankGeometry
   gallonsAdded: number
   inchesBefore: number | null
   inchesAfter: number | null
   lastGallons: number | null
+  /** A factory tank adjusted to its capacity (specs/0015 RF-9). */
+  scale?: number
 }): RefuelLevels => {
-  const full = fullVolumeGallons(geometry)
+  const full = fullVolumeGallons(geometry) * scale
   const before =
-    inchesBefore !== null ? gallonsAt(geometry, inchesBefore) : lastGallons
+    inchesBefore !== null
+      ? gallonsAt(geometry, inchesBefore) * scale
+      : lastGallons
   const after =
     inchesAfter !== null
-      ? gallonsAt(geometry, inchesAfter)
+      ? gallonsAt(geometry, inchesAfter) * scale
       : before === null
         ? null
         : Math.min(full, before + gallonsAdded)
   const percent = (gallons: number | null) =>
-    gallons === null ? null : fillPercent(geometry, gallons)
+    gallons === null ? null : fillPercent(geometry, gallons / scale)
   return {
     gallonsBefore: before === null ? null : round2(before),
     gallonsAfter: after === null ? null : round2(after),

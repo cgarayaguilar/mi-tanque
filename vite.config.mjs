@@ -12,6 +12,7 @@ const srcDir = fileURLToPath(new URL('./src', import.meta.url))
 const absoluteImportDirs = [
   'assets',
   'components',
+  'data',
   'hooks',
   'pages',
   'schemas',

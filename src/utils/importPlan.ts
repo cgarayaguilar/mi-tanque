@@ -2,7 +2,7 @@ import { FLEET_LIMITS } from 'schemas/fleet'
 import { CURRENCIES } from 'schemas/account'
 import type { LocalRefuel, Measurement, RefuelValues, Tank } from 'types'
 import { formatNumber } from 'utils/formatNumber'
-import { TANK_TEMPLATES } from 'utils/tankTemplates'
+import { TANK_TEMPLATES, templateById } from 'utils/tankTemplates'
 import { fullVolumeGallons, type TankGeometry } from 'utils/tankVolume'
 
 /**
@@ -189,12 +189,17 @@ export const planImport = (
       orientation: 'horizontal',
       dimensions: { diameterIn: tank.diameter, lengthIn: tank.length },
     }
-    const template = TANK_TEMPLATES.find(
-      item =>
-        item.capacityGal === tank.capacity &&
-        item.diameterIn === tank.diameter &&
-        item.lengthIn === tank.length
-    )
+    // Chosen from the catalog (specs/0015 RF-11), or the same as a template
+    const template =
+      templateById(tank.catalogId) ??
+      TANK_TEMPLATES.find(
+        item =>
+          item.shape === 'cylinder' &&
+          item.capacityGal === tank.capacity &&
+          'diameterIn' in item.dimensions &&
+          item.dimensions.diameterIn === tank.diameter &&
+          item.dimensions.lengthIn === tank.length
+      )
     const cloudTank = {
       id: ids.tank(tank),
       // At most 2 decimals: the rules hold the name to 40 characters

@@ -1,9 +1,13 @@
 import { useState } from 'react'
-import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type FieldErrors,
+} from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons, { ChoiceButtonsBase } from 'components/ChoiceButtons'
 import MoreDetails, {
@@ -12,30 +16,28 @@ import MoreDetails, {
 } from 'components/MoreDetails'
 import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
-import TankShapeIcon from 'components/TankShapeIcon'
+import MeasureGuide from 'components/MeasureGuide'
+import MeasureHelp from 'components/MeasureHelp'
+import ModelPicker from 'components/ModelPicker'
+import TankPreview from 'components/TankPreview'
 import TextField from 'components/TextField'
 import {
   TANK_ORIENTATION_LABELS,
   TANK_SHAPE_LABELS,
   tankFormSchema,
   tankFromForm,
-  tankGeometryFromForm,
   tankToForm,
   type FleetTank,
   type TankFormValues,
 } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
-import { radius } from 'theme/tokens'
 import type { FleetSection } from 'utils/fleetSections'
 import { formatNumber } from 'utils/formatNumber'
+import { measureHelp, type MeasureName } from 'utils/measureHelp'
 import { parseDecimal } from 'utils/parseDecimal'
-import { TANK_TEMPLATES } from 'utils/tankTemplates'
-import {
-  fullVolumeGallons,
-  TANK_ORIENTATIONS,
-  TANK_SHAPES,
-  type TankGeometry,
-} from 'utils/tankVolume'
+import { catalogFilterFor } from 'data/truckModels'
+import { templateById } from 'utils/tankTemplates'
+import { TANK_ORIENTATIONS, TANK_SHAPES } from 'utils/tankVolume'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
 
@@ -49,41 +51,31 @@ interface Props {
 
 const FORM_ID = 'tank-form'
 
-const summaryBox = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  p: 4,
-  bgcolor: 'background.paper',
-  border: 1,
-  borderColor: 'divider',
-  borderRadius: `${String(radius.lg)}px`,
-} as const
-
-// A capacity this far from the geometry suggests a measuring mistake (RF-10)
-const CAPACITY_TOLERANCE = 0.15
-
-/** The geometry if every measurement the shape needs is a positive number. */
-const geometryOf = (values: TankFormValues): TankGeometry | null => {
-  const geometry = tankGeometryFromForm(values)
-  const numbers = Object.values(geometry.dimensions)
-  return numbers.every(value => Number.isFinite(value) && value > 0)
-    ? geometry
-    : null
+/** A typed measure for the preview: null unless a positive number. */
+const positive = (value: string | undefined) => {
+  const number = parseDecimal(value ?? '')
+  return Number.isFinite(number) && number > 0 ? number : null
 }
 
 type Describe = 'template' | 'measures'
 
 /** The model these values still are, if any. */
 const templateOf = (values: TankFormValues) => {
-  const template = TANK_TEMPLATES.find(item => item.id === values.templateId)
-  return template !== undefined &&
-    values.shape === 'cylinder' &&
+  const template = templateById(values.templateId)
+  if (template === undefined) return null
+  const same = (typed: string, value: number) => parseDecimal(typed) === value
+  const { dimensions } = template
+  const measures =
+    'diameterIn' in dimensions
+      ? same(values.diameter, dimensions.diameterIn)
+      : same(values.height, dimensions.heightIn) &&
+        same(values.width, dimensions.widthIn)
+  return values.shape === template.shape &&
     values.orientation === 'horizontal' &&
-    parseDecimal(values.diameter) === template.diameterIn &&
-    parseDecimal(values.length) === template.lengthIn &&
+    measures &&
+    same(values.length, dimensions.lengthIn) &&
     // A capacity edited by hand is no longer the model (audit 2026-10-02)
-    parseDecimal(values.capacity) === template.capacityGal
+    same(values.capacity, template.capacityGal)
     ? template
     : null
 }
@@ -128,23 +120,30 @@ export default function TankEditor({
   const [describe, setDescribe] = useState<Describe>(() =>
     tank === null || templateOf(tankToForm(tank)) ? 'template' : 'measures'
   )
-  const template = TANK_TEMPLATES.find(item => item.id === values.templateId)
+  const template = templateById(values.templateId)
   const details = useMoreDetails<TankFormValues>(['description'], setFocus)
-  const geometry = geometryOf(values)
-  const volume = geometry ? fullVolumeGallons(geometry) : null
-  const capacity = parseDecimal(values.capacity)
-  const capacityLooksOff =
-    volume !== null &&
-    Number.isFinite(capacity) &&
-    Math.abs(capacity - volume) / volume > CAPACITY_TOLERANCE
+  const cylinder = values.shape === 'cylinder'
+  const vertical = values.orientation === 'vertical'
+  const helpFor = (measure: MeasureName, name: string) => (
+    <MeasureHelp
+      label={name}
+      text={measureHelp(measure, values.shape, values.orientation)}
+    />
+  )
 
   const applyTemplate = (templateId: string) => {
-    const template = TANK_TEMPLATES.find(item => item.id === templateId)
+    const template = templateById(templateId)
     if (!template) return
-    setValue('shape', 'cylinder')
+    const { dimensions } = template
+    setValue('shape', template.shape)
     setValue('orientation', 'horizontal')
-    setValue('diameter', formatNumber(template.diameterIn))
-    setValue('length', formatNumber(template.lengthIn))
+    if ('diameterIn' in dimensions) {
+      setValue('diameter', formatNumber(dimensions.diameterIn))
+    } else {
+      setValue('height', formatNumber(dimensions.heightIn))
+      setValue('width', formatNumber(dimensions.widthIn))
+    }
+    setValue('length', formatNumber(dimensions.lengthIn))
     setValue('capacity', formatNumber(template.capacityGal))
   }
 
@@ -200,6 +199,14 @@ export default function TankEditor({
       tank === null
     )
   }
+
+  // The catalog opens on the tank's truck (specs/0016 RF-6, RF-7)
+  const ownerTruck = values.equipment.startsWith('truck:')
+    ? trucks.find(truck => `truck:${truck.id}` === values.equipment)
+    : undefined
+  const truckFilter = ownerTruck
+    ? catalogFilterFor(ownerTruck.brand, ownerTruck.model, ownerTruck.year)
+    : null
 
   const isCurrent = (kind: string, itemId: string) =>
     tank?.equipment.kind === kind && tank.equipment.id === itemId
@@ -273,28 +280,39 @@ export default function TankEditor({
 
           {describe === 'template' ? (
             <>
-              <AutocompleteField
-                id="templateId"
-                label="Modelo"
-                placeholder="Busca por galones o medidas"
-                options={TANK_TEMPLATES.map(item => ({
-                  value: item.id,
-                  label: item.label,
-                }))}
-                hint="Un tanque común: llena forma, medidas y capacidad."
-                error={errors.templateId?.message}
+              <Controller
                 control={control}
                 name="templateId"
-                disabled={!canWrite}
-                onChange={applyTemplate}
+                render={({ field }) => (
+                  <ModelPicker
+                    id="templateId"
+                    value={field.value}
+                    hint="Por la marca y el modelo de tu camión: llena forma, medidas y capacidad."
+                    error={errors.templateId?.message}
+                    disabled={!canWrite}
+                    buttonRef={field.ref}
+                    truckFilter={truckFilter}
+                    onChange={templateId => {
+                      field.onChange(templateId)
+                      applyTemplate(templateId)
+                    }}
+                  />
+                )}
               />
               {template && (
-                <Box sx={summaryBox}>
-                  <TankShapeIcon shape="cylinder" size={56} />
-                  <Typography variant="body2" role="status">
-                    {`Cilíndrico, horizontal · ${template.label}`}
-                  </Typography>
-                </Box>
+                <TankPreview
+                  shape={template.shape}
+                  orientation="horizontal"
+                  {...('diameterIn' in template.dimensions
+                    ? { diameter: template.dimensions.diameterIn }
+                    : {
+                        height: template.dimensions.heightIn,
+                        width: template.dimensions.widthIn,
+                      })}
+                  length={template.dimensions.lengthIn}
+                  capacity={template.capacityGal}
+                  adjusted={template.sourced}
+                />
               )}
             </>
           ) : (
@@ -322,84 +340,82 @@ export default function TankEditor({
                 disabled={!canWrite}
               />
 
-              <Box sx={summaryBox}>
-                <TankShapeIcon shape={values.shape} size={56} />
-                <Typography variant="body2" role="status">
-                  {volume === null
-                    ? 'Escribe las medidas para calcular cuánto cabe.'
-                    : `Según las medidas caben unos ${formatNumber(Math.round(volume))} galones.`}
-                </Typography>
-              </Box>
-
-              {values.shape === 'cylinder' ? (
-                <NumberField
-                  id="diameter"
-                  label="Diámetro"
-                  unit="pulg."
-                  placeholder="Ej. 25"
-                  hint="De lado a lado, por fuera."
-                  error={errors.diameter?.message}
-                  registration={register('diameter')}
-                />
-              ) : (
-                <>
-                  <NumberField
-                    id="height"
-                    label="Alto"
-                    unit="pulg."
-                    placeholder="Ej. 24"
-                    hint={
-                      values.shape === 'd_flat_side'
-                        ? 'Del fondo al techo, en el lado plano.'
-                        : 'Del fondo al punto más alto.'
-                    }
-                    error={errors.height?.message}
-                    registration={register('height')}
-                  />
-                  <NumberField
-                    id="width"
-                    label="Ancho"
-                    unit="pulg."
-                    placeholder="Ej. 30"
-                    hint={
-                      values.shape === 'd_flat_side'
-                        ? 'Del lado plano al punto más saliente de la curva.'
-                        : 'De lado a lado.'
-                    }
-                    error={errors.width?.message}
-                    registration={register('width')}
-                  />
-                </>
-              )}
-              <NumberField
-                id="length"
-                label={
-                  values.orientation === 'vertical'
-                    ? 'Altura del tanque'
-                    : 'Largo'
-                }
-                unit="pulg."
-                placeholder="Ej. 48"
-                hint={
-                  values.orientation === 'vertical'
-                    ? 'De pie: de la base a la tapa.'
-                    : 'De punta a punta.'
-                }
-                error={errors.length?.message}
-                registration={register('length')}
-              />
               <NumberField
                 id="capacity"
                 label="Capacidad"
                 unit="gal"
                 placeholder="Ej. 120"
-                hint={
-                  capacityLooksOff
-                    ? `Las medidas dan unos ${formatNumber(Math.round(volume))} galones. Revisa las medidas o la capacidad.`
-                    : 'La que indica el fabricante o la placa del tanque.'
-                }
+                hint="La que indica la placa del tanque."
+                help={helpFor('capacity', 'la capacidad')}
                 error={errors.capacity?.message}
                 registration={register('capacity')}
+              />
+              <MeasureGuide
+                shape={values.shape}
+                orientation={values.orientation}
+              />
+              {/* All the measures on one row, on a phone too (specs/0013 RF-2) */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${String(cylinder ? 2 : 3)}, minmax(0, 1fr))`,
+                  gap: 2,
+                }}
+              >
+                {cylinder ? (
+                  <NumberField
+                    id="diameter"
+                    dense
+                    label="Diámetro"
+                    unit="pulg."
+                    placeholder="25"
+                    help={helpFor('diameter', 'el diámetro')}
+                    error={errors.diameter?.message}
+                    registration={register('diameter')}
+                  />
+                ) : (
+                  <>
+                    <NumberField
+                      id="height"
+                      dense
+                      label="Alto"
+                      unit="pulg."
+                      placeholder="24"
+                      help={helpFor('height', 'el alto')}
+                      error={errors.height?.message}
+                      registration={register('height')}
+                    />
+                    <NumberField
+                      id="width"
+                      dense
+                      label="Ancho"
+                      unit="pulg."
+                      placeholder="30"
+                      help={helpFor('width', 'el ancho')}
+                      error={errors.width?.message}
+                      registration={register('width')}
+                    />
+                  </>
+                )}
+                <NumberField
+                  id="length"
+                  dense
+                  label={vertical ? 'Altura' : 'Largo'}
+                  unit="pulg."
+                  placeholder="48"
+                  help={helpFor('length', vertical ? 'la altura' : 'el largo')}
+                  error={errors.length?.message}
+                  registration={register('length')}
+                />
+              </Box>
+              <TankPreview
+                shape={values.shape}
+                orientation={values.orientation}
+                diameter={positive(values.diameter)}
+                height={positive(values.height)}
+                width={positive(values.width)}
+                length={positive(values.length)}
+                capacity={positive(values.capacity)}
               />
             </>
           )}

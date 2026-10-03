@@ -17,6 +17,7 @@ import {
 import { readTanks } from 'services/tanks'
 import { radius } from 'theme/tokens'
 import type { Period, Tank } from 'types'
+import { localGeometry, localScale } from 'utils/fuelReading'
 import { reportError } from 'utils/reportError'
 
 const tankName = (tank: Tank | undefined) =>
@@ -96,14 +97,8 @@ export default function BasicRefuelHistory({
           const tank = tanks.get(localOf(item)?.tankId ?? -1)
           return tank
             ? {
-                geometry: {
-                  shape: 'cylinder',
-                  orientation: 'horizontal',
-                  dimensions: {
-                    diameterIn: tank.diameter,
-                    lengthIn: tank.length,
-                  },
-                },
+                geometry: localGeometry(tank),
+                scale: localScale(tank),
                 maxInches: tank.diameter,
                 capacityGal: tank.capacity,
                 odometer: null,

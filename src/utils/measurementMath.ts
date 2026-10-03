@@ -5,6 +5,7 @@ import {
   type Truck,
 } from 'schemas/fleet'
 import { convertGallonsToLiters } from 'utils/converts'
+import { capacityScale } from 'utils/tankTemplates'
 import {
   fullVolumeGallons,
   gallonsAt,
@@ -37,6 +38,17 @@ export const geometryOf = (tank: FleetTank): TankGeometry =>
         dimensions: tank.dimensions,
       }
 
+/**
+ * Gallons by shape times this give a factory tank its capacity when full
+ * (backend specs/0015 RF-9); 1 for any other tank.
+ */
+export const capacityScaleOf = (tank: FleetTank) =>
+  capacityScale(
+    tank.templateId,
+    tank.capacityGal,
+    fullVolumeGallons(geometryOf(tank))
+  )
+
 /** The tallest fuel height the form accepts for this tank (RF-2). */
 export const maxInchesFor = (tank: FleetTank) => maxFuelHeight(geometryOf(tank))
 
@@ -65,14 +77,15 @@ export const readingFor = (
   kmPerGal: number | null
 ): CloudReading => {
   const geometry = geometryOf(tank)
-  const gallons = gallonsAt(geometry, inches)
+  const byShape = gallonsAt(geometry, inches)
   const full = fullVolumeGallons(geometry)
+  const gallons = byShape * capacityScaleOf(tank)
   const km = kmPerGal === null ? null : gallons * kmPerGal
   return {
     inches,
     gallons: round2(gallons),
     liters: round2(convertGallonsToLiters({ gallons })),
-    fillPercent: round2(Math.min(100, full > 0 ? (gallons / full) * 100 : 0)),
+    fillPercent: round2(Math.min(100, full > 0 ? (byShape / full) * 100 : 0)),
     estimate:
       km === null || kmPerGal === null
         ? null

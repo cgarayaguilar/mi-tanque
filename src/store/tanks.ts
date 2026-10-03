@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import { createTank, readTanks, seedPredefinedTanks } from 'services/tanks'
+import {
+  createTank,
+  readTanks,
+  saveCatalogTank,
+  seedPredefinedTanks,
+} from 'services/tanks'
 import type { Tank, TankDimensions } from 'types'
 import { reportError } from 'utils/reportError'
 
@@ -12,6 +17,11 @@ interface TanksState {
   load: () => Promise<void>
   /** Saves a tank and adds it to the list. Rejects like `createTank`. */
   addTank: (dimensions: TankDimensions) => Promise<Tank>
+  /** A catalog cylinder as one of this phone's tanks (specs/0015 RF-11). */
+  addCatalogTank: (
+    catalogId: string,
+    dimensions: TankDimensions
+  ) => Promise<Tank>
 }
 
 const bySize = (a: Tank, b: Tank) =>
@@ -45,6 +55,16 @@ export const useTanksStore = create<TanksState>()((set, get) => ({
   addTank: async dimensions => {
     const tank = await createTank(dimensions)
     set(state => ({ tanks: [...state.tanks, tank].sort(bySize) }))
+    return tank
+  },
+
+  addCatalogTank: async (catalogId, dimensions) => {
+    const tank = await saveCatalogTank(catalogId, dimensions)
+    set(state => ({
+      tanks: [...state.tanks.filter(item => item.id !== tank.id), tank].sort(
+        bySize
+      ),
+    }))
     return tank
   },
 }))

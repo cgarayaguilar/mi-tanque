@@ -10,6 +10,7 @@ const toTank = (stored: StoredTank): Tank => {
     capacity: Number(stored.capacity),
     diameter: Number(stored.diameter),
     length: Number(stored.length),
+    ...(stored.catalogId === undefined ? {} : { catalogId: stored.catalogId }),
   }
 }
 
@@ -45,6 +46,30 @@ export const createTank = async (dimensions: TankDimensions): Promise<Tank> => {
 
     const id = await db.tanks.add(valid)
     return { id, ...valid }
+  })
+}
+
+/**
+ * A cylinder of the truck catalog as this phone's tank (specs/0015 RF-11):
+ * the one already saved for it, a saved tank with its very dimensions (now
+ * marked as the catalog's), or a new one. One read-write transaction.
+ */
+export const saveCatalogTank = async (
+  catalogId: string,
+  dimensions: TankDimensions
+): Promise<Tank> => {
+  const valid = tankDimensionsSchema.parse(dimensions)
+  return db.transaction('rw', db.tanks, async () => {
+    const stored = (await db.tanks.toArray()).map(toTank)
+    const saved = stored.find(tank => tank.catalogId === catalogId)
+    if (saved) return saved
+    const same = stored.find(tank => sameDimensions(tank, valid))
+    if (same) {
+      await db.tanks.update(same.id, { catalogId })
+      return { ...same, catalogId }
+    }
+    const id = await db.tanks.add({ ...valid, catalogId })
+    return { id, ...valid, catalogId }
   })
 }
 

@@ -4,6 +4,7 @@ import {
   type TankGeometry,
 } from 'utils/tankVolume'
 import {
+  levelAt,
   refuelAmounts,
   refuelLevels,
   refuelSummary,
@@ -230,4 +231,27 @@ test('the summary adds fuel overall and money per currency, never converted (RF-
       },
     ],
   })
+})
+
+// specs/0015 RF-9: refuel levels of a catalog tank use the same adjustment
+test('levels of a catalog tank are scaled; its % is not', () => {
+  const geometry = {
+    shape: 'cylinder' as const,
+    orientation: 'horizontal' as const,
+    dimensions: { diameterIn: 24.5, lengthIn: 50 },
+  }
+  const plain = levelAt(geometry, 12)
+  const scaled = levelAt(geometry, 12, 0.98)
+  expect(scaled.gallons).toBeCloseTo(plain.gallons * 0.98, 1)
+  expect(scaled.percent).toBe(plain.percent)
+  const levels = refuelLevels({
+    geometry,
+    gallonsAdded: 500,
+    inchesBefore: null,
+    inchesAfter: null,
+    lastGallons: 10,
+    scale: 0.98,
+  })
+  // Capped at the adjusted full tank
+  expect(levels.gallonsAfter).toBeCloseTo(fullVolumeGallons(geometry) * 0.98, 1)
 })

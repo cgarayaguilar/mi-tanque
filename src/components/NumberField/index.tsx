@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import TextField from 'components/TextField'
 
@@ -10,9 +11,13 @@ interface NumberFieldProps {
   prefix?: string | undefined
   placeholder: string
   /** Shown under the field until there is an error. */
-  hint: string
+  hint?: string
   error?: string | undefined
   registration: UseFormRegisterReturn
+  /** Next to the label, e.g. the ⓘ of a measure (specs/0013 RF-4). */
+  help?: ReactNode
+  /** Less inner padding, for a row of measures. */
+  dense?: boolean
 }
 
 /**

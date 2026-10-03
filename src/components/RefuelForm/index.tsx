@@ -42,6 +42,8 @@ export interface RefuelResult {
 
 interface RefuelFormProps {
   geometry: TankGeometry
+  /** A factory tank's gallons adjusted to its capacity (specs/0015 RF-9). */
+  scale?: number
   maxInches: number
   capacityGal: number
   /** The organization's currency; '' without an account (RF-2). */
@@ -100,6 +102,7 @@ const EMPTY: RefuelFormValues = {
  */
 export default function RefuelForm({
   geometry,
+  scale = 1,
   maxInches,
   capacityGal,
   defaultCurrency,
@@ -159,7 +162,7 @@ export default function RefuelForm({
   const levelOf = (typed: string | undefined) => {
     const inches = parseDecimal(typed ?? '')
     return Number.isFinite(inches) && inches >= 0 && inches <= maxInches
-      ? levelAt(geometry, inches)
+      ? levelAt(geometry, inches, scale)
       : null
   }
   const levelBefore = levelOf(watched.inchesBefore)
@@ -196,6 +199,7 @@ export default function RefuelForm({
       inchesBefore: optionalNumber(form.inchesBefore),
       inchesAfter: optionalNumber(form.inchesAfter),
       lastGallons,
+      scale,
     })
     const odometerValue = odometer ? optionalNumber(form.odometer) : null
     onSave({
