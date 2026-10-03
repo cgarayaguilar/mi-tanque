@@ -126,7 +126,7 @@ en cada push y PR.
   La usan el tanque de la flota y "Agrega tu tanque" (sin cuenta).
 - **Catálogo de tanques (specs/0014, 0015):** `components/TankCatalog` (lógica pura en
   `utils/tankCatalog`) lo usan `ModelPicker` ("De un modelo", en un diálogo) y "Elige tu tanque"
-  sin cuenta (solo cilíndricos hasta specs/0017). Las plantillas (`utils/tankTemplates`) son los 15
+  sin cuenta (solo cilíndricos hasta specs/0018). Las plantillas (`utils/tankTemplates`) son los 15
   "Genérico" y los tanques de fábrica de `src/data/truckTanks.json`, que **no se edita a mano**:
   se regenera con `npm run build:tanks` desde `data/tank-research/` (un test exige que coincidan).
   Un tanque de fábrica con fuente se mide ajustado a su capacidad (`capacityScale`; sin cuenta,
@@ -137,7 +137,11 @@ en cada push y PR.
   "Otra marca…"/"Otro modelo…" (`OTHER_CHOICE`) y un campo de texto. Se guarda el texto, como
   antes: lo escrito a mano se reconoce con `matchBrand`/`matchModel` al abrir el camión y en los
   chips de Flota. `catalogFilterFor` da el filtro inicial de `TankCatalog` para el tanque de un
-  camión. `ChipRow` es la fila de chips de los dos.
+  camión.
+- **Filtros (specs/0017):** una fila de chips (`FilterBar`), uno por filtro: `FilterChip` abre un
+  menú con "Todas" y las opciones (buscador con más de 10) y, elegido, muestra el valor con una ×;
+  `FilterToggle` es un filtro sí/no ("Archivados"). Los usan `TankCatalog` y Flota. En los tests,
+  `filterBy(filtro, opción)` y `filterChip(filtro)` de `src/testing/filterBy`.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
