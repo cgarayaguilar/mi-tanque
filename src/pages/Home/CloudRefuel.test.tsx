@@ -11,7 +11,6 @@ import {
   trailer,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -68,9 +67,19 @@ const type = (label: string, value: string) => {
 const openRefuel = async () => {
   window.history.pushState({}, '', '/')
   render(<App />)
-  await choose('Tanque', 'Tanque izquierdo')
+  await pickTank('Tanque izquierdo')
   fireEvent.click(screen.getByRole('button', { name: 'Rellenar' }))
   return screen.findByRole('form', { name: 'Nuevo relleno' })
+}
+
+/** Picks a tank of the chosen equipment from its card's menu. */
+const pickTank = async (name: string) => {
+  fireEvent.click(
+    await screen.findByRole('button', { name: /^(Cambiar|Elegir) tanque/ })
+  )
+  fireEvent.click(
+    await screen.findByRole('menuitem', { name: new RegExp(`^${name}`) })
+  )
 }
 
 beforeEach(() => {

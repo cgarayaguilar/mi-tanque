@@ -96,6 +96,16 @@ const measure = (inches: string) => {
   fireEvent.click(screen.getByRole('button', { name: 'Calcular' }))
 }
 
+/** Picks a tank of the chosen equipment from its card's menu. */
+const pickTank = async (name: string) => {
+  fireEvent.click(
+    await screen.findByRole('button', { name: /^(Cambiar|Elegir) tanque/ })
+  )
+  fireEvent.click(
+    await screen.findByRole('menuitem', { name: new RegExp(`^${name}`) })
+  )
+}
+
 beforeEach(() => {
   window.localStorage.clear()
   useFleetStore.getState().reset()
@@ -121,23 +131,26 @@ test('a truck with two tanks asks for the truck, then the tank (CA-1)', async ()
     (await screen.findAllByRole('option')).map(option => option.textContent)
   ).toEqual(['Camión · Unidad 12', 'Remolque · Caja 7', 'Tanques individuales'])
   fireEvent.keyDown(screen.getByLabelText('Equipo'), { key: 'Escape' })
-  expect(screen.getByLabelText('Tanque')).toHaveValue('')
+  // One card asks for the tank: no select plus summary (owner, 2026-10-02)
+  expect(screen.getByText('Elige el tanque')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Tanque')).toBeNull()
   expect(screen.queryByLabelText('Pulgadas de combustible')).toBeNull()
 
-  await choose('Tanque', 'Tanque izquierdo')
+  await pickTank('Tanque izquierdo')
   expect(screen.getByLabelText('Pulgadas de combustible')).toBeInTheDocument()
 })
 
 test('a trailer with a single tank picks it by itself (CA-1)', async () => {
   renderHome()
   await choose('Equipo', 'Remolque · Caja 7')
-  expect(screen.queryByLabelText('Tanque')).toBeNull()
   expect(screen.getByText('Tanque del termo')).toBeInTheDocument()
+  // A single tank: nothing to change
+  expect(screen.queryByRole('button', { name: /^Cambiar tanque/ })).toBeNull()
 })
 
 test('the inches field rejects more than the tank height (CA-1)', async () => {
   renderHome()
-  await choose('Tanque', 'Tanque izquierdo')
+  await pickTank('Tanque izquierdo')
   measure('25')
   expect(
     await screen.findByText('Este tanque permite hasta 24 pulgadas.')
@@ -148,7 +161,7 @@ test('the inches field rejects more than the tank height (CA-1)', async () => {
 test('a "D" tank at 12 inches shows its gallons and the truck range, and saves at once (CA-2, CA-3)', async () => {
   mockGeolocation({ latitude: 12.13, longitude: -86.25, accuracy: 9.6 })
   renderHome()
-  await choose('Tanque', 'Tanque izquierdo')
+  await pickTank('Tanque izquierdo')
   // Not asked when measuring: it took room and was rarely typed
   expect(screen.queryByLabelText('Odómetro (opcional)')).toBeNull()
   measure('12')
@@ -254,12 +267,16 @@ test('an individual tank has no estimate', async () => {
 
 test('the last tank measured is chosen next time', async () => {
   const { unmount } = render(<App />)
-  await choose('Tanque', 'Tanque derecho')
+  await pickTank('Tanque derecho')
   measure('10')
   unmount()
 
   renderHome()
-  expect(await screen.findByLabelText('Tanque')).toHaveValue('Tanque derecho')
+  expect(
+    await screen.findByRole('button', {
+      name: 'Cambiar tanque: Tanque derecho',
+    })
+  ).toBeInTheDocument()
 })
 
 test('a rejected save is reported', async () => {

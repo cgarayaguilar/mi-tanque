@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -127,6 +131,108 @@ function CloudResults({
               ? `Agrega el rendimiento de ${truck.name} para estimar la distancia.`
               : 'Este tanque no es de un camión: no hay estimación de distancia.'}
         </Typography>
+      )}
+    </Box>
+  )
+}
+
+/**
+ * The tank to measure, with its shape and measures, and "Cambiar" to pick
+ * another of the same equipment: one control instead of a select plus a
+ * summary (owner, 2026-10-02). Without a choice yet, it asks for one.
+ */
+function TankCard({
+  tank,
+  tanks,
+  onChoose,
+}: {
+  tank: FleetTank | null
+  tanks: readonly FleetTank[]
+  onChoose: (id: string) => void
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+  const canChange = tanks.length > 1
+
+  return (
+    <Box
+      ref={cardRef}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        mt: 4,
+        px: 3,
+        py: 3,
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: `${String(radius.lg)}px`,
+      }}
+    >
+      {tank && <TankShapeIcon shape={tank.shape} size={28} />}
+      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+        <Typography variant="subtitle1" component="p" noWrap>
+          {tank ? tank.name : 'Elige el tanque'}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {tank
+            ? `${tankMeasures(tank)} · ${formatNumber(tank.capacityGal)} gal`
+            : `${String(tanks.length)} tanques en este equipo`}
+        </Typography>
+      </Box>
+      {canChange && (
+        <>
+          <Button
+            variant="outlined"
+            size="small"
+            aria-haspopup="menu"
+            aria-expanded={anchor !== null}
+            aria-controls={anchor ? menuId : undefined}
+            aria-label={tank ? `Cambiar tanque: ${tank.name}` : 'Elegir tanque'}
+            onClick={() => {
+              setAnchor(cardRef.current)
+            }}
+            sx={{ flexShrink: 0 }}
+          >
+            {tank ? 'Cambiar' : 'Elegir'}
+          </Button>
+          <Menu
+            id={menuId}
+            anchorEl={anchor}
+            open={anchor !== null}
+            onClose={() => {
+              setAnchor(null)
+            }}
+            // As wide as the card, under it; long names end in "…"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            slotProps={{ paper: { sx: { width: anchor?.clientWidth } } }}
+          >
+            {tanks.map(item => (
+              <MenuItem
+                key={item.id}
+                selected={item.id === tank?.id}
+                onClick={() => {
+                  setAnchor(null)
+                  onChoose(item.id)
+                }}
+              >
+                <ListItemIcon>
+                  <TankShapeIcon shape={item.shape} size={28} />
+                </ListItemIcon>
+                <ListItemText
+                  slotProps={{
+                    primary: { noWrap: true },
+                    secondary: { noWrap: true },
+                  }}
+                  primary={item.name}
+                  secondary={`${tankMeasures(item)} · ${formatNumber(item.capacityGal)} gal`}
+                />
+              </MenuItem>
+            ))}
+          </Menu>
+        </>
       )}
     </Box>
   )
@@ -342,47 +448,17 @@ export default function CloudMeasurement() {
             setChosenTank(null)
           }}
         />
-        {tanksOfEquipment.length > 1 && (
-          <AutocompleteBase
-            id="measureTank"
-            label="Tanque"
-            placeholder="Elige el tanque"
-            options={tanksOfEquipment.map(item => ({
-              value: item.id,
-              label: item.name,
-            }))}
-            value={tank?.id ?? ''}
-            onChange={setChosenTank}
-          />
-        )}
       </Stack>
 
+      {tanksOfEquipment.length > 0 && (
+        <TankCard
+          tank={tank}
+          tanks={tanksOfEquipment}
+          onChoose={setChosenTank}
+        />
+      )}
       {tank && (
         <>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-              mt: 4,
-              px: 4,
-              py: 3,
-              bgcolor: 'background.paper',
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: `${String(radius.lg)}px`,
-            }}
-          >
-            <TankShapeIcon shape={tank.shape} size={36} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle1" component="p" noWrap>
-                {tank.name}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {tankMeasures(tank)} · {formatNumber(tank.capacityGal)} gal
-              </Typography>
-            </Box>
-          </Box>
           {mode === 'measure' ? (
             // A different tank is a new form: fresh values and limits
             <MeasureForm
