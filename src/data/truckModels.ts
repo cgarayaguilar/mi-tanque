@@ -2,6 +2,8 @@
 // each one leads to by year (backend specs/0016 RF-1). A test checks that
 // every model of the catalog is reachable from here, and nothing else.
 
+import { foldText } from 'utils/foldText'
+
 export interface TruckModel {
   name: string
   /** The catalog's "Model (generation)" this truck uses, by year. */
@@ -139,12 +141,7 @@ export const TRUCK_BRANDS = Object.keys(TRUCK_MODELS).sort((a, b) =>
 )
 
 /** "freightliner", "FREIGHTLINER " and "Fréightliner" are the same. */
-const normalize = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
+const normalize = (text: string) => foldText(text).replace(/[^a-z0-9]/g, '')
 
 /** The list's brand a typed one means, if any (RF-5). */
 export const matchBrand = (typed: string | null | undefined) => {
