@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react'
 import { addDays } from 'date-fns'
 import App from '../../App'
+import { filterBy } from '../../testing/filterBy'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { toPlainDate } from 'utils/plainDate'
@@ -232,14 +233,48 @@ test('trucks filter by brand, then model', async () => {
   renderAt('/flota/camiones')
   await screen.findByText('Unidad 16')
 
-  const brands = screen.getByRole('group', { name: 'Marca' })
-  fireEvent.click(within(brands).getByRole('button', { name: 'Freightliner' }))
-  expect(screen.queryByText('Unidad 16')).toBeNull()
+  // One row of chips: no model until a brand is chosen (specs/0017 CA-4)
+  expect(screen.queryByRole('button', { name: /^Modelo/ })).toBeNull()
+  await filterBy('Marca', 'Freightliner')
+  await waitFor(() => {
+    expect(screen.queryByText('Unidad 16')).toBeNull()
+  })
   expect(screen.getByText('Unidad 12')).toBeInTheDocument()
   expect(screen.getByText('Unidad 15')).toBeInTheDocument()
 
-  const models = screen.getByRole('group', { name: 'Modelo' })
-  fireEvent.click(within(models).getByRole('button', { name: 'Cascadia' }))
-  expect(screen.queryByText('Unidad 15')).toBeNull()
+  await filterBy('Modelo', 'Cascadia')
+  await waitFor(() => {
+    expect(screen.queryByText('Unidad 15')).toBeNull()
+  })
   expect(screen.getByText('Unidad 12')).toBeInTheDocument()
+})
+
+// specs/0017 RF-9, RF-10, CA-4: archived ones are a chip of the same row
+test('the archived chip shows the archived ones, in every tab', async () => {
+  api.readFleet.mockResolvedValue({
+    trucks: [
+      truck(),
+      truck({ id: 'truck-2', name: 'Unidad 15', archived: true }),
+    ],
+    trailers: [],
+    tanks: [],
+  })
+  renderAt('/flota/camiones')
+  await screen.findByText('Unidad 12')
+  expect(screen.queryByRole('checkbox', { name: 'Ver archivados' })).toBeNull()
+
+  const archived = screen.getByRole('button', { name: 'Archivados' })
+  expect(archived).toHaveAttribute('aria-pressed', 'false')
+  fireEvent.click(archived)
+  expect(archived).toHaveAttribute('aria-pressed', 'true')
+  expect(await screen.findByText('Unidad 15')).toBeInTheDocument()
+  expect(screen.queryByText('Unidad 12')).toBeNull()
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Remolques' }))
+  const filters = await screen.findByRole('group', { name: 'Filtros' })
+  expect(
+    within(filters)
+      .getAllByRole('button')
+      .map(button => button.textContent)
+  ).toEqual(['Archivados'])
 })

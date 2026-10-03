@@ -1,16 +1,11 @@
 import { StrictMode } from 'react'
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../../App'
 import { db } from 'services/db'
 import { useSelectedTankStore } from 'store/selectedTank'
 import { useTanksStore } from 'store/tanks'
 import { settle } from '../../testUtils'
+import { filterBy, filterChip, filterOptions } from '../../testing/filterBy'
 
 const renderTankSearch = ({ strict = false } = {}) => {
   window.history.pushState({}, '', '/tanques')
@@ -25,9 +20,7 @@ const search = (value: string) => {
 }
 
 /** The 15 tanks of before, under the "Genérico" brand (specs/0015 RF-6). */
-const onlyGeneric = () => {
-  fireEvent.click(screen.getByRole('button', { name: 'Genérico' }))
-}
+const onlyGeneric = () => filterBy('Marca', 'Genérico')
 
 beforeEach(async () => {
   window.localStorage.clear()
@@ -66,7 +59,7 @@ test('shows placeholders while the tanks load', async () => {
 test('selecting a tank remembers it and goes to the measurement', async () => {
   renderTankSearch()
   await screen.findByText('168 tanques')
-  onlyGeneric()
+  await onlyGeneric()
 
   fireEvent.click(
     await screen.findByRole('button', {
@@ -85,7 +78,7 @@ test('selecting a tank remembers it and goes to the measurement', async () => {
 test('filters by any dimension and offers to clear an empty search', async () => {
   renderTankSearch()
   await screen.findByText('168 tanques')
-  onlyGeneric()
+  await onlyGeneric()
 
   search('150')
   expect(await screen.findByText('2 tanques')).toBeInTheDocument()
@@ -150,7 +143,7 @@ test('marks the tank being measured', async () => {
 
   renderTankSearch()
   await screen.findByText('168 tanques')
-  onlyGeneric()
+  await onlyGeneric()
 
   expect(
     await screen.findByRole('button', {
@@ -182,7 +175,7 @@ test('tanks are grouped by capacity, filtered with chips, and yours say so', asy
 
   // Grouped by capacity: the 15 of before, by brand
   await screen.findByText('169 tanques')
-  onlyGeneric()
+  await onlyGeneric()
   const hundred = await screen.findByRole('region', { name: '100 galones' })
   expect(hundred).toHaveTextContent('100 gal · 3 tanques')
 })
@@ -192,20 +185,17 @@ test('a truck brand and model narrow the list to their tanks', async () => {
   renderTankSearch()
   await screen.findByText('168 tanques')
 
-  fireEvent.click(screen.getByRole('button', { name: 'Kenworth' }))
-  const model = await screen.findByRole('group', { name: 'Modelo' })
-  fireEvent.click(within(model).getByRole('button', { name: 'T680' }))
+  await filterBy('Marca', 'Kenworth')
+  await filterBy('Modelo', 'T680')
 
   expect(
     await screen.findByText(/Kenworth T680 · \d+ tanques/)
   ).toBeInTheDocument()
   expect(screen.getByText(/Mide el diámetro/)).toBeInTheDocument()
-  // The other rows offer only what that truck has
-  const capacity = screen.getByRole('group', { name: 'Capacidad' })
-  expect(within(capacity).queryByRole('button', { name: '28 gal' })).toBeNull()
-  expect(
-    within(capacity).getByRole('button', { name: '100 gal' })
-  ).toBeInTheDocument()
+  // The other filters offer only what that truck has
+  const capacities = await filterOptions('Capacidad')
+  expect(capacities).not.toContain('28 gal')
+  expect(capacities).toContain('100 gal')
   // Without an account, no "D" nor box tanks yet (specs/0016)
   expect(screen.queryByText(/^En D ·|^Rectangular ·/)).toBeNull()
 })
@@ -213,22 +203,14 @@ test('a truck brand and model narrow the list to their tanks', async () => {
 test('capacity and diameter chips combine, and Limpiar clears them', async () => {
   renderTankSearch()
   await screen.findByText('168 tanques')
-  onlyGeneric()
+  await onlyGeneric()
 
-  const capacity = screen.getAllByRole('group', {
-    name: 'Capacidad',
-  })[0] as HTMLElement
-  fireEvent.click(within(capacity).getByRole('button', { name: '100 gal' }))
+  await filterBy('Capacidad', '100 gal')
   expect(await screen.findByText('3 tanques')).toBeInTheDocument()
 
-  const diameter = screen.getAllByRole('group', {
-    name: 'Diámetro',
-  })[0] as HTMLElement
-  fireEvent.click(within(diameter).getByRole('button', { name: '24 pulg.' }))
+  await filterBy('Diámetro', '24 pulg.')
   expect(await screen.findByText('1 tanque')).toBeInTheDocument()
-  expect(
-    within(diameter).getByRole('button', { name: '24 pulg.' })
-  ).toHaveAttribute('aria-pressed', 'true')
+  expect(filterChip('Diámetro')).toHaveAccessibleName('Diámetro: 24 pulg.')
 
   fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
   expect(await screen.findByText('168 tanques')).toBeInTheDocument()
@@ -238,13 +220,8 @@ test('capacity and diameter chips combine, and Limpiar clears them', async () =>
 test('choosing a factory tank saves it with its catalog id and selects it', async () => {
   renderTankSearch()
   await screen.findByText('168 tanques')
-  fireEvent.click(screen.getByRole('button', { name: 'Kenworth' }))
-  fireEvent.click(
-    within(await screen.findByRole('group', { name: 'Modelo' })).getByRole(
-      'button',
-      { name: 'T680' }
-    )
-  )
+  await filterBy('Marca', 'Kenworth')
+  await filterBy('Modelo', 'T680')
   fireEvent.click(
     await screen.findByRole('button', {
       name: 'Seleccionar: tanque de 100 galones, 24.5 pulgadas de diámetro y 50 de largo',

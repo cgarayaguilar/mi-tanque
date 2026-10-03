@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import SearchIcon from '@mui/icons-material/Search'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
-import ChipRow from 'components/ChipRow'
+import FilterChip, { FilterBar } from 'components/FilterChip'
 import EmptyState from 'components/EmptyState'
 import TankThumbnail, { thumbnailFrame } from 'components/TankThumbnail'
 import { radius, softShadow, typeScale } from 'theme/tokens'
@@ -146,69 +146,72 @@ export default function TankCatalog({
         }}
       />
 
-      <Box sx={{ display: 'grid', gap: 2, mt: 3 }}>
-        {options.brands.length > 0 && (
-          <ChipRow
-            label="Marca"
+      {/* One chip per filter, each with its menu (specs/0017 RF-6) */}
+      <Box sx={{ mt: 3 }}>
+        <FilterBar>
+          {options.brands.length > 0 && (
+            <FilterChip
+              label="Marca"
+              allLabel="Todas"
+              options={options.brands.map(value => ({ value, label: value }))}
+              value={filters.brand}
+              onChange={brand => {
+                // A model belongs to one brand
+                set({ brand, model: null })
+              }}
+            />
+          )}
+          {filters.brand !== null && models.length > 0 && (
+            <FilterChip
+              label="Modelo"
+              allLabel="Todos"
+              options={models.map(value => ({ value, label: value }))}
+              value={filters.model}
+              onChange={model => {
+                set({ model })
+              }}
+            />
+          )}
+          <FilterChip
+            label="Capacidad"
             allLabel="Todas"
-            options={options.brands.map(value => ({ value, label: value }))}
-            value={filters.brand}
-            onChange={brand => {
-              // A model belongs to one brand
-              set({ brand, model: null })
+            options={keep(scoped.capacities, filters.capacity).map(value => ({
+              value,
+              label: `${formatNumber(value)} gal`,
+            }))}
+            value={filters.capacity}
+            onChange={capacity => {
+              set({ capacity })
             }}
           />
-        )}
-        {filters.brand !== null && models.length > 0 && (
-          <ChipRow
-            label="Modelo"
+          <FilterChip
+            label="Diámetro"
             allLabel="Todos"
-            options={models.map(value => ({ value, label: value }))}
-            value={filters.model}
-            onChange={model => {
-              set({ model })
+            options={keep(scoped.diameters, filters.diameter).map(value => ({
+              value,
+              label: `${formatNumber(value)} pulg.`,
+            }))}
+            value={filters.diameter}
+            onChange={diameter => {
+              set({ diameter })
             }}
           />
-        )}
-        <ChipRow
-          label="Capacidad"
-          allLabel="Todas"
-          options={keep(scoped.capacities, filters.capacity).map(value => ({
-            value,
-            label: `${formatNumber(value)} gal`,
-          }))}
-          value={filters.capacity}
-          onChange={capacity => {
-            set({ capacity })
-          }}
-        />
-        <ChipRow
-          label="Diámetro"
-          allLabel="Todos"
-          options={keep(scoped.diameters, filters.diameter).map(value => ({
-            value,
-            label: `${formatNumber(value)} pulg.`,
-          }))}
-          value={filters.diameter}
-          onChange={diameter => {
-            set({ diameter })
-          }}
-        />
-        <ChipRow
-          label="Largo"
-          allLabel="Todos"
-          options={LENGTH_RANGES.filter(
-            range =>
-              scoped.lengths.includes(range) || range.id === filters.length
-          ).map(range => ({
-            value: range.id,
-            label: range.label,
-          }))}
-          value={filters.length}
-          onChange={length => {
-            set({ length })
-          }}
-        />
+          <FilterChip
+            label="Largo"
+            allLabel="Todos"
+            options={LENGTH_RANGES.filter(
+              range =>
+                scoped.lengths.includes(range) || range.id === filters.length
+            ).map(range => ({
+              value: range.id,
+              label: range.label,
+            }))}
+            value={filters.length}
+            onChange={length => {
+              set({ length })
+            }}
+          />
+        </FilterBar>
       </Box>
 
       {filters.brand !== null && filters.model !== null && (
