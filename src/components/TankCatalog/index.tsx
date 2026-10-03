@@ -78,7 +78,9 @@ function ChipRow<T extends string | number>({
     />
   )
   return (
-    <Box role="group" aria-label={label}>
+    // minWidth 0: a grid item grows to its chips otherwise, and the whole
+    // page (or dialog) scrolled sideways instead of the row
+    <Box role="group" aria-label={label} sx={{ minWidth: 0 }}>
       <Typography
         variant="overline"
         component="p"
