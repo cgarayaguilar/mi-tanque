@@ -43,9 +43,15 @@ export default function AppBar() {
           gap: 2,
           minWidth: 0,
           borderRadius: `${String(radius.sm)}px`,
-          // Phones: a smaller mark so the name stays on one line next to
-          // the theme and account buttons (down to 360px wide)
-          '& svg': { width: { xs: 52, sm: 70 }, height: 'auto', flexShrink: 0 },
+          // Sized by height: the truck is 2.27 times as wide as tall. On a
+          // phone it stays small enough for the name to fit on one line next
+          // to the theme and account buttons (down to 360px wide). Its color
+          // is the text's: ink when light, light when dark
+          '& svg': {
+            height: { xs: 26, sm: 40 },
+            width: 'auto',
+            flexShrink: 0,
+          },
         }}
       >
         <LogoIcon aria-hidden="true" />

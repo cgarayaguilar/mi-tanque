@@ -115,8 +115,10 @@ tarjetas.
 
 - Una columna de ancho máximo **600px**, centrada (**Adaptación:** el original es una web de
   1200px).
-- Barra superior de **64px**. En teléfonos el logo baja a 52px y el nombre a `titleSm` (18px, fuente
-  display) para caber en una línea junto a los botones de tema y de sesión, hasta 360px.
+- Barra superior de **64px**. El logo (el frente del camión) se mide por su alto: **40px**, y en
+  teléfonos **26px**, con el nombre en `titleSm` (18px, fuente display) para caber en una línea
+  junto a los botones de tema y de sesión, hasta 360px. Toma el color del texto (`ink` en claro,
+  claro en oscuro); el ícono de la app lo lleva en blanco sobre `primary`.
 - Rejilla de tanques: columnas automáticas de mínimo 150px (dos por fila en un teléfono).
 - Medidor de **200px**: Medición entera cabe en una pantalla de teléfono (812px).
 - Barra de navegación **fija abajo** en Medición, Historial y Flota (esta última solo con sesión, con tres pestañas).
