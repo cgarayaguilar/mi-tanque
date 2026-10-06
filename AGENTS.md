@@ -122,6 +122,11 @@ en cada push y PR.
   (`settleDistanceUnit`) al leer la cuenta. Úsala con `useDistanceUnit()`; en un formulario, con
   `useFormDistanceUnit()`, que la fija al abrirlo para mostrar y guardar con la misma. El rendimiento
   y el odómetro se guardan siempre en km.
+- **Rendimiento cargado y vacío (specs/0021):** `fuelEfficiencyKmPerGal` es el **cargado** (el de
+  antes) y `fuelEfficiencyEmptyKmPerGal` el vacío; los dos opcionales (un camión viejo no tiene el
+  vacío: se lee como `null`). Cada medición guarda `estimate` (cargado) y `estimateEmpty` (vacío),
+  los dos de `readingFor` con `efficienciesOf(truck)`. El texto de lo declarado sale de
+  `declaredEfficiency` (`utils/fleetLabels`). Las reglas aceptan documentos sin los campos nuevos.
 - **Dinero (specs/0012):** todo monto pasa por `utils/formatMoney` (`moneyTotal` para totales,
   "C$9,274.26 NIO"; `unitPrice`/`unitPrices` para precios por galón y litro). Nombre, símbolo y
   países de cada moneda viven en `CURRENCY_DETAILS` (`schemas/account`). Litros se escribe
