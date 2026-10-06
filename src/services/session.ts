@@ -26,11 +26,19 @@ import {
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import * as z from 'zod/mini'
-import { CURRENCIES, type Currency } from 'schemas/account'
+import type { Currency } from 'schemas/account'
+import {
+  membershipSchema,
+  organizationSchema,
+  profileSchema,
+  type Membership,
+  type Organization,
+  type Profile,
+} from 'schemas/session'
 import { loadFirebase, signOutAndClearFirebase } from 'services/firebase'
 import { majorityUnit } from 'utils/distanceUnit'
 import { reportError } from 'utils/reportError'
-import { ROLES } from 'utils/roles'
+import { withTimeout } from 'utils/withTimeout'
 
 export interface SessionUser {
   uid: string
@@ -117,27 +125,9 @@ export const sendPhoneCode = async (
   }
 }
 
-// Storage boundary (§6.4): documents written by the `account` callable
-const profileSchema = z.object({
-  displayName: z.string(),
-  // null after leaving or being removed from the last one (specs/0005)
-  activeOrgId: z.nullable(z.string()),
-})
-const membershipSchema = z.object({
-  orgId: z.string(),
-  role: z.enum(ROLES),
-  orgName: z.string(),
-})
-const organizationSchema = z.object({
-  name: z.string(),
-  defaultCurrency: z.enum(CURRENCIES),
-  // Missing in organizations from before specs/0010: see utils/distanceUnit
-  distanceUnit: z.optional(z.nullable(z.enum(['km', 'mi']))),
-})
-
-export type Profile = z.infer<typeof profileSchema>
-export type Membership = z.infer<typeof membershipSchema>
-export type Organization = z.infer<typeof organizationSchema> & { id: string }
+// Storage boundary (§6.4): documents written by the `account` callable,
+// validated with the schemas the session store also uses (specs/0020)
+export type { Membership, Organization, Profile } from 'schemas/session'
 
 export interface Account {
   /** null: first sign-in, the welcome screen creates it. */
@@ -154,16 +144,20 @@ const MAX_MEMBERSHIPS = 50
 
 export const readAccount = async (uid: string): Promise<Account> => {
   const { db } = await loadFirebase()
-  const [profileSnapshot, membershipsSnapshot] = await Promise.all([
-    getDoc(doc(db, 'users', uid)),
-    getDocs(
-      query(
-        collection(db, 'members'),
-        where('uid', '==', uid),
-        limit(MAX_MEMBERSHIPS)
-      )
-    ),
-  ])
+  // Limited (specs/0020 RF-5): on an installed iPhone app it could hang
+  const [profileSnapshot, membershipsSnapshot] = await withTimeout(
+    Promise.all([
+      getDoc(doc(db, 'users', uid)),
+      getDocs(
+        query(
+          collection(db, 'members'),
+          where('uid', '==', uid),
+          limit(MAX_MEMBERSHIPS)
+        )
+      ),
+    ]),
+    'readAccount'
+  )
   if (!profileSnapshot.exists()) {
     return {
       profile: null,
@@ -189,8 +183,9 @@ export const readAccount = async (uid: string): Promise<Account> => {
     return { profile, memberships, organization: null, needsContactSync }
   }
 
-  const organizationSnapshot = await getDoc(
-    doc(db, 'organizations', activeOrgId)
+  const organizationSnapshot = await withTimeout(
+    getDoc(doc(db, 'organizations', activeOrgId)),
+    'readOrganization'
   )
   const organization = organizationSnapshot.exists()
     ? {

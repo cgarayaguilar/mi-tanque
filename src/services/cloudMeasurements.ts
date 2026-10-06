@@ -22,6 +22,7 @@ import { loadFirebase } from 'services/firebase'
 import type { Position } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
+import { withTimeout } from 'utils/withTimeout'
 
 export const HISTORY_PAGE_SIZE = 100
 
@@ -226,8 +227,9 @@ export const readHistoryPage = async (options: {
     ...(options.after ? [startAfter(options.after)] : []),
     limit(options.pageSize ?? HISTORY_PAGE_SIZE),
   ]
-  const snapshot = await getDocs(
-    query(collection(db, 'measurements'), ...constraints)
+  const snapshot = await withTimeout(
+    getDocs(query(collection(db, 'measurements'), ...constraints)),
+    'readHistoryPage'
   )
   const last = snapshot.docs.at(-1) ?? null
   return {

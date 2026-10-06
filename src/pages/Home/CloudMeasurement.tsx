@@ -52,6 +52,7 @@ import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 const NOT_MEASURED = '—'
 const INDIVIDUAL = 'none'
@@ -417,7 +418,7 @@ export default function CloudMeasurement() {
       <EmptyState
         icon={<CloudOffIcon />}
         title="No pudimos cargar tus tanques"
-        description="Revisa tu conexión y vuelve a intentarlo."
+        description={RETRY_HINT}
         action={{ label: 'Reintentar', onClick: () => void load(orgId) }}
       />
     )

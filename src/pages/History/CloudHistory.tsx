@@ -59,6 +59,7 @@ import { canChangeReading } from 'utils/roles'
 import { equipmentLabel } from 'hooks/equipmentLabel'
 import { useDistanceUnit, useFormDistanceUnit } from 'hooks/useDistanceUnit'
 import { odometerText } from 'utils/distanceUnit'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -567,7 +568,7 @@ export default function CloudHistory() {
           headingLevel="h2"
           icon={<CloudOffIcon />}
           title="No pudimos cargar el historial"
-          description="Revisa tu conexión y vuelve a intentarlo."
+          description={RETRY_HINT}
           action={{ label: 'Reintentar', onClick: () => void load(orgId) }}
         />
       )

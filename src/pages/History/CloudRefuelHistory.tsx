@@ -36,6 +36,7 @@ import { truckEfficiency, truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
 import { useFormDistanceUnit } from 'hooks/useDistanceUnit'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 const placeText = (refuel: CloudRefuel): string | null => {
   if (refuel.place) {
@@ -84,7 +85,7 @@ export default function CloudRefuelHistory({
         headingLevel="h2"
         icon={<CloudOffIcon />}
         title="No pudimos cargar los rellenos"
-        description="Revisa tu conexión y vuelve a intentarlo."
+        description={RETRY_HINT}
         action={{
           label: 'Reintentar',
           onClick: () =>

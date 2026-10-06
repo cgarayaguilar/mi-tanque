@@ -19,6 +19,7 @@ import {
   type InvitableRole,
   type Role,
 } from 'utils/roles'
+import { withTimeout } from 'utils/withTimeout'
 
 // Bounded reads (§2.3)
 const MAX_MEMBERS = 200
@@ -50,12 +51,15 @@ const ROLE_ORDER: Record<Role, number> = {
 /** The members, by role and then by name (RF-8). */
 export const readTeam = async (orgId: string): Promise<TeamMember[]> => {
   const { db } = await loadFirebase()
-  const snapshot = await getDocs(
-    query(
-      collection(db, 'members'),
-      where('orgId', '==', orgId),
-      limit(MAX_MEMBERS)
-    )
+  const snapshot = await withTimeout(
+    getDocs(
+      query(
+        collection(db, 'members'),
+        where('orgId', '==', orgId),
+        limit(MAX_MEMBERS)
+      )
+    ),
+    'readTeam'
   )
   return snapshot.docs
     .map(document => memberSchema.safeParse(document.data()))
@@ -90,15 +94,18 @@ export const readPendingInvitations = async (
   orgId: string
 ): Promise<PendingInvitation[]> => {
   const { db } = await loadFirebase()
-  const snapshot = await getDocs(
-    query(
-      collection(db, 'invitations'),
-      where('orgId', '==', orgId),
-      where('status', '==', 'pending'),
-      where('expiresAt', '>', Timestamp.now()),
-      orderBy('expiresAt'),
-      limit(MAX_PENDING)
-    )
+  const snapshot = await withTimeout(
+    getDocs(
+      query(
+        collection(db, 'invitations'),
+        where('orgId', '==', orgId),
+        where('status', '==', 'pending'),
+        where('expiresAt', '>', Timestamp.now()),
+        orderBy('expiresAt'),
+        limit(MAX_PENDING)
+      )
+    ),
+    'readPendingInvitations'
   )
   return snapshot.docs.flatMap(document => {
     const parsed = invitationSchema.safeParse(document.data())

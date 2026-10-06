@@ -7,6 +7,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import EmptyState from 'components/EmptyState'
 import { useSessionStore, type SessionStatus } from 'store/session'
 import { radius } from 'theme/tokens'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 interface SessionGateProps {
   /** The status this screen is for; the others are sent where they belong. */
@@ -48,7 +49,7 @@ export default function SessionGate({ needs, children }: SessionGateProps) {
       <EmptyState
         icon={<CloudOffIcon />}
         title="No pudimos cargar tu cuenta"
-        description="Revisa tu conexión y vuelve a intentarlo."
+        description={RETRY_HINT}
         action={{ label: 'Reintentar', onClick: () => void refresh() }}
       />
     )
