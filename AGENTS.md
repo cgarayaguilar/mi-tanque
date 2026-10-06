@@ -70,7 +70,14 @@ en cada push y PR.
   y se validan en la frontera de datos con los esquemas Zod de `src/schemas/`.
 - **Errores:** todo `catch` llama a `reportError(error, { operation, ...contexto })`
   (`src/utils/reportError.ts`, el canal único de §7.3) y avisa al usuario con Sileo. Nunca pongas
-  ubicaciones ni datos personales en el contexto.
+  ubicaciones ni datos personales en el contexto: en producción, `reportError` también lo envía a
+  la función `clientErrors` del backend (`fetch` a `/api/client-errors`, que `vercel.json` reenvía;
+  specs/0020). Solo van texto corto, números y sí/no del contexto, sin correos ni teléfonos.
+- **Lecturas que bloquean una pantalla (specs/0020):** van con `withTimeout` (`utils/withTimeout`,
+  15 s); la pantalla muestra su error con `RETRY_HINT` y "Reintentar". Al vencer, `services/firebase`
+  reinicia la conexión de Firestore (en un iPhone instalado se colgaba sin fallar). Crear la cuenta o
+  una organización entra con la respuesta del callable (`enter` en `store/session`), sin volver a
+  leer Firestore; una lectura posterior sin perfil no devuelve a la bienvenida (`readAccountStale`).
 - **Modo autenticado (specs/0002 del backend):** el estado de la cuenta vive en `store/session`. Solo
   `services/session` importa el SDK de Firebase. El store lo carga con `import()` y solo las páginas
   lazy (`/entrar`, `/bienvenida`, `/cuenta`) lo importan directo: así el modo básico nunca descarga
