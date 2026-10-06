@@ -24,12 +24,14 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
         ...truckForm,
         name: 'Unidad 12',
         efficiency: '6',
+        efficiencyEmpty: '8',
         odometer: '100000',
       },
       'mi'
     )
 
     expect(fields.fuelEfficiencyKmPerGal).toBeCloseTo(9.656, 3)
+    expect(fields.fuelEfficiencyEmptyKmPerGal).toBeCloseTo(12.875, 3)
     expect(fields.odometerKm).toBe(160934)
 
     const truck: Truck = {
@@ -42,6 +44,7 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
     expect(fields.distanceUnit).toBe('mi')
     expect(truckToForm(truck, 'mi')).toMatchObject({
       efficiency: '6',
+      efficiencyEmpty: '8',
       odometer: '100,000',
     })
   })
@@ -55,6 +58,7 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
       year: null,
       color: null,
       fuelEfficiencyKmPerGal: null,
+      fuelEfficiencyEmptyKmPerGal: null,
       odometerKm: null,
       assignedDriverUid: null,
     })
@@ -86,6 +90,11 @@ describe('trucks (backend specs/0003 RF-4, RF-5)', () => {
     [{ name: '' }, 'name', 'Escribe el nombre o número de unidad'],
     [{ year: '19' }, 'year', 'Escribe un año de 4 números, por ejemplo 2019'],
     [{ efficiency: '80' }, 'efficiency', 'Debe estar entre 0.5 y 50 por galón'],
+    [
+      { efficiencyEmpty: '0' },
+      'efficiencyEmpty',
+      'Debe estar entre 0.5 y 50 por galón',
+    ],
     [
       { efficiency: 'mucho' },
       'efficiency',

@@ -51,6 +51,8 @@ const truckSchema = z.object({
   ...vehicle,
   distanceUnit: z.enum(['km', 'mi']),
   fuelEfficiencyKmPerGal: nullableNumber,
+  // Trucks saved before specs/0021 have no empty efficiency
+  fuelEfficiencyEmptyKmPerGal: z._default(nullableNumber, null),
   odometerKm: nullableNumber,
   assignedDriverUid: nullableString,
 })

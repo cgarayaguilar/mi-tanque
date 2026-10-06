@@ -179,6 +179,7 @@ export const importLocalData = async ({
           place: null,
           placeStatus: null,
           estimate: null,
+          estimateEmpty: null,
           odometerKm: null,
           source: 'import',
           createdAt: serverTimestamp(),

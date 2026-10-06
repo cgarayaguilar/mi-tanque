@@ -244,11 +244,12 @@ function FleetScreen() {
                     tankCount === 1
                       ? '1 tanque'
                       : `${String(tankCount)} tanques`,
-                    efficiency,
                     odometer,
                   ]
                     .filter(Boolean)
                     .join(' · '),
+                  // Its own line: loaded and empty use " · " too (specs/0021)
+                  efficiency,
                 ]}
                 archived={truck.archived}
                 notice={insuranceNotice(

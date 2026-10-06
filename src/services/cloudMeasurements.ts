@@ -60,6 +60,12 @@ export interface CloudMeasurement extends CloudReading {
 const toDate = (value: unknown): Date | null =>
   value instanceof Timestamp ? value.toDate() : null
 
+const estimateSchema = z.object({
+  km: z.number(),
+  miles: z.number(),
+  kmPerGal: z.number(),
+})
+
 const schema = z.object({
   orgId: z.string(),
   tankId: z.string(),
@@ -88,9 +94,9 @@ const schema = z.object({
   gallons: z.number(),
   liters: z.number(),
   fillPercent: z.number(),
-  estimate: z.nullable(
-    z.object({ km: z.number(), miles: z.number(), kmPerGal: z.number() })
-  ),
+  estimate: z.nullable(estimateSchema),
+  // Measurements from before specs/0021 only have the loaded one
+  estimateEmpty: z._default(z.nullable(estimateSchema), null),
   odometerKm: z.nullable(z.number()),
   source: z.enum(['app', 'import']),
 })

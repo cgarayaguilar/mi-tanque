@@ -32,6 +32,7 @@ import {
   geometryOf,
   maxInchesFor,
 } from 'utils/measurementMath'
+import { declaredEfficiency } from 'utils/fleetLabels'
 import { truckEfficiency, truckTotals } from 'utils/refuelMath'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
@@ -153,6 +154,7 @@ export default function CloudRefuelHistory({
           km: result.km,
           gallons: result.gallons,
           unit: distanceUnit,
+          declared: truck ? declaredEfficiency(truck, distanceUnit) : null,
         },
       ]
     }

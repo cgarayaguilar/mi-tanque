@@ -78,6 +78,7 @@ export const exportLocalHistory = async ({
           ? Math.round(volumePercent(tank, measurement.inches) * 100) / 100
           : null,
         estimate: null,
+        estimateEmpty: null,
         odometerKm: null,
         place: null,
         placeText:

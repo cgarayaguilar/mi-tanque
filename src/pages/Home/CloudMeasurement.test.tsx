@@ -5,6 +5,8 @@ import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { fullVolumeGallons, gallonsAt } from 'utils/tankVolume'
 import type { Role } from 'utils/roles'
+import type { Truck } from 'schemas/fleet'
+import { formatNumber } from 'utils/formatNumber'
 import {
   accountWithRole,
   ORG_ID,
@@ -176,8 +178,14 @@ test('a "D" tank at 12 inches shows its gallons and the truck range, and saves a
   const km = Math.round(gallons * 9.5)
   expect(
     await screen.findByText(
-      `Alcanza para unos ${String(km).replace(/\B(?=(\d{3})+(?!\d))/g, '')} km`,
+      `Cargado: unos ${String(km).replace(/\B(?=(\d{3})+(?!\d))/g, '')} km`,
       { exact: false }
+    )
+  ).toBeInTheDocument()
+  // Only the loaded one: it asks for the other (backend specs/0021 CA-3)
+  expect(
+    screen.getByText(
+      'Agrega el rendimiento vacío de Unidad 12 para ver las dos.'
     )
   ).toBeInTheDocument()
 
@@ -208,6 +216,84 @@ test('a "D" tank at 12 inches shows its gallons and the truck range, and saves a
       'luis',
       { latitude: 12.13, longitude: -86.25, accuracy: 9.6 }
     )
+  })
+})
+
+// backend specs/0021 CA-2, CA-3
+describe('loaded and empty', () => {
+  const twelveInches = () => {
+    const geometry = {
+      shape: 'd_flat_side',
+      orientation: 'horizontal',
+      dimensions: { heightIn: 24, widthIn: 30, lengthIn: 48 },
+    } as const
+    return (gallonsAt(geometry, 12) * 135) / fullVolumeGallons(geometry)
+  }
+  const withTruck = (efficiencies: Partial<Truck>) => {
+    fleetApi.readFleet.mockResolvedValue({
+      trucks: [truck(efficiencies)],
+      trailers: [trailer()],
+      tanks: [LEFT, RIGHT, REEFER, LOOSE],
+    })
+  }
+
+  test('with both it shows and saves both distances', async () => {
+    withTruck({ fuelEfficiencyKmPerGal: 8.5, fuelEfficiencyEmptyKmPerGal: 11 })
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    measure('12')
+
+    const gallons = twelveInches()
+    const km = (kmPerGal: number) =>
+      formatNumber(Math.round(gallons * kmPerGal))
+    expect(
+      await screen.findByText(`Cargado: unos ${km(8.5)} km`, { exact: false })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(`Vacío: unos ${km(11)} km`, { exact: false })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/para ver las dos/)).toBeNull()
+    expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reading: expect.objectContaining({
+          estimate: expect.objectContaining({ kmPerGal: 8.5 }) as unknown,
+          estimateEmpty: expect.objectContaining({
+            kmPerGal: 11,
+            km: Math.round(gallons * 11 * 100) / 100,
+          }) as unknown,
+        }) as unknown,
+      })
+    )
+  })
+
+  test('with only the empty one it shows that and asks for the loaded one', async () => {
+    withTruck({ fuelEfficiencyKmPerGal: null, fuelEfficiencyEmptyKmPerGal: 11 })
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    measure('12')
+
+    expect(
+      await screen.findByText('Vacío: unos', { exact: false })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Cargado:/)).toBeNull()
+    expect(
+      screen.getByText(
+        'Agrega el rendimiento cargado de Unidad 12 para ver las dos.'
+      )
+    ).toBeInTheDocument()
+  })
+
+  test('with none it says what it said before', async () => {
+    withTruck({ fuelEfficiencyKmPerGal: null })
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    measure('12')
+
+    expect(
+      await screen.findByText(
+        'Agrega el rendimiento de Unidad 12 para estimar la distancia.'
+      )
+    ).toBeInTheDocument()
   })
 })
 

@@ -52,7 +52,13 @@ import {
 import { colorTokens, layout, radius, typeScale } from 'theme/tokens'
 import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
 import { formatEditable, formatNumber } from 'utils/formatNumber'
-import { maxInchesFor, rangeTruckFor, readingFor } from 'utils/measurementMath'
+import {
+  efficienciesOf,
+  maxInchesFor,
+  rangeTruckFor,
+  readingFor,
+  type RangeEstimate,
+} from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canChangeReading } from 'utils/roles'
@@ -118,7 +124,15 @@ function MeasurementRow({
 }) {
   const distanceUnit = useDistanceUnit()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
-  const estimate = measurement.estimate
+  // Loaded and empty, in the organization's unit (backend specs/0021 RF-7);
+  // measurements from before only have the loaded one
+  const range = (estimate: RangeEstimate | null, load: string) =>
+    estimate &&
+    `~${formatNumber(Math.round(distanceUnit === 'mi' ? estimate.miles : estimate.km))} ${distanceUnit} ${load}`
+  const ranges = [
+    range(measurement.estimate, 'cargado'),
+    range(measurement.estimateEmpty, 'vacío'),
+  ].filter(Boolean)
   return (
     <Box sx={{ py: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -193,9 +207,7 @@ function MeasurementRow({
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           {formatNumber(measurement.liters, 2)} litros ·{' '}
           {formatNumber(measurement.inches)} pulg.
-          {estimate
-            ? ` · ~${formatNumber(Math.round(estimate.km))} km (${formatNumber(Math.round(estimate.miles))} mi)`
-            : ''}
+          {ranges.length > 0 ? ` · ${ranges.join(' · ')}` : ''}
           {measurement.odometerKm !== null
             ? ` · odómetro ${odometerText(measurement.odometerKm, distanceUnit)}`
             : ''}
@@ -416,11 +428,7 @@ function EditDialog({
       tankId: tank.id,
       tankName: tank.name,
       equipment: equipmentLabel(tank, equipmentNameOf(tank)),
-      reading: readingFor(
-        tank,
-        parseDecimal(inches),
-        truck?.fuelEfficiencyKmPerGal ?? null
-      ),
+      reading: readingFor(tank, parseDecimal(inches), efficienciesOf(truck)),
       // Without a truck the form does not ask it: the same tank keeps the
       // one saved (it was erased); another tank has none
       odometerKm:

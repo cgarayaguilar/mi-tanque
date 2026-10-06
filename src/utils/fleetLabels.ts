@@ -19,14 +19,36 @@ export const trailerTypeLabel = (trailer: Trailer) =>
     ? (trailer.trailerTypeOther ?? 'Otro')
     : (TRAILER_TYPES.find(type => type.id === trailer.trailerType)?.label ?? '')
 
+/**
+ * The truck's declared efficiencies in the organization's unit (backend
+ * specs/0021 RF-5): "8.5 cargado · 11 vacío km/gal", "8.5 km/gal cargado",
+ * or null without either.
+ */
+export const declaredEfficiency = (
+  truck: Pick<Truck, 'fuelEfficiencyKmPerGal' | 'fuelEfficiencyEmptyKmPerGal'>,
+  unit: DistanceUnit
+): string | null => {
+  const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
+  // One decimal, none when whole: "11", not "11.0"
+  const figure = (kmPerGal: number) => {
+    const value = Math.round(kmPerGal * fromKm * 10) / 10
+    return formatNumber(value, Number.isInteger(value) ? 0 : 1)
+  }
+  const loaded = truck.fuelEfficiencyKmPerGal
+  const empty = truck.fuelEfficiencyEmptyKmPerGal
+  if (loaded !== null && empty !== null)
+    return `${figure(loaded)} cargado · ${figure(empty)} vacío ${unit}/gal`
+  if (loaded !== null) return `${figure(loaded)} ${unit}/gal cargado`
+  if (empty !== null) return `${figure(empty)} ${unit}/gal vacío`
+  return null
+}
+
 /** Efficiency and odometer in the organization's unit (backend specs/0010). */
 export const truckFigures = (truck: Truck, unit: DistanceUnit) => {
   const fromKm = unit === 'mi' ? 1 / KM_PER_MILE : 1
+  const declared = declaredEfficiency(truck, unit)
   return {
-    efficiency:
-      truck.fuelEfficiencyKmPerGal === null
-        ? null
-        : `${formatNumber(truck.fuelEfficiencyKmPerGal * fromKm, 1)} ${unit}/gal`,
+    efficiency: declared && `Rinde ${declared}`,
     odometer:
       truck.odometerKm === null
         ? null
