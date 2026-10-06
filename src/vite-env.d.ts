@@ -2,6 +2,9 @@
 /// <reference types="vite-plugin-svgr/client" />
 /// <reference types="vite-plugin-pwa/client" />
 
+/** The build: the commit on Vercel, the package version elsewhere (vite.config.mjs). */
+declare const __APP_VERSION__: string
+
 interface ImportMetaEnv {
   /** "true" connects Auth and Firestore to the local Firebase emulators. */
   readonly VITE_USE_EMULATORS?: string
