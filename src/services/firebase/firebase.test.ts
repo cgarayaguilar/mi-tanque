@@ -18,6 +18,8 @@ const sdk = vi.hoisted(() => ({
   connectFirestoreEmulator: vi.fn(),
   terminate: vi.fn(() => Promise.resolve()),
   clearIndexedDbPersistence: vi.fn(() => Promise.resolve()),
+  disableNetwork: vi.fn(() => Promise.resolve()),
+  enableNetwork: vi.fn(() => Promise.resolve()),
   getFunctions: vi.fn(() => ({ name: 'functions' })),
   connectFunctionsEmulator: vi.fn(),
   initializeAppCheck: vi.fn(),
@@ -56,6 +58,8 @@ vi.mock('firebase/firestore', () => ({
   connectFirestoreEmulator: sdk.connectFirestoreEmulator,
   terminate: sdk.terminate,
   clearIndexedDbPersistence: sdk.clearIndexedDbPersistence,
+  disableNetwork: sdk.disableNetwork,
+  enableNetwork: sdk.enableNetwork,
 }))
 vi.mock('firebase/app-check', () => ({
   initializeAppCheck: sdk.initializeAppCheck,
@@ -121,6 +125,32 @@ test('connects every service to the local emulators when asked', async () => {
     'localhost',
     5001
   )
+})
+
+// specs/0020 RF-5: on an installed iPhone app the connection hung without
+// failing, and "Reintentar" waited on it again
+test('a read out of time restarts the connection, once for many', async () => {
+  const { loadFirebase } = await load()
+  const { withTimeout } = await import('utils/withTimeout')
+  const { db } = await loadFirebase()
+  vi.useFakeTimers()
+  // Still restarting when the second read runs out
+  sdk.disableNetwork.mockImplementationOnce(
+    () => new Promise(resolve => setTimeout(resolve, 1000))
+  )
+
+  const reads = ['readFleet', 'readHistory'].map(operation =>
+    withTimeout(new Promise(() => undefined), operation).catch(
+      (error: unknown) => error
+    )
+  )
+  await vi.advanceTimersByTimeAsync(16_000)
+  await Promise.all(reads)
+  vi.useRealTimers()
+
+  expect(sdk.disableNetwork).toHaveBeenCalledTimes(1)
+  expect(sdk.disableNetwork).toHaveBeenCalledWith(db)
+  expect(sdk.enableNetwork).toHaveBeenCalledWith(db)
 })
 
 test('a failed load is retried on the next call', async () => {

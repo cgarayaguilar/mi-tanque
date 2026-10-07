@@ -7,7 +7,9 @@ import MoreDetails, {
   countFilled,
   useMoreDetails,
 } from 'components/MoreDetails'
+import MeasureHelp from 'components/MeasureHelp'
 import NumberField from 'components/NumberField'
+import Typography from '@mui/material/Typography'
 import AutocompleteField from 'components/AutocompleteField'
 import TextField from 'components/TextField'
 import { TRUCK_BRANDS, TRUCK_MODELS } from 'data/truckModels'
@@ -40,6 +42,10 @@ interface Props {
 
 const FORM_ID = 'truck-form'
 
+// One ⓘ for both: one per field pushed "Cargado (opcional)" to two lines
+const efficiencyHelp = (unit: 'km' | 'mi') =>
+  `${unit === 'mi' ? 'Las millas' : 'Los km'} que recorre con un galón de combustible: cargado, yendo con carga; vacío, yendo sin ella.`
+
 const BRAND_OPTIONS = [
   { value: '', label: 'Sin marca' },
   ...TRUCK_BRANDS.map(brand => ({ value: brand, label: brand })),
@@ -58,6 +64,7 @@ const modelOptions = (brand: string) => [
 // Behind "Ver más detalles" (backend specs/0009 RF-7)
 const DETAILS = [
   'efficiency',
+  'efficiencyEmpty',
   'odometer',
   'assignedDriverUid',
   'vin',
@@ -115,6 +122,9 @@ export default function TruckEditor({
     if (truck && !dirtyFields.odometer) fields.odometerKm = truck.odometerKm
     if (truck && !dirtyFields.efficiency) {
       fields.fuelEfficiencyKmPerGal = truck.fuelEfficiencyKmPerGal
+    }
+    if (truck && !dirtyFields.efficiencyEmpty) {
+      fields.fuelEfficiencyEmptyKmPerGal = truck.fuelEfficiencyEmptyKmPerGal
     }
     saveItem(
       {
@@ -260,21 +270,65 @@ export default function TruckEditor({
             onToggle={details.toggle}
             filled={countFilled([
               values.efficiency,
+              values.efficiencyEmpty,
               values.odometer,
               values.assignedDriverUid,
               values.vin,
               values.description,
             ])}
           >
-            <NumberField
-              id="efficiency"
-              label="Rendimiento (opcional)"
-              unit={`${unit}/gal`}
-              placeholder="Ej. 6.5"
-              hint="Para estimar cuánto puedes recorrer con el combustible."
-              error={errors.efficiency?.message}
-              registration={register('efficiency')}
-            />
+            {/* Loaded and empty on one row (backend specs/0021 RF-4): short
+                labels under a title, or they wrap unevenly at 375 px */}
+            <Box role="group" aria-labelledby="efficiency-title">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  id="efficiency-title"
+                  variant="overline"
+                  component="p"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  Rendimiento
+                </Typography>
+                <MeasureHelp
+                  label="el rendimiento"
+                  text={efficiencyHelp(unit)}
+                />
+              </Box>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: 2,
+                }}
+              >
+                <NumberField
+                  id="efficiency"
+                  dense
+                  label="Cargado (opcional)"
+                  unit={`${unit}/gal`}
+                  placeholder="Ej. 6.5"
+                  error={errors.efficiency?.message}
+                  registration={register('efficiency')}
+                />
+                <NumberField
+                  id="efficiencyEmpty"
+                  dense
+                  label="Vacío (opcional)"
+                  unit={`${unit}/gal`}
+                  placeholder="Ej. 8"
+                  error={errors.efficiencyEmpty?.message}
+                  registration={register('efficiencyEmpty')}
+                />
+              </Box>
+              <Typography
+                variant="caption"
+                component="p"
+                sx={{ mt: 1, color: 'text.secondary' }}
+              >
+                Para estimar cuánto puedes recorrer con el combustible, cargado
+                y vacío.
+              </Typography>
+            </Box>
             <NumberField
               id="odometer"
               label="Odómetro (opcional)"

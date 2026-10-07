@@ -81,8 +81,18 @@ const pwa = VitePWA({
   },
 })
 
+// Which build sent a client error (backend specs/0020 RF-9): the commit on
+// Vercel, the package version elsewhere
+const appVersion =
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+  process.env.npm_package_version ??
+  'dev'
+
 export default defineConfig({
   plugins: [react(), svgr(), pwa],
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   resolve: {
     alias: [
       {

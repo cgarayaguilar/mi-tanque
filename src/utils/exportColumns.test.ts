@@ -50,17 +50,42 @@ test('measurement columns; what does not apply stays empty (RF-5, RF-6)', () => 
     liters: 99.25,
     fillPercent: 47.5,
     estimate: null,
+    estimateEmpty: null,
     odometerKm: null,
     place: null,
     placeText: 'Managua, Nicaragua',
   }
   const [header, row] = rowsOf(toCsv(MEASUREMENT_COLUMNS, [basic]))
   expect(header).toBe(
-    'Fecha,Hora,Registrado por,Tanque,Equipo,Pulgadas,Galones,Litros,Llenado (%),Alcance (km),Alcance (mi),Rendimiento usado (km/gal),Odómetro (km),Odómetro (mi),Ciudad,Estado o departamento,País,Lugar'
+    'Fecha,Hora,Registrado por,Tanque,Equipo,Pulgadas,Galones,Litros,Llenado (%),Alcance cargado (km),Alcance cargado (mi),Rendimiento cargado (km/gal),Alcance vacío (km),Alcance vacío (mi),Rendimiento vacío (km/gal),Odómetro (km),Odómetro (mi),Ciudad,Estado o departamento,País,Lugar'
   )
   expect(row).toBe(
-    '29/09/2026,17:30,,Tanque de 50 gal,,12.5,26.22,99.25,47.5,,,,,,,,,"Managua, Nicaragua"'
+    '29/09/2026,17:30,,Tanque de 50 gal,,12.5,26.22,99.25,47.5,,,,,,,,,,,,"Managua, Nicaragua"'
   )
+})
+
+// backend specs/0021 CA-5: loaded and empty; from before, only loaded
+test('measurement columns carry the range loaded and empty', () => {
+  const measured: ExportMeasurement = {
+    takenAt: new Date(2026, 9, 6, 9, 0),
+    userName: 'Luis',
+    tankName: 'Tanque izquierdo',
+    equipmentName: 'Unidad 12',
+    inches: 12,
+    gallons: 50,
+    liters: 189.27,
+    fillPercent: 50,
+    estimate: { km: 425, miles: 264.08, kmPerGal: 8.5 },
+    estimateEmpty: { km: 550, miles: 341.75, kmPerGal: 11 },
+    odometerKm: null,
+    place: null,
+    placeText: null,
+  }
+  const [, both, before] = rowsOf(
+    toCsv(MEASUREMENT_COLUMNS, [measured, { ...measured, estimateEmpty: null }])
+  )
+  expect(both).toContain(',50,425,264,8.5,550,342,11,')
+  expect(before).toContain(',50,425,264,8.5,,,,')
 })
 
 test('file names carry the kind, the organization and the period (RF-7)', () => {

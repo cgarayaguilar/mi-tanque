@@ -113,8 +113,9 @@ test('a new truck in miles is saved in kilometers and the list opens (CA-2)', as
   )
   await choose('Color (opcional)', 'Azul')
   fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
-  expect(screen.getByText('mi/gal')).toBeInTheDocument()
-  type('Rendimiento (opcional)', '6')
+  expect(screen.getAllByText('mi/gal')).toHaveLength(2)
+  type('Cargado (opcional)', '6')
+  type('Vacío (opcional)', '8')
   type('Odómetro (opcional)', '100000')
   fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
 
@@ -126,6 +127,8 @@ test('a new truck in miles is saved in kilometers and the list opens (CA-2)', as
       expect.objectContaining({
         name: 'Unidad 20',
         distanceUnit: 'mi',
+        fuelEfficiencyKmPerGal: 6 * 1.609344,
+        fuelEfficiencyEmptyKmPerGal: 8 * 1.609344,
         odometerKm: 160934,
         color: { swatch: 'blue', label: 'Azul' },
       })
@@ -136,6 +139,30 @@ test('a new truck in miles is saved in kilometers and the list opens (CA-2)', as
   expect(useFleetStore.getState().trucks.map(t => t.name)).toContain(
     'Unidad 20'
   )
+})
+
+// backend specs/0021 CA-1: the efficiency of before is the loaded one
+test('a truck saved before opens with its efficiency as loaded and gains the empty one', async () => {
+  renderAt('/flota/camiones/truck-1')
+  fireEvent.click(
+    await screen.findByRole('button', { name: /Ver más detalles/ })
+  )
+  expect(screen.getByLabelText('Cargado (opcional)')).toHaveValue('9.5')
+  expect(screen.getByLabelText('Vacío (opcional)')).toHaveValue('')
+
+  type('Vacío (opcional)', '11')
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+  await waitFor(() => {
+    expect(api.updateFleetItem).toHaveBeenCalledWith(
+      'trucks',
+      'truck-1',
+      expect.objectContaining({
+        fuelEfficiencyKmPerGal: 9.5,
+        fuelEfficiencyEmptyKmPerGal: 11,
+      })
+    )
+  })
 })
 
 test('errors show next to their field and nothing is saved', async () => {

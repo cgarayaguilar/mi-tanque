@@ -18,6 +18,7 @@ import { loadFirebase, loadStorage } from 'services/firebase'
 import { compressImage } from 'utils/compressImage'
 import { reportError } from 'utils/reportError'
 import { ROLES } from 'utils/roles'
+import { withTimeout } from 'utils/withTimeout'
 
 export type FleetCollection = 'trucks' | 'trailers' | 'tanks'
 
@@ -50,6 +51,8 @@ const truckSchema = z.object({
   ...vehicle,
   distanceUnit: z.enum(['km', 'mi']),
   fuelEfficiencyKmPerGal: nullableNumber,
+  // Trucks saved before specs/0021 have no empty efficiency
+  fuelEfficiencyEmptyKmPerGal: z._default(nullableNumber, null),
   odometerKm: nullableNumber,
   assignedDriverUid: nullableString,
 })
@@ -95,12 +98,15 @@ const readCollection = async <T>(
   parse: (id: string, data: unknown) => T | null
 ): Promise<T[]> => {
   const { db } = await loadFirebase()
-  const snapshot = await getDocs(
-    query(
-      collection(db, name),
-      where('orgId', '==', orgId),
-      limit(MAX_FLEET_ITEMS)
-    )
+  const snapshot = await withTimeout(
+    getDocs(
+      query(
+        collection(db, name),
+        where('orgId', '==', orgId),
+        limit(MAX_FLEET_ITEMS)
+      )
+    ),
+    'readFleet'
   )
   return snapshot.docs
     .map(document => parse(document.id, document.data()))
@@ -199,8 +205,11 @@ const memberSchema = z.object({
 /** Members of the organization, for the assigned-driver select. */
 export const readMembers = async (orgId: string): Promise<OrgMember[]> => {
   const { db } = await loadFirebase()
-  const snapshot = await getDocs(
-    query(collection(db, 'members'), where('orgId', '==', orgId), limit(200))
+  const snapshot = await withTimeout(
+    getDocs(
+      query(collection(db, 'members'), where('orgId', '==', orgId), limit(200))
+    ),
+    'readMembers'
   )
   return snapshot.docs
     .map(document => memberSchema.safeParse(document.data()))

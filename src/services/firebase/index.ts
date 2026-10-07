@@ -5,6 +5,8 @@ import { connectAuthEmulator, getAuth, signOut, type Auth } from 'firebase/auth'
 import {
   clearIndexedDbPersistence,
   connectFirestoreEmulator,
+  disableNetwork,
+  enableNetwork,
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
@@ -14,6 +16,8 @@ import {
 } from 'firebase/firestore'
 import type { Functions } from 'firebase/functions'
 import type { FirebaseStorage } from 'firebase/storage'
+import { reportError } from 'utils/reportError'
+import { setSlowConnectionHandler } from 'utils/withTimeout'
 import { emulatorHostFor, EMULATORS } from './config'
 import { emulatorsEnabled, firebaseApp, functionsFor } from './core'
 
@@ -61,7 +65,29 @@ const initialize = async (): Promise<FirebaseServices> => {
   }
 
   marked[SIGNED_IN_SETUP] = true
+  setSlowConnectionHandler(() => {
+    restartConnection(db)
+  })
   return { app, auth, db, functions }
+}
+
+let restarting: Promise<void> | null = null
+
+/**
+ * A read ran out of time (specs/0020 RF-5): Firestore can be waiting on a
+ * connection that hung without failing, as on an installed iPhone app, and
+ * every retry would wait on it too. Closing and opening the network makes
+ * the next read use a new one; queued writes stay queued and go out after.
+ */
+const restartConnection = (db: Firestore) => {
+  restarting ??= disableNetwork(db)
+    .then(() => enableNetwork(db))
+    .catch((error: unknown) => {
+      reportError(error, { operation: 'restartConnection' })
+    })
+    .finally(() => {
+      restarting = null
+    })
 }
 
 /**
@@ -112,6 +138,7 @@ export const loadStorage = (): Promise<FirebaseStorage> => {
 export const signOutAndClearFirebase = async (): Promise<void> => {
   if (!services) return
   const { app, auth, db } = await services
+  setSlowConnectionHandler(() => undefined)
   await signOut(auth)
   await terminate(db)
   await clearIndexedDbPersistence(db)

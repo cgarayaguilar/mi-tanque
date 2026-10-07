@@ -42,16 +42,19 @@ import { tankMeasures } from 'utils/fleetLabels'
 import { formatNumber } from 'utils/formatNumber'
 import { LEVEL_GROUND } from 'utils/measureHelp'
 import {
+  efficienciesOf,
   maxInchesFor,
   rangeTruckFor,
   readingFor,
   capacityMismatchOf,
   type CloudReading,
+  type RangeEstimate,
 } from 'utils/measurementMath'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 const NOT_MEASURED = '—'
 const INDIVIDUAL = 'none'
@@ -91,11 +94,18 @@ function CloudResults({
   mismatch?: ReactNode
 }) {
   const unit = useDistanceUnit()
-  const range = reading?.estimate
-    ? unit === 'mi'
-      ? `${formatNumber(Math.round(reading.estimate.miles))} mi (${formatNumber(Math.round(reading.estimate.km))} km)`
-      : `${formatNumber(Math.round(reading.estimate.km))} km (${formatNumber(Math.round(reading.estimate.miles))} mi)`
-    : null
+  // In the organization's unit, the other in parentheses
+  const distance = (estimate: RangeEstimate) =>
+    unit === 'mi'
+      ? `unos ${formatNumber(Math.round(estimate.miles))} mi (${formatNumber(Math.round(estimate.km))} km)`
+      : `unos ${formatNumber(Math.round(estimate.km))} km (${formatNumber(Math.round(estimate.miles))} mi)`
+  const loaded = reading?.estimate ?? null
+  const empty = reading?.estimateEmpty ?? null
+  // Loaded and empty, each when the truck has it (backend specs/0021 RF-6)
+  const missing =
+    truck && (loaded === null) !== (empty === null)
+      ? `Agrega el rendimiento ${loaded ? 'vacío' : 'cargado'} de ${truck.name} para ver las dos.`
+      : null
 
   return (
     <Box component="section" aria-label="Resultados">
@@ -137,11 +147,25 @@ function CloudResults({
           role="status"
           sx={{ mt: 3, textAlign: 'center' }}
         >
-          {range
-            ? `Alcanza para unos ${range}.`
-            : truck
-              ? `Agrega el rendimiento de ${truck.name} para estimar la distancia.`
-              : 'Este tanque no es de un camión: no hay estimación de distancia.'}
+          {loaded || empty ? (
+            <>
+              {loaded && <span>Cargado: {distance(loaded)}</span>}
+              {loaded && empty && <br />}
+              {empty && <span>Vacío: {distance(empty)}</span>}
+              {missing && (
+                <Box
+                  component="span"
+                  sx={{ display: 'block', mt: 1, color: 'text.secondary' }}
+                >
+                  {missing}
+                </Box>
+              )}
+            </>
+          ) : truck ? (
+            `Agrega el rendimiento de ${truck.name} para estimar la distancia.`
+          ) : (
+            'Este tanque no es de un camión: no hay estimación de distancia.'
+          )}
         </Typography>
       )}
       {reading && mismatch}
@@ -279,11 +303,7 @@ function MeasureForm({
   const onSubmit = ({ inches }: FleetMeasureFormValues) => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur()
-    const next = readingFor(
-      tank,
-      parseDecimal(inches),
-      truck?.fuelEfficiencyKmPerGal ?? null
-    )
+    const next = readingFor(tank, parseDecimal(inches), efficienciesOf(truck))
     setReading(next)
     if (!canSave) return
     save(tank, next)
@@ -417,7 +437,7 @@ export default function CloudMeasurement() {
       <EmptyState
         icon={<CloudOffIcon />}
         title="No pudimos cargar tus tanques"
-        description="Revisa tu conexión y vuelve a intentarlo."
+        description={RETRY_HINT}
         action={{ label: 'Reintentar', onClick: () => void load(orgId) }}
       />
     )

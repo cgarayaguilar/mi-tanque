@@ -115,7 +115,9 @@ test('measurements are grouped by tank with author, city, estimate and odometer 
   expect(row).toHaveTextContent('Luis')
   expect(row).toHaveTextContent('70.50 gal')
   expect(row).toHaveTextContent(/litros · \d+ pulg\./)
-  expect(row).toHaveTextContent('~670 km (416 mi)')
+  // Saved before specs/0021: only the loaded range
+  expect(row).toHaveTextContent('~670 km cargado')
+  expect(row).not.toHaveTextContent('vacío')
   expect(row).toHaveTextContent('odómetro 120,500 km')
   expect(row).toHaveTextContent('Managua, Nicaragua')
 
@@ -127,6 +129,70 @@ test('measurements are grouped by tank with author, city, estimate and odometer 
   expect(within(second).getByRole('listitem')).toHaveTextContent(
     'Sin ubicación'
   )
+})
+
+// backend specs/0021 CA-5, RF-9
+describe('loaded and empty', () => {
+  test('a measurement shows both ranges, in the organization unit', async () => {
+    useSessionStore.setState(state => ({
+      organization: state.organization && {
+        ...state.organization,
+        distanceUnit: 'mi',
+      },
+    }))
+    historyApi.readHistoryPage.mockResolvedValue({
+      items: [
+        cloudMeasurement({
+          estimate: { km: 425, miles: 264.08, kmPerGal: 8.5 },
+          estimateEmpty: { km: 550, miles: 341.75, kmPerGal: 11 },
+        }),
+      ],
+      cursor: null,
+    })
+    renderHistory()
+
+    const tank = await screen.findByRole('article', {
+      name: 'Tanque izquierdo',
+    })
+    // A single tank opens with its measurements shown
+    expect(within(tank).getByRole('listitem')).toHaveTextContent(
+      '~264 mi cargado · ~342 mi vacío'
+    )
+  })
+
+  test('editing recalculates both with the truck of today', async () => {
+    fleetApi.readFleet.mockResolvedValue({
+      trucks: [
+        truck({ fuelEfficiencyKmPerGal: 8.5, fuelEfficiencyEmptyKmPerGal: 11 }),
+      ],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+    historyApi.readHistoryPage.mockResolvedValue({
+      items: [cloudMeasurement()],
+      cursor: null,
+    })
+    renderHistory()
+    await openOptions('Editar')
+
+    const dialog = screen.getByRole('dialog', { name: 'Corregir medición' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => {
+      expect(historyApi.updateCloudMeasurement).toHaveBeenCalledWith(
+        'm-1',
+        'luis',
+        expect.objectContaining({
+          reading: expect.objectContaining({
+            estimate: expect.objectContaining({ kmPerGal: 8.5 }) as unknown,
+            estimateEmpty: expect.objectContaining({
+              kmPerGal: 11,
+            }) as unknown,
+          }) as unknown,
+        })
+      )
+    })
+  })
 })
 
 test('the summary compares the first and last measurement of the period', async () => {

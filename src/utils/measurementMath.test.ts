@@ -2,6 +2,8 @@ import {
   capacityMismatchOf,
   maxInchesFor,
   rangeTruckFor,
+  efficienciesOf,
+  NO_EFFICIENCY,
   readingFor,
 } from 'utils/measurementMath'
 import { fullVolumeGallons, gallonsAt } from 'utils/tankVolume'
@@ -11,7 +13,7 @@ import { tank, trailer, truck } from '../testing/fleetFixtures'
 const dTank = tank() // D, flat side, 24 × 30 × 48, on truck-1
 
 test('a D tank at 12 inches: gallons from its formula, % by volume, km by the truck', () => {
-  const reading = readingFor(dTank, 12, 9.5)
+  const reading = readingFor(dTank, 12, { loaded: 9.5, empty: null })
   const geometry = {
     shape: 'd_flat_side',
     orientation: 'horizontal',
@@ -29,9 +31,29 @@ test('a D tank at 12 inches: gallons from its formula, % by volume, km by the tr
   expect(reading.estimate?.miles).toBeCloseTo((expected * 9.5) / 1.609344, 1)
 })
 
+// backend specs/0021 CA-2: the same gallons at 8.5 loaded and 11 empty
+test('the range loaded and empty come from the same gallons', () => {
+  // Half of a 130 gal tank (its measures agree: adjusted to it)
+  const half = readingFor(
+    { ...dTank, capacityGal: 130 },
+    12,
+    efficienciesOf(
+      truck({ fuelEfficiencyKmPerGal: 8.5, fuelEfficiencyEmptyKmPerGal: 11 })
+    )
+  )
+  expect(half.gallons).toBe(65)
+  expect(half.estimate).toEqual({ km: 552.5, miles: 343.31, kmPerGal: 8.5 })
+  expect(half.estimateEmpty).toEqual({ km: 715, miles: 444.28, kmPerGal: 11 })
+  // A truck saved before specs/0021: the loaded one only
+  expect(
+    readingFor(dTank, 12, efficienciesOf(truck())).estimateEmpty
+  ).toBeNull()
+})
+
 test('without efficiency there is no estimate; full is 100%', () => {
-  const reading = readingFor(dTank, 24, null)
+  const reading = readingFor(dTank, 24, NO_EFFICIENCY)
   expect(reading.estimate).toBeNull()
+  expect(reading.estimateEmpty).toBeNull()
   expect(reading.fillPercent).toBe(100)
 })
 
@@ -89,13 +111,14 @@ describe('a catalog tank is adjusted to its factory capacity', () => {
   })
 
   test('full, it holds its capacity; half way, about half', () => {
-    expect(readingFor(kenworth, 24.5, null).gallons).toBe(100)
-    const half = readingFor(kenworth, 12, null)
+    expect(readingFor(kenworth, 24.5, NO_EFFICIENCY).gallons).toBe(100)
+    const half = readingFor(kenworth, 12, NO_EFFICIENCY)
     expect(half.gallons).toBeGreaterThan(48)
     expect(half.gallons).toBeLessThan(49.5)
     // The share of the tank does not change
     expect(half.fillPercent).toBe(
-      readingFor({ ...kenworth, templateId: null }, 12, null).fillPercent
+      readingFor({ ...kenworth, templateId: null }, 12, NO_EFFICIENCY)
+        .fillPercent
     )
   })
 
@@ -108,8 +131,8 @@ describe('a catalog tank is adjusted to its factory capacity', () => {
         capacityGal: 100,
         templateId,
       })
-      expect(readingFor(generic, 24, null).gallons).toBe(100)
-      expect(readingFor(generic, 12, null)).toMatchObject({
+      expect(readingFor(generic, 24, NO_EFFICIENCY).gallons).toBe(100)
+      expect(readingFor(generic, 12, NO_EFFICIENCY)).toMatchObject({
         gallons: 50,
         fillPercent: 50,
       })
@@ -130,7 +153,7 @@ describe('a catalog tank is adjusted to its factory capacity', () => {
       capacityGal: 70,
       templateId: null,
     })
-    expect(readingFor(wrong, 26, null).gallons).toBe(
+    expect(readingFor(wrong, 26, NO_EFFICIENCY).gallons).toBe(
       Math.round(fullVolumeGallons(geometry) * 100) / 100
     )
     expect(capacityMismatchOf(wrong)).toBe(true)

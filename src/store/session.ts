@@ -8,8 +8,9 @@ import type {
 } from 'services/session'
 import { sileo } from 'sileo'
 import { forgetInvitation } from 'utils/pendingInvitation'
-import { reportError } from 'utils/reportError'
+import { reportError, setSessionStatusSource } from 'utils/reportError'
 import { isPermissionDenied } from 'utils/teamErrors'
+import { enteredAccountFrom } from 'schemas/session'
 
 // import(): the SDK stays out of the basic mode's bundle (specs/0000 RNF-1)
 const sessionApi = () => import('services/session')
@@ -121,11 +122,32 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     // Only the latest read counts: an older one that ends later (switching
     // organization, signing out meanwhile) must not overwrite it
     const current = () => load === latestLoad && get().user?.uid === user.uid
+    // The account this session already knows, if any (specs/0020 RF-3)
+    const before = get()
+    const known =
+      before.user?.uid === user.uid && before.profile !== null
+        ? {
+            status: before.status,
+            profile: before.profile,
+            memberships: before.memberships,
+            organization: before.organization,
+          }
+        : null
     set({ status: 'loading', user })
     try {
       const api = await sessionApi()
       const account = await api.readAccount(user.uid)
       if (!current()) return
+      // Firestore answering from the phone's cache, from before the account
+      // existed (an installed iPhone app, specs/0020): it would send someone
+      // who already entered back to Welcome. What the session knows stays
+      if (account.profile === null && known) {
+        reportError(new Error('The account was read without its profile'), {
+          operation: 'readAccountStale',
+        })
+        set(known)
+        return
+      }
       const { needsContactSync, ...data } = account
       set({
         ...data,
@@ -147,6 +169,33 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       }
       set({ status: 'error' })
     }
+  }
+
+  /**
+   * Enters with the account the callable answered (specs/0020 RF-2), without
+   * reading Firestore again: on an installed iPhone app that read could hang
+   * or come from a stale cache. A backend from before 0020 answers only the
+   * id: then the account is read, as before.
+   */
+  const enter = async (result: unknown) => {
+    const entered = enteredAccountFrom(result)
+    if (!entered) {
+      await get().refresh()
+      return
+    }
+    // A read still in flight must not overwrite this
+    latestLoad += 1
+    set(state => ({
+      status: 'ready',
+      profile: entered.profile,
+      memberships: [
+        ...state.memberships.filter(
+          membership => membership.orgId !== entered.membership.orgId
+        ),
+        entered.membership,
+      ].sort((a, b) => a.orgName.localeCompare(b.orgName, 'es')),
+      organization: entered.organization,
+    }))
   }
 
   return {
@@ -199,8 +248,8 @@ export const useSessionStore = create<SessionState>()((set, get) => {
 
     completeOnboarding: async input => {
       const api = await sessionApi()
-      await api.callAccount({ action: 'bootstrap', ...input })
-      await get().refresh()
+      const result = await api.callAccount({ action: 'bootstrap', ...input })
+      await enter(result)
     },
 
     switchOrganization: async orgId => {
@@ -220,8 +269,12 @@ export const useSessionStore = create<SessionState>()((set, get) => {
 
     createOrganization: async ({ name, currency }) => {
       const api = await sessionApi()
-      await api.callAccount({ action: 'createOrganization', name, currency })
-      await get().refresh()
+      const result = await api.callAccount({
+        action: 'createOrganization',
+        name,
+        currency,
+      })
+      await enter(result)
     },
 
     deleteAccount: async () => {
@@ -269,6 +322,9 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     },
   }
 })
+
+// Client errors say which state the session was in (backend specs/0020 RF-9)
+setSessionStatusSource(() => useSessionStore.getState().status)
 
 /** The caller's role in the active organization. */
 export const selectActiveRole = (state: SessionState) =>

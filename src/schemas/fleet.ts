@@ -101,7 +101,10 @@ interface VehicleFields {
 
 export interface Truck extends FleetItemBase, VehicleFields {
   distanceUnit: DistanceUnit
+  /** Loaded (backend specs/0021 RF-1): the field of before, kept as is. */
   fuelEfficiencyKmPerGal: number | null
+  /** Empty; trucks saved before specs/0021 have none. */
+  fuelEfficiencyEmptyKmPerGal: number | null
   odometerKm: number | null
   assignedDriverUid: string | null
 }
@@ -266,7 +269,13 @@ export const truckFormSchema = z
     // From the list, '' or OTHER_CHOICE (then `brand` / `model` is typed)
     brandChoice: z.string(),
     modelChoice: z.string(),
+    // Loaded and empty (backend specs/0021 RF-4)
     efficiency: optionalDecimal(
+      FLEET_LIMITS.efficiency.min,
+      FLEET_LIMITS.efficiency.max,
+      'por galón'
+    ),
+    efficiencyEmpty: optionalDecimal(
       FLEET_LIMITS.efficiency.min,
       FLEET_LIMITS.efficiency.max,
       'por galón'
@@ -393,12 +402,15 @@ const vehicleToForm = (item: Truck | Trailer) => ({
 export const truckFromForm = (values: TruckFormValues, unit: DistanceUnit) => {
   const toKm = unit === 'mi' ? KM_PER_MILE : 1
   const efficiency = decimalOrNull(values.efficiency)
+  const efficiencyEmpty = decimalOrNull(values.efficiencyEmpty)
   const odometer = decimalOrNull(values.odometer)
   return {
     ...vehicleFromForm(values),
     ...brandAndModel(values),
     distanceUnit: unit,
     fuelEfficiencyKmPerGal: efficiency === null ? null : efficiency * toKm,
+    fuelEfficiencyEmptyKmPerGal:
+      efficiencyEmpty === null ? null : efficiencyEmpty * toKm,
     // Whole kilometers: an odometer has no use for fractions
     odometerKm: odometer === null ? null : Math.round(odometer * toKm),
     assignedDriverUid: values.assignedDriverUid || null,
@@ -470,6 +482,11 @@ export const truckToForm = (
       truck?.fuelEfficiencyKmPerGal == null
         ? null
         : truck.fuelEfficiencyKmPerGal * fromKm
+    ),
+    efficiencyEmpty: show(
+      truck?.fuelEfficiencyEmptyKmPerGal == null
+        ? null
+        : truck.fuelEfficiencyEmptyKmPerGal * fromKm
     ),
     odometer: show(
       truck?.odometerKm == null ? null : Math.round(truck.odometerKm * fromKm)

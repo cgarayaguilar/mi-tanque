@@ -31,6 +31,10 @@
       "destination": "https://mi-tanque-60015.firebaseapp.com/__/firebase/:path*"
     },
     {
+      "source": "/api/client-errors",
+      "destination": "https://us-central1-mi-tanque-60015.cloudfunctions.net/clientErrors"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

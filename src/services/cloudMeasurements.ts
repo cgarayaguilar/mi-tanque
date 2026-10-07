@@ -22,6 +22,7 @@ import { loadFirebase } from 'services/firebase'
 import type { Position } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
 import { reportError } from 'utils/reportError'
+import { withTimeout } from 'utils/withTimeout'
 
 export const HISTORY_PAGE_SIZE = 100
 
@@ -59,6 +60,12 @@ export interface CloudMeasurement extends CloudReading {
 const toDate = (value: unknown): Date | null =>
   value instanceof Timestamp ? value.toDate() : null
 
+const estimateSchema = z.object({
+  km: z.number(),
+  miles: z.number(),
+  kmPerGal: z.number(),
+})
+
 const schema = z.object({
   orgId: z.string(),
   tankId: z.string(),
@@ -87,9 +94,9 @@ const schema = z.object({
   gallons: z.number(),
   liters: z.number(),
   fillPercent: z.number(),
-  estimate: z.nullable(
-    z.object({ km: z.number(), miles: z.number(), kmPerGal: z.number() })
-  ),
+  estimate: z.nullable(estimateSchema),
+  // Measurements from before specs/0021 only have the loaded one
+  estimateEmpty: z._default(z.nullable(estimateSchema), null),
   odometerKm: z.nullable(z.number()),
   source: z.enum(['app', 'import']),
 })
@@ -226,8 +233,9 @@ export const readHistoryPage = async (options: {
     ...(options.after ? [startAfter(options.after)] : []),
     limit(options.pageSize ?? HISTORY_PAGE_SIZE),
   ]
-  const snapshot = await getDocs(
-    query(collection(db, 'measurements'), ...constraints)
+  const snapshot = await withTimeout(
+    getDocs(query(collection(db, 'measurements'), ...constraints)),
+    'readHistoryPage'
   )
   const last = snapshot.docs.at(-1) ?? null
   return {

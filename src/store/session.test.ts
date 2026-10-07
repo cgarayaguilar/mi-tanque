@@ -400,3 +400,89 @@ describe('reading the account (audit 2026-10-01 #16, #17)', () => {
     )
   })
 })
+
+describe('entering without reading Firestore (specs/0020)', () => {
+  const welcome = { profile: null, memberships: [], organization: null }
+  const entered = (orgId: string, orgName: string) => ({
+    orgId,
+    account: {
+      profile: { displayName: 'Ana', activeOrgId: orgId },
+      membership: { orgId, role: 'owner', orgName },
+      organization: {
+        id: orgId,
+        name: orgName,
+        defaultCurrency: 'NIO',
+        distanceUnit: 'km',
+      },
+    },
+  })
+
+  // CA-1: on an installed iPhone app the read could hang forever
+  test('"Empezar" enters with the answer, without reading the account', async () => {
+    api.readAccount.mockResolvedValueOnce(welcome)
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    api.readAccount.mockImplementation(() => new Promise(() => undefined))
+    api.callAccount.mockResolvedValueOnce(entered('org-n', 'Flota de Ana'))
+
+    await store
+      .getState()
+      .completeOnboarding({ orgName: 'Flota de Ana', currency: 'NIO' })
+
+    expect(api.readAccount).toHaveBeenCalledTimes(1)
+    expect(store.getState()).toMatchObject({
+      status: 'ready',
+      profile: { activeOrgId: 'org-n' },
+      memberships: [{ orgId: 'org-n', role: 'owner' }],
+      organization: { id: 'org-n', name: 'Flota de Ana', distanceUnit: 'km' },
+    })
+  })
+
+  test('a new organization joins the others, in order, and becomes active', async () => {
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    api.callAccount.mockResolvedValueOnce(entered('org-c', 'Carga C'))
+
+    await store
+      .getState()
+      .createOrganization({ name: 'Carga C', currency: 'NIO' })
+
+    expect(api.readAccount).toHaveBeenCalledTimes(1)
+    expect(store.getState().organization?.id).toBe('org-c')
+    expect(store.getState().memberships.map(m => m.orgName)).toEqual([
+      'Carga C',
+      'Flota de Ana',
+      'Transportes B',
+    ])
+  })
+
+  // CA-2: a stale cache must not send someone who entered back to Welcome
+  test('a later read without the profile keeps the account and is reported', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    api.readAccount.mockResolvedValueOnce(welcome)
+    const { store, emit } = await startWithListener()
+    emit(ana)
+    await settled()
+    api.callAccount.mockResolvedValueOnce(entered('org-n', 'Flota de Ana'))
+    await store
+      .getState()
+      .completeOnboarding({ orgName: 'Flota de Ana', currency: 'NIO' })
+
+    api.readAccount.mockResolvedValueOnce(welcome)
+    await store.getState().refresh()
+
+    expect(store.getState()).toMatchObject({
+      status: 'ready',
+      organization: { id: 'org-n' },
+    })
+    expect(consoleError).toHaveBeenCalledWith(
+      '[readAccountStale]',
+      expect.anything(),
+      expect.any(Error)
+    )
+  })
+})

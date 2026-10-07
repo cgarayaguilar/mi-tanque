@@ -93,6 +93,7 @@ test('an edit and a removal show at once', async () => {
       liters: 37.85,
       fillPercent: 20,
       estimate: null,
+      estimateEmpty: null,
     },
     odometerKm: null,
   })

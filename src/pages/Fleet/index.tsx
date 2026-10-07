@@ -47,6 +47,7 @@ import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
 import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
 import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
+import { RETRY_HINT } from 'utils/withTimeout'
 
 const CARD_HEIGHT = 88
 
@@ -243,11 +244,12 @@ function FleetScreen() {
                     tankCount === 1
                       ? '1 tanque'
                       : `${String(tankCount)} tanques`,
-                    efficiency,
                     odometer,
                   ]
                     .filter(Boolean)
                     .join(' · '),
+                  // Its own line: loaded and empty use " · " too (specs/0021)
+                  efficiency,
                 ]}
                 archived={truck.archived}
                 notice={insuranceNotice(
@@ -329,7 +331,7 @@ function FleetScreen() {
           headingLevel="h2"
           icon={<CloudOffIcon />}
           title="No pudimos cargar tu flota"
-          description="Revisa tu conexión y vuelve a intentarlo."
+          description={RETRY_HINT}
           action={{
             label: 'Reintentar',
             onClick: () => orgId && void load(orgId),

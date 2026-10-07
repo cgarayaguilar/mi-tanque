@@ -26,6 +26,7 @@ import { photoUrl } from 'services/fleet'
 import type { RefuelValues } from 'types'
 import type { Position } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
+import { withTimeout } from 'utils/withTimeout'
 
 export const REFUELS_PAGE_SIZE = 100
 
@@ -229,8 +230,9 @@ export const readRefuelsPage = async (options: {
     ...(options.after ? [startAfter(options.after)] : []),
     limit(options.pageSize ?? REFUELS_PAGE_SIZE),
   ]
-  const snapshot = await getDocs(
-    query(collection(db, 'refuels'), ...constraints)
+  const snapshot = await withTimeout(
+    getDocs(query(collection(db, 'refuels'), ...constraints)),
+    'readRefuelsPage'
   )
   const last = snapshot.docs.at(-1) ?? null
   return {

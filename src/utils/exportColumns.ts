@@ -43,6 +43,8 @@ export interface ExportMeasurement {
   liters: number
   fillPercent: number | null
   estimate: { km: number; miles: number; kmPerGal: number } | null
+  /** Empty (backend specs/0021); null in measurements from before. */
+  estimateEmpty: { km: number; miles: number; kmPerGal: number } | null
   odometerKm: number | null
   place: ExportPlace | null
   /** Free text: basic-mode and imported measurements. */
@@ -117,17 +119,30 @@ export const MEASUREMENT_COLUMNS: CsvColumn<ExportMeasurement>[] = [
   { header: 'Galones', value: row => row.gallons },
   { header: 'Litros', value: row => row.liters },
   { header: 'Llenado (%)', value: row => row.fillPercent },
+  // Loaded and empty (backend specs/0021 RF-8)
   {
-    header: 'Alcance (km)',
+    header: 'Alcance cargado (km)',
     value: row => row.estimate && Math.round(row.estimate.km),
   },
   {
-    header: 'Alcance (mi)',
+    header: 'Alcance cargado (mi)',
     value: row => row.estimate && Math.round(row.estimate.miles),
   },
   {
-    header: 'Rendimiento usado (km/gal)',
+    header: 'Rendimiento cargado (km/gal)',
     value: row => row.estimate?.kmPerGal,
+  },
+  {
+    header: 'Alcance vacío (km)',
+    value: row => row.estimateEmpty && Math.round(row.estimateEmpty.km),
+  },
+  {
+    header: 'Alcance vacío (mi)',
+    value: row => row.estimateEmpty && Math.round(row.estimateEmpty.miles),
+  },
+  {
+    header: 'Rendimiento vacío (km/gal)',
+    value: row => row.estimateEmpty?.kmPerGal,
   },
   ...odometer<ExportMeasurement>(),
   ...where<ExportMeasurement>(),

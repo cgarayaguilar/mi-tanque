@@ -135,6 +135,8 @@ test('the summary shows money per currency and the truck efficiency by levels (C
   expect(summary).toHaveTextContent('Gastado en NIOC$28,600.00 NIO')
   // 1 000 km with 180 − 60 = 120 gal
   expect(summary).toHaveTextContent('Unidad 12: 8.3 km/gal (1,000 km, 120 gal)')
+  // Next to what the truck declares (backend specs/0021 CA-6)
+  expect(summary).toHaveTextContent('declarado: 9.5 km/gal cargado')
   expect(refuelsApi.readRefuelsPage).toHaveBeenCalledWith(
     expect.objectContaining({ orgId: ORG_ID, equipmentId: null, after: null })
   )

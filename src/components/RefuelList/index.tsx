@@ -59,6 +59,8 @@ export interface TruckEfficiencyRow {
   km: number
   gallons: number
   unit: 'km' | 'mi'
+  /** What the truck says it does, loaded and empty (backend specs/0021 RF-10). */
+  declared: string | null
 }
 
 const written = (item: RefuelItem) =>
@@ -174,6 +176,12 @@ export function RefuelPeriodSummary({
                 {row.truckName}: {formatNumber(distance / row.gallons, 1)}{' '}
                 {row.unit}/gal ({formatNumber(Math.round(distance))} {row.unit},{' '}
                 {formatNumber(Math.round(row.gallons))} gal)
+                {row.declared && (
+                  <Box component="span" sx={{ color: 'text.secondary' }}>
+                    {' '}
+                    · declarado: {row.declared}
+                  </Box>
+                )}
               </Typography>
             )
           })}
