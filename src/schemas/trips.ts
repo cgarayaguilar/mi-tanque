@@ -16,6 +16,10 @@ export const TRIP_LIMITS = {
   amountMax: 100_000_000,
   extras: 10,
   extraDescription: 80,
+  // The trip and its expenses go in one batch, where the rules may read
+  // at most 20 documents: 10 categories fit beside the trip's (specs/0026)
+  expenses: 10,
+  expenseDescription: 200,
   tripNumber: 20,
   description: 500,
   notes: 1000,
@@ -66,6 +70,8 @@ export interface Trip extends TripPeriod {
   secondDriverId: string | null
   secondDriverName: string | null
   driverIds: string[]
+  /** Its expenses' total, kept by the backend (specs/0026 RF-3). */
+  expensesTotal: number
   tripNumber: string | null
   description: string | null
   notes: string | null
@@ -82,9 +88,22 @@ export const tripIncome = (trip: Pick<Trip, 'price' | 'extras'>) =>
   ) / 100
 
 /** Stored with 2 decimals, like every amount (specs/0012). */
-const toCents = (value: number) => Math.round(value * 100) / 100
+export const toCents = (value: number) => Math.round(value * 100) / 100
 
-const amountIssue = (value: string): string | null => {
+/** The rules take an expense up to a day ahead (backend specs/0026 RF-2). */
+export const isTooLate = (date: Date, now = new Date()) =>
+  date.getTime() > now.getTime() + 24 * 60 * 60 * 1000
+
+/** What is wrong with an expense's typed date, or null (specs/0026). */
+export const expenseDateIssue = (value: string): string | null => {
+  const date = fromDateTimeValue(value)
+  if (!date) return 'Escribe la fecha y hora'
+  if (isTooLate(date)) return 'La fecha no puede ser futura'
+  return null
+}
+
+/** What is wrong with a typed amount, or null (specs/0025, 0026). */
+export const amountIssue = (value: string): string | null => {
   if (value.trim() === '') return 'Escribe el monto'
   const amount = parseDecimal(value)
   if (Number.isNaN(amount)) return 'Escribe solo números, por ejemplo 2,500'
@@ -111,6 +130,16 @@ export const tripFormSchema = z
     destination: text(TRIP_LIMITS.place),
     price: z.string(),
     extras: z.array(z.object({ description: z.string(), amount: z.string() })),
+    // Its expenses, created, changed or deleted with it (specs/0026 RF-12)
+    expenses: z.array(
+      z.object({
+        id: z.string(),
+        categoryId: z.string(),
+        amount: z.string(),
+        takenAt: z.string(),
+        description: z.string(),
+      })
+    ),
     truckId: z.string(),
     trailerId: z.string(),
     driverId: z.string(),
@@ -147,6 +176,19 @@ export const tripFormSchema = z
           )
         const amount = amountIssue(extra.amount)
         if (amount) issue(['extras', index, 'amount'], amount)
+      })
+      values.expenses.forEach((expense, index) => {
+        if (!expense.categoryId)
+          issue(['expenses', index, 'categoryId'], 'Elige la categoría')
+        const amount = amountIssue(expense.amount)
+        if (amount) issue(['expenses', index, 'amount'], amount)
+        const date = expenseDateIssue(expense.takenAt)
+        if (date) issue(['expenses', index, 'takenAt'], date)
+        if (expense.description.trim().length > TRIP_LIMITS.expenseDescription)
+          issue(
+            ['expenses', index, 'description'],
+            `Usa ${String(TRIP_LIMITS.expenseDescription)} caracteres como máximo`
+          )
       })
       if (!values.truckId) issue(['truckId'], 'Elige el camión')
       if (!values.driverId) issue(['driverId'], 'Elige el conductor')
@@ -256,6 +298,7 @@ export const EMPTY_TRIP_FORM = (now: Date): TripFormValues => ({
   destination: '',
   price: '',
   extras: [],
+  expenses: [],
   truckId: '',
   trailerId: '',
   driverId: '',
@@ -279,6 +322,8 @@ export const tripToForm = (trip: Trip): TripFormValues => ({
     description: extra.description,
     amount: formatEditable(extra.amount),
   })),
+  // Filled by the form with the trip's expenses, once read (specs/0026)
+  expenses: [],
   truckId: trip.truckId,
   trailerId: trip.trailerId ?? '',
   driverId: trip.driverId,

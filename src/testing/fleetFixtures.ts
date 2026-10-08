@@ -1,5 +1,10 @@
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
+import {
+  presetCategoriesOf,
+  type ExpenseCategory,
+} from 'schemas/expenseCategories'
+import type { Expense } from 'schemas/expenses'
 import type { Rate } from 'schemas/rates'
 import type { Trip } from 'schemas/trips'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
@@ -181,10 +186,40 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   secondDriverId: null,
   secondDriverName: null,
   driverIds: ['driver-1'],
+  expensesTotal: 0,
   tripNumber: null,
   description: null,
   notes: null,
   createdAt: new Date(2026, 9, 6, 8, 15),
+  createdBy: 'luis',
+  ...overrides,
+})
+
+/** The nine an organization starts with (specs/0026 RF-1). */
+export const presetCategories = (): ExpenseCategory[] =>
+  presetCategoriesOf(ORG_ID)
+
+/** A trip's toll: C$1,850 of "Peajes" on Managua → San José. */
+export const expense = (overrides: Partial<Expense> = {}): Expense => ({
+  id: 'expense-1',
+  orgId: ORG_ID,
+  takenAt: new Date(2026, 9, 6, 10, 30),
+  amount: 1850,
+  currency: 'NIO',
+  categoryId: 'org-a_tolls',
+  categoryName: 'Peajes',
+  description: null,
+  kind: 'trip',
+  tripId: 'trip-1',
+  tripRoute: 'Managua → San José',
+  truckId: 'truck-1',
+  truckName: 'Unidad 12',
+  trailerId: 'trailer-1',
+  trailerName: 'Caja 7',
+  driverId: null,
+  driverName: null,
+  receiptPhotoPath: null,
+  createdAt: new Date(2026, 9, 6, 10, 35),
   createdBy: 'luis',
   ...overrides,
 })

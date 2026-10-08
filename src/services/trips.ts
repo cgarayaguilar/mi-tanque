@@ -14,6 +14,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
 } from 'firebase/firestore'
 import * as z from 'zod/mini'
@@ -25,6 +26,8 @@ import {
   type TripExtra,
   type TripFields,
 } from 'schemas/trips'
+import type { ExpenseFields } from 'schemas/expenses'
+import { expenseChanges, newExpenseData } from 'services/expenses'
 import { loadFirebase } from 'services/firebase'
 import { reportError } from 'utils/reportError'
 import { withTimeout } from 'utils/withTimeout'
@@ -62,6 +65,8 @@ const schema = z.object({
   secondDriverId: nullableString,
   secondDriverName: nullableString,
   driverIds: z.array(z.string()),
+  // Kept by the backend's trigger (specs/0026 RF-3); 0 until it runs
+  expensesTotal: z._default(z.number(), 0),
   tripNumber: nullableString,
   description: nullableString,
   notes: nullableString,
@@ -174,6 +179,7 @@ export const createTrip = async (
   await setDoc(doc(db, 'trips', id), {
     ...stored(fields),
     orgId,
+    expensesTotal: 0,
     createdAt: serverTimestamp(),
     createdBy: uid,
     updatedAt: serverTimestamp(),
@@ -193,4 +199,60 @@ export const updateTrip = async (id: string, fields: TripFields) => {
 export const deleteTrip = async (id: string) => {
   const { db } = await loadFirebase()
   await deleteDoc(doc(db, 'trips', id))
+}
+
+/** The expenses a trip's form adds, changes and removes (specs/0026 RF-12). */
+export interface TripExpenseWrites {
+  create: { id: string; fields: ExpenseFields }[]
+  update: { id: string; fields: ExpenseFields }[]
+  remove: string[]
+}
+
+/**
+ * The trip and its expenses in one batch (RF-12): offline they wait
+ * together, and the rules check each expense against the trip it goes with.
+ */
+export const saveTripWithExpenses = async (
+  id: string,
+  orgId: string,
+  fields: TripFields,
+  isNew: boolean,
+  expenses: TripExpenseWrites
+) => {
+  const [{ db }, uid] = await Promise.all([loadFirebase(), currentUid()])
+  const batch = writeBatch(db)
+  const tripRef = doc(db, 'trips', id)
+  if (isNew) {
+    batch.set(tripRef, {
+      ...stored(fields),
+      orgId,
+      expensesTotal: 0,
+      createdAt: serverTimestamp(),
+      createdBy: uid,
+      updatedAt: serverTimestamp(),
+      updatedBy: uid,
+    })
+  } else {
+    batch.update(tripRef, {
+      ...stored(fields),
+      updatedAt: serverTimestamp(),
+      updatedBy: uid,
+    })
+  }
+  for (const expense of expenses.create) {
+    batch.set(
+      doc(db, 'expenses', expense.id),
+      newExpenseData(orgId, uid, expense.fields)
+    )
+  }
+  for (const expense of expenses.update) {
+    batch.update(
+      doc(db, 'expenses', expense.id),
+      expenseChanges(uid, expense.fields)
+    )
+  }
+  for (const expenseId of expenses.remove) {
+    batch.delete(doc(db, 'expenses', expenseId))
+  }
+  await batch.commit()
 }
