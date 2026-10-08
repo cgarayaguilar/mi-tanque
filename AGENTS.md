@@ -189,6 +189,23 @@ en cada push y PR.
   evalúa como máximo 1000 expresiones por regla): la app los valida al escribir y al leer
   (`toExtras` en `services/trips`). El test "ten extras, two drivers…" de `tripRules` es la guardia
   de ese límite: cualquier campo nuevo del viaje tiene que mantenerlo en verde.
+- **Gastos (specs/0026):** botón **Gastos** en la barra. Páginas lazy `Expenses` (lista),
+  `Expense` (`/gastos/nuevo`, `/gastos/nuevo?viaje={id}` y `/gastos/{id}`) y `ExpenseCategories`
+  (`/gastos/categorias`); una sola ruta `/gastos/:id` elige entre categorías y gasto, como la de
+  viajes. `services/expenses` (estático solo en esas páginas, en `TripEditor`, `Trip` y en
+  `hooks/useExpense`/`useTripExpenses`) y `store/expenses` (con **un solo** `import()` en curso:
+  en Vitest, dos `import()` en el mismo tick pueden dar el módulo real). Las categorías son de la
+  organización, con las 9 precargadas con id fijo `{orgId}_{clave}` (`presetCategoriesOf`); las
+  siembra la primera persona que puede escribir al abrir Gastos (Lectura las ve sin guardarlas) y
+  el store no hace dos lecturas a la vez (dos siembras seguidas: la segunda es un `update` que las
+  reglas rechazan). "Combustible" (`system: 'fuel'`) no se archiva. Un gasto de viaje copia el
+  camión y el remolque del viaje (`tripLink`); el **trigger** del backend mantiene
+  `expensesTotal` del viaje y mueve sus gastos si cambia o se borra: la app nunca escribe ese
+  campo. El formulario del viaje guarda sus renglones de gastos en **un lote** con el viaje
+  (`saveTripWithExpenses`, `tripExpenseChanges`): solo escribe los renglones nuevos o cambiados,
+  hasta `TRIP_LIMITS.expenses` (10), porque las reglas de un lote leen como máximo 20 documentos
+  (el emulador no lo hace cumplir). La fecha de un gasto no puede pasar de mañana
+  (`expenseDateIssue`, como las reglas).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

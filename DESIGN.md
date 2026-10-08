@@ -121,13 +121,18 @@ tarjetas.
   claro en oscuro); el ícono de la app lo lleva en blanco sobre `primary`.
 - Rejilla de tanques: columnas automáticas de mínimo 150px (dos por fila en un teléfono).
 - Medidor de **200px**: Medición entera cabe en una pantalla de teléfono (812px).
-- Barra de navegación **fija abajo** en Medición, Historial, Flota y Viajes (las dos últimas solo con sesión; Flota con seis pestañas: Camiones, Remolques, Tanques, Clientes, Conductores y Tarifas). Con cuatro o más botones, cada uno lleva el icono arriba y el nombre abajo en `caption` (specs/0025).
+- Barra de navegación **fija abajo** en Medición, Historial, Flota, Viajes y Gastos (las tres últimas solo con sesión; Flota con seis pestañas: Camiones, Remolques, Tanques, Clientes, Conductores y Tarifas). Con cuatro o más botones, cada uno lleva el icono arriba y el nombre abajo en `caption` (specs/0025, 0026).
+- Encabezado de una lista con acciones (Viajes, Gastos): título y botones en **una fila** a 375px;
+  la acción secundaria ("Categorías") va como botón de texto, sin icono, para caber junto a
+  "Agregar" (specs/0026).
 
 ## Números, dinero y unidades
 
 - Números como en Centroamérica: punto decimal y coma de miles ("1,500.25"), con `formatNumber`.
 - **Dinero** (specs/0012), siempre con `utils/formatMoney`:
-  - Totales: símbolo al inicio y código al final, "C$9,274.26 NIO" (`moneyTotal`).
+  - Totales: símbolo al inicio y código al final, "C$9,274.26 NIO" (`moneyTotal`). Un total
+    negativo (una pérdida) lleva el signo antes del símbolo, "-C$350.00 NIO", y se muestra en
+    `error.main` (la utilidad de un viaje, specs/0026).
   - Precios por unidad: solo el símbolo, "C$185.49/gal · C$49.00/litro" (`unitPrice`).
   - En los campos de dinero, el símbolo va a la izquierda del número.
   - Cada moneda se nombra en plural con su gentilicio y su símbolo: "Córdobas nicaragüenses
