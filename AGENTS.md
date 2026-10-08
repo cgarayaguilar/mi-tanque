@@ -206,6 +206,15 @@ en cada push y PR.
   hasta `TRIP_LIMITS.expenses` (10), porque las reglas de un lote leen como máximo 20 documentos
   (el emulador no lo hace cumplir). La fecha de un gasto no puede pasar de mañana
   (`expenseDateIssue`, como las reglas).
+- **Rellenos y su gasto (specs/0027):** cada relleno con cuenta tiene su gasto de Combustible,
+  `expenses/{id del relleno}`, con `refuelId`; lo crea, actualiza y borra el trigger
+  `onRefuelExpense` del backend (al viaje En curso de su camión o remolque). La app escribe
+  `refuelId: null` en todo gasto suyo, nunca crea ni borra el de un relleno, y solo le cambia a qué
+  corresponde y la descripción: `pages/Expense/RefuelExpenseForm` (`refuelExpenseChanges`,
+  `tripCarriesRefuel`, `updateRefuelExpense`; el relleno se lee con `readRefuelOfExpense`). En
+  el formulario del viaje no es un renglón: se muestra aparte y nunca se quita. Con cuenta, el
+  relleno va en la moneda de la organización y `RefuelForm` no muestra selector (los importados
+  del teléfono conservan la suya).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
