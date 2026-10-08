@@ -7,6 +7,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import SpeedIcon from '@mui/icons-material/Speed'
 import AltRouteIcon from '@mui/icons-material/AltRoute'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import {
   colorTokens,
   controlHeight,
@@ -27,14 +28,15 @@ const SECTIONS: Section[] = [
 ]
 
 // With a session the organization's fleet joins the tabs (specs/0003 RF-1),
-// and its trips (specs/0025 RF-5)
+// its trips (specs/0025 RF-5) and its expenses (specs/0026 RF-8)
 const SIGNED_IN: Section[] = [
   { href: '/flota', label: 'Flota', icon: <LocalShippingIcon /> },
   { href: '/viajes', label: 'Viajes', icon: <AltRouteIcon /> },
+  { href: '/gastos', label: 'Gastos', icon: <ReceiptLongIcon /> },
 ]
 
 // The sections whose pages go deeper (/flota/camiones, /viajes/123)
-const PREFIXED = new Set(['/flota', '/viajes'])
+const PREFIXED = new Set(['/flota', '/viajes', '/gastos'])
 
 /** Pill tabs between the two main screens; the route decides the active one. */
 export default function NavBar() {

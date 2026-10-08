@@ -12,6 +12,8 @@ import { reportError } from 'utils/reportError'
 interface PhotoFieldProps {
   /** Alt text of the photo, e.g. "Foto de Unidad 12". */
   alt: string
+  /** Its title; "Foto" for an item of the fleet. */
+  label?: string
   path: string | null
   /** Resolves the stored path to a URL (services/fleet). */
   loadUrl: (path: string) => Promise<string>
@@ -24,6 +26,7 @@ interface PhotoFieldProps {
 /** The item's single photo (specs/0003 RF-13): shown, added or replaced. */
 export default function PhotoField({
   alt,
+  label = 'Foto',
   path,
   loadUrl,
   upload,
@@ -86,7 +89,7 @@ export default function PhotoField({
   return (
     <Box>
       <Typography variant="subtitle2" component="p" sx={{ mb: 2 }}>
-        Foto
+        {label}
       </Typography>
       {path && !url ? (
         <Skeleton
