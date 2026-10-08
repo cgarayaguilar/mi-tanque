@@ -161,6 +161,11 @@ en cada push y PR.
   escribir, `parseTankDimensions`. El cálculo sin cuenta pasa por `localGeometry` y
   `localMaxInches` (`utils/fuelReading`), y el texto de un tanque por `utils/tankText`. En los
   tests, `cylinder({…})` de `src/testing/localTank` arma un cilindro.
+- **Clientes (specs/0022):** una sección más de Flota (`/flota/clientes`), en el mismo store y
+  servicio (`useFleetStore().clients`, colección `clients`), sin foto (`section.photo`). Los campos
+  son `components/ClientFields`, con su esquema en `schemas/clients`, para reutilizarlos en el
+  diálogo "Nuevo cliente" del viaje (specs/0025). El nombre no se repite: lo revisa la app con
+  `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
