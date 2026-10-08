@@ -23,6 +23,11 @@ import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
 import type { Currency } from 'schemas/account'
+import {
+  expenseToRow,
+  tripExpenseChanges,
+  type Expense,
+} from 'schemas/expenses'
 import { knownPlaces, knownSpelling } from 'schemas/rates'
 import {
   EMPTY_TRIP_FORM,
@@ -32,14 +37,19 @@ import {
   tripFormSchema,
   tripFromForm,
   tripIncome,
+  isTooLate,
+  toCents,
   tripToForm,
   type Trip,
   type TripFormValues,
 } from 'schemas/trips'
-import { createTrip, updateTrip } from 'services/trips'
+import { newExpenseId } from 'services/expenses'
+import { saveTripWithExpenses } from 'services/trips'
+import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { useTripsStore } from 'store/trips'
+import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
 import { currencySymbol, moneyTotal } from 'utils/formatMoney'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
@@ -47,6 +57,8 @@ import { reportError } from 'utils/reportError'
 interface TripFormProps {
   /** The trip being edited, or null for a new one. */
   trip: Trip | null
+  /** Its expenses, as read: rows of "Gastos (opcional)" (specs/0026). */
+  expenses: readonly Expense[]
   /** The id the new trip will have (made when the form opened). */
   id: string
   orgId: string
@@ -70,11 +82,19 @@ const STATUS_OPTIONS = TRIP_STATUSES.map(status => ({
 }))
 
 /** A trip's form, to create or edit it (backend specs/0025 RF-9, RF-10). */
-export default function TripForm({ trip, id, orgId, currency }: TripFormProps) {
+export default function TripForm({
+  trip,
+  expenses: tripExpenses,
+  id,
+  orgId,
+  currency,
+}: TripFormProps) {
   const [, navigate] = useLocation()
   const { clients, trucks, trailers, drivers, rates } = useFleetStore()
   const tripsSeen = useTripsStore(state => state.known)
   const saveTrip = useTripsStore(state => state.save)
+  const categories = useExpensesStore(state => state.categories)
+  const applyTripExpenses = useExpensesStore(state => state.applyTripExpenses)
   const uid = useSessionStore(state => state.user?.uid ?? '')
   const [now] = useState(() => new Date())
   const {
@@ -87,9 +107,16 @@ export default function TripForm({ trip, id, orgId, currency }: TripFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
-    defaultValues: trip ? tripToForm(trip) : EMPTY_TRIP_FORM(now),
+    defaultValues: trip
+      ? { ...tripToForm(trip), expenses: tripExpenses.map(expenseToRow) }
+      : EMPTY_TRIP_FORM(now),
   })
   const extras = useFieldArray({ control, name: 'extras' })
+  const expenseRows = useFieldArray({
+    control,
+    name: 'expenses',
+    keyName: 'key',
+  })
   const values = useWatch({ control })
   const details = useMoreDetails<TripFormValues>(DETAILS, setFocus)
   const [secondDriver, setSecondDriver] = useState(
@@ -136,6 +163,25 @@ export default function TripForm({ trip, id, orgId, currency }: TripFormProps) {
       }
     }),
   })
+
+  const expensesTotal = toCents(
+    (values.expenses ?? []).reduce((sum, row) => {
+      const amount = parseDecimal(row.amount ?? '')
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+  )
+
+  // A new row's date is the trip's start, or now if it starts later (RF-12)
+  const addExpenseRow = () => {
+    const start = fromDateTimeValue(getValues('startAt'))
+    expenseRows.append({
+      id: newExpenseId(),
+      categoryId: '',
+      amount: '',
+      takenAt: toDateTimeValue(start && !isTooLate(start) ? start : new Date()),
+      description: '',
+    })
+  }
 
   const chooseRate = (rateId: string) => {
     const rate = rates.find(item => item.id === rateId)
@@ -192,11 +238,23 @@ export default function TripForm({ trip, id, orgId, currency }: TripFormProps) {
       id,
       orgId,
       ...fields,
+      // The backend keeps it (RF-3); meanwhile, what the rows add up to
+      expensesTotal: toCents(
+        values.expenses.reduce((sum, row) => sum + parseDecimal(row.amount), 0)
+      ),
       createdAt: trip?.createdAt ?? null,
       createdBy: trip?.createdBy ?? uid,
     }
+    const expenses = tripExpenseChanges(
+      values.expenses,
+      saved,
+      tripExpenses,
+      { currency, categories, trucks, trailers, drivers },
+      uid
+    )
+    applyTripExpenses(expenses.saved, expenses.remove)
     saveTrip(saved, () =>
-      trip ? updateTrip(id, fields) : createTrip(id, orgId, fields)
+      saveTripWithExpenses(id, orgId, fields, trip === null, expenses)
     ).catch((error: unknown) => {
       reportError(error, { operation: 'saveTrip' })
       if (recoverFromLostPermission(error)) return
@@ -523,7 +581,122 @@ export default function TripForm({ trip, id, orgId, currency }: TripFormProps) {
           name="status"
         />
 
-        {/* 9. The rest */}
+        {/* 9. Its expenses, saved with it (specs/0026 RF-12) */}
+        <Box role="group" aria-labelledby="trip-expenses-title">
+          <Typography
+            id="trip-expenses-title"
+            variant="overline"
+            component="p"
+            sx={{ color: 'text.secondary' }}
+          >
+            Gastos (opcional)
+          </Typography>
+          <Stack spacing={3}>
+            {expenseRows.fields.map((field, index) => {
+              const row = `expenses.${String(index)}` as `expenses.${number}`
+              const rowErrors = errors.expenses?.[index]
+              const categoryOptions = categories
+                .filter(
+                  category =>
+                    !category.archived ||
+                    category.id ===
+                      tripExpenses.find(e => e.id === field.id)?.categoryId
+                )
+                .map(option)
+              return (
+                <Box
+                  key={field.key}
+                  role="group"
+                  aria-label={`Gasto ${String(index + 1)}`}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto',
+                    gap: 2,
+                    alignItems: 'start',
+                    pb: 3,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Box sx={{ gridColumn: '1 / 3' }}>
+                    <AutocompleteField
+                      id={`tripExpense${String(index)}Category`}
+                      label="Categoría"
+                      options={categoryOptions}
+                      placeholder="Elige la categoría"
+                      error={rowErrors?.categoryId?.message}
+                      control={control}
+                      name={`${row}.categoryId`}
+                    />
+                  </Box>
+                  <IconButton
+                    aria-label={`Quitar el gasto ${String(index + 1)}`}
+                    onClick={() => {
+                      expenseRows.remove(index)
+                    }}
+                    sx={{ mt: 7 }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                  <Box sx={{ gridColumn: '1 / 3' }}>
+                    <NumberField
+                      id={`tripExpense${String(index)}Amount`}
+                      dense
+                      label="Monto"
+                      prefix={currencySymbol(currency)}
+                      placeholder="1,850"
+                      error={rowErrors?.amount?.message}
+                      registration={register(`${row}.amount`)}
+                    />
+                  </Box>
+                  <Box sx={{ gridColumn: '1 / 4' }}>
+                    <TextField
+                      id={`tripExpense${String(index)}Description`}
+                      dense
+                      label="Descripción (opcional)"
+                      placeholder="Peaje de Tipitapa"
+                      maxLength={TRIP_LIMITS.expenseDescription}
+                      error={rowErrors?.description?.message}
+                      registration={register(`${row}.description`)}
+                    />
+                  </Box>
+                  <Box sx={{ gridColumn: '1 / 4' }}>
+                    <DateTimeField
+                      id={`tripExpense${String(index)}TakenAt`}
+                      label="Fecha y hora"
+                      control={control}
+                      name={`${row}.takenAt`}
+                      error={rowErrors?.takenAt?.message}
+                    />
+                  </Box>
+                </Box>
+              )
+            })}
+          </Stack>
+          {expenseRows.fields.length < TRIP_LIMITS.expenses && (
+            <Button
+              startIcon={<AddIcon />}
+              onClick={addExpenseRow}
+              sx={{ mt: 1, ml: -2 }}
+            >
+              Agregar gasto
+            </Button>
+          )}
+          <Typography variant="subtitle2" component="p" sx={{ mt: 2 }}>
+            Gastos: {moneyTotal(trip?.currency ?? currency, expensesTotal)}
+          </Typography>
+          {expenseRows.fields.length > 0 && (
+            <Typography
+              variant="caption"
+              component="p"
+              sx={{ color: 'text.secondary' }}
+            >
+              La foto del comprobante se agrega desde cada gasto.
+            </Typography>
+          )}
+        </Box>
+
+        {/* 10. The rest */}
         <MoreDetails
           open={details.open}
           onToggle={details.toggle}

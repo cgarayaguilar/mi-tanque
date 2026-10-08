@@ -15,6 +15,8 @@ import { selectActiveRole, useSessionStore } from 'store/session'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 import { useTrip } from 'hooks/useTrip'
+import { useTripExpenses } from 'hooks/useTripExpenses'
+import { useExpensesStore } from 'store/expenses'
 import TripForm from './TripForm'
 
 function TripEditorScreen() {
@@ -32,11 +34,20 @@ function TripEditorScreen() {
   const fleetStatus = useFleetStore(state => state.status)
   const loadFleet = useFleetStore(state => state.load)
   const [loaded, retry] = useTrip(isNew ? null : id)
+  // Its expenses are rows of the form (specs/0026 RF-12)
+  const [expensesStatus, expenses, retryExpenses] = useTripExpenses(
+    orgId,
+    isNew ? null : id
+  )
+  const categoriesStatus = useExpensesStore(state => state.categoriesStatus)
+  const loadCategories = useExpensesStore(state => state.loadCategories)
   const back = isNew ? '/viajes' : `/viajes/${id}`
 
   useEffect(() => {
-    if (orgId) void loadFleet(orgId)
-  }, [orgId, loadFleet])
+    if (!orgId) return
+    void loadFleet(orgId)
+    void loadCategories(orgId)
+  }, [orgId, loadFleet, loadCategories])
 
   const body = () => {
     if (!canWriteFleet(role)) {
@@ -69,17 +80,33 @@ function TripEditorScreen() {
         />
       )
     }
-    if (!isNew && loaded.status === 'error') {
+    if (
+      (!isNew && loaded.status === 'error') ||
+      expensesStatus === 'error' ||
+      categoriesStatus === 'error'
+    ) {
       return (
         <EmptyState
           icon={<CloudOffIcon />}
           title="No pudimos cargar el viaje"
           description={RETRY_HINT}
-          action={{ label: 'Reintentar', onClick: retry }}
+          action={{
+            label: 'Reintentar',
+            onClick: () => {
+              if (loaded.status === 'error') retry()
+              if (expensesStatus === 'error') retryExpenses()
+              if (categoriesStatus === 'error') void loadCategories(orgId)
+            },
+          }}
         />
       )
     }
-    if (fleetStatus !== 'ready' || (!isNew && loaded.status !== 'ready')) {
+    if (
+      fleetStatus !== 'ready' ||
+      categoriesStatus !== 'ready' ||
+      expensesStatus !== 'ready' ||
+      (!isNew && loaded.status !== 'ready')
+    ) {
       return (
         <Box aria-busy="true" aria-label="Cargando">
           <Skeleton variant="rounded" height={320} />
@@ -90,6 +117,7 @@ function TripEditorScreen() {
       <TripForm
         key={id}
         trip={loaded.status === 'ready' && !isNew ? loaded.trip : null}
+        expenses={isNew ? [] : expenses}
         id={id}
         orgId={orgId}
         currency={currency}

@@ -377,10 +377,61 @@ function TripsScreen() {
               {totals.count === 1
                 ? '1 viaje'
                 : `${String(totals.count)} viajes`}
-              {totals.income.length > 0 && ` · ${totals.income.join(' · ')}`}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Ingresos, sin los cancelados.
+            {totals.count > 0 && (
+              <Box
+                component="dl"
+                sx={{
+                  m: 0,
+                  mt: 2,
+                  display: 'grid',
+                  gridTemplateColumns: 'auto minmax(0, 1fr)',
+                  columnGap: 3,
+                  rowGap: 0.5,
+                }}
+              >
+                {[
+                  { label: 'Ingresos', values: totals.income },
+                  { label: 'Gastos', values: totals.expenses },
+                  { label: 'Utilidad', values: totals.profit },
+                ].map(({ label, values }) => (
+                  <Box key={label} sx={{ display: 'contents' }}>
+                    <Typography
+                      component="dt"
+                      variant="caption"
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      {label}
+                    </Typography>
+                    <Typography
+                      component="dd"
+                      variant="caption"
+                      sx={{ m: 0, textAlign: 'right' }}
+                    >
+                      {values.map((value, index) => (
+                        <Box
+                          key={value}
+                          component="span"
+                          sx={{
+                            display: 'block',
+                            ...(label === 'Utilidad' &&
+                              totals.losing[index] && { color: 'error.main' }),
+                          }}
+                        >
+                          {value}
+                        </Box>
+                      ))}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+            <Typography
+              variant="caption"
+              component="p"
+              sx={{ mt: 1, color: 'text.secondary' }}
+            >
+              Sin los cancelados.
             </Typography>
           </Box>
         )}

@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react'
 import { sileo } from 'sileo'
 import App from '../../App'
+import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { useTripsStore } from 'store/trips'
@@ -15,6 +16,8 @@ import {
   accountWithRole,
   client,
   driver,
+  expense,
+  presetCategories,
   rate,
   trailer,
   trip,
@@ -40,11 +43,18 @@ const tripsApi = vi.hoisted(() => ({
   readTripsInPeriod: vi.fn(),
   readTrip: vi.fn(),
   newTripId: vi.fn(() => 'new-trip'),
-  createTrip: vi.fn(() => Promise.resolve()),
-  updateTrip: vi.fn(() => Promise.resolve()),
+  saveTripWithExpenses: vi.fn((..._args: unknown[]) => Promise.resolve()),
   deleteTrip: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/trips', () => tripsApi)
+
+const expensesApi = vi.hoisted(() => ({
+  readCategories: vi.fn(),
+  seedCategories: vi.fn(),
+  readTripExpenses: vi.fn(),
+  newExpenseId: vi.fn(() => 'new-expense'),
+}))
+vi.mock('services/expenses', () => expensesApi)
 
 const signIn = (role: Role = 'owner') => {
   useSessionStore.setState({
@@ -67,6 +77,9 @@ const type = (label: string, value: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   useTripsStore.getState().reset()
+  useExpensesStore.getState().reset()
+  expensesApi.readCategories.mockResolvedValue(presetCategories())
+  expensesApi.readTripExpenses.mockResolvedValue([])
   fleetApi.readFleet.mockResolvedValue({
     clients: [client(), client({ id: 'client-2', name: 'Fletes Ríos' })],
     trucks: [truck({ assignedDriverUid: 'ana' })],
@@ -92,7 +105,7 @@ beforeEach(() => {
   })
   tripsApi.readTripsInPeriod.mockResolvedValue({
     items: [
-      trip(),
+      trip({ expensesTotal: 3200 }),
       trip({
         id: 'trip-2',
         origin: 'León',
@@ -133,7 +146,7 @@ test('with a session the bar has Viajes, active on its page', async () => {
     within(nav)
       .getAllByRole('link')
       .map(link => link.textContent)
-  ).toEqual(['Historial', 'Medición', 'Flota', 'Viajes'])
+  ).toEqual(['Historial', 'Medición', 'Flota', 'Viajes', 'Gastos'])
   expect(within(nav).getByRole('link', { name: 'Viajes' })).toHaveAttribute(
     'aria-current',
     'page'
@@ -145,9 +158,14 @@ describe('the list', () => {
   test('totals leave the cancelled out; each trip has its route and income', async () => {
     renderAt('/viajes')
 
-    expect(
-      await screen.findByRole('status', { name: 'Totales del periodo' })
-    ).toHaveTextContent('2 viajes · C$45,500.00 NIO')
+    const totals = await screen.findByRole('status', {
+      name: 'Totales del periodo',
+    })
+    expect(totals).toHaveTextContent('2 viajes')
+    // specs/0026 RF-14, CA-7: expenses and profit from each expensesTotal
+    expect(totals).toHaveTextContent('IngresosC$45,500.00 NIO')
+    expect(totals).toHaveTextContent('GastosC$3,200.00 NIO')
+    expect(totals).toHaveTextContent('UtilidadC$42,300.00 NIO')
     const list = screen.getByRole('list', { name: 'Viajes' })
     const cards = within(list).getAllByRole('button')
     expect(cards.map(card => card.getAttribute('aria-label'))).toEqual([
@@ -173,7 +191,7 @@ describe('the list', () => {
     await filterBy('Conductor', 'Marta Gómez')
     expect(
       screen.getByRole('status', { name: 'Totales de lo filtrado' })
-    ).toHaveTextContent('1 viaje · C$18,000.00 NIO')
+    ).toHaveTextContent('1 viajeIngresosC$18,000.00 NIO')
     expect(
       within(screen.getByRole('list', { name: 'Viajes' })).getAllByRole(
         'button'
@@ -221,7 +239,7 @@ describe('the form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
 
     await waitFor(() => {
-      expect(tripsApi.createTrip).toHaveBeenCalledWith(
+      expect(tripsApi.saveTripWithExpenses).toHaveBeenCalledWith(
         'new-trip',
         'org-a',
         expect.objectContaining({
@@ -236,7 +254,9 @@ describe('the form', () => {
           trailerId: 'trailer-1',
           driverId: 'driver-1',
           driverIds: ['driver-1'],
-        })
+        }),
+        true,
+        expect.objectContaining({ create: [], update: [], remove: [] })
       )
     })
     expect(sileo.success).toHaveBeenCalledWith({ title: 'Viaje guardado' })
@@ -271,12 +291,12 @@ describe('the form', () => {
     expect(
       await screen.findByText('Para terminarlo, pon la fecha y hora de fin')
     ).toBeInTheDocument()
-    expect(tripsApi.createTrip).not.toHaveBeenCalled()
+    expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
 
     await choose('Estado', 'En curso')
     fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
     await waitFor(() => {
-      expect(tripsApi.createTrip).toHaveBeenCalledWith(
+      expect(tripsApi.saveTripWithExpenses).toHaveBeenCalledWith(
         'new-trip',
         'org-a',
         expect.objectContaining({
@@ -287,7 +307,9 @@ describe('the form', () => {
           price: 18000,
           status: 'in_progress',
           driverIds: ['driver-1', 'driver-2'],
-        })
+        }),
+        true,
+        expect.anything()
       )
     })
   })
@@ -385,5 +407,186 @@ describe('the trip', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Borrar' })).toBeNull()
+  })
+})
+
+// backend specs/0026 RF-12
+describe('its expenses in the form', () => {
+  // CA-3
+  test('a new trip saves its expense rows with it, in one batch', async () => {
+    renderAt('/viajes/nuevo')
+
+    await choose('Cliente', 'Transportes Pérez')
+    await choose('Tarifa', 'Managua - San José - C$25,000.00')
+    await choose('Camión', 'Unidad 12')
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar gasto' }))
+    const row = screen.getByRole('group', { name: 'Gasto 1' })
+    await choose('Categoría', 'Peajes', row)
+    fireEvent.change(within(row).getByLabelText('Monto'), {
+      target: { value: '1850' },
+    })
+    fireEvent.change(within(row).getByLabelText('Descripción (opcional)'), {
+      target: { value: 'Peaje de Tipitapa' },
+    })
+    expect(screen.getByText('Gastos: C$1,850.00 NIO')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
+
+    await waitFor(() => {
+      expect(tripsApi.saveTripWithExpenses.mock.lastCall).toMatchObject([
+        'new-trip',
+        'org-a',
+        { truckId: 'truck-1' },
+        true,
+        {
+          create: [
+            {
+              id: 'new-expense',
+              fields: {
+                kind: 'trip',
+                tripId: 'new-trip',
+                tripRoute: 'Managua → San José',
+                // The trip's truck and trailer go with it (RF-2)
+                truckId: 'truck-1',
+                trailerId: 'trailer-1',
+                amount: 1850,
+                currency: 'NIO',
+                categoryId: 'org-a_tolls',
+                categoryName: 'Peajes',
+                description: 'Peaje de Tipitapa',
+              },
+            },
+          ],
+          update: [],
+          remove: [],
+        },
+      ])
+    })
+  })
+
+  // CA-4
+  test('editing: a removed row is deleted; a changed one keeps its driver and photo', async () => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    expensesApi.readTripExpenses.mockResolvedValue([
+      expense(),
+      expense({
+        id: 'expense-2',
+        categoryId: 'org-a_per_diem',
+        categoryName: 'Viáticos',
+        amount: 1350,
+        driverId: 'driver-1',
+        driverName: 'Pedro Ruiz',
+        receiptPhotoPath: 'orgs/org-a/expenses/expense-2/receipt.jpg',
+      }),
+    ])
+    renderAt('/viajes/trip-1/editar')
+
+    const first = await screen.findByRole('group', { name: 'Gasto 1' })
+    expect(within(first).getByLabelText('Monto')).toHaveValue('1,850')
+    expect(screen.getByText('Gastos: C$3,200.00 NIO')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar el gasto 1' }))
+    fireEvent.change(
+      within(screen.getByRole('group', { name: 'Gasto 1' })).getByLabelText(
+        'Monto'
+      ),
+      { target: { value: '1500' } }
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(tripsApi.saveTripWithExpenses.mock.lastCall).toMatchObject([
+        'trip-1',
+        'org-a',
+        {},
+        false,
+        {
+          create: [],
+          update: [
+            {
+              id: 'expense-2',
+              fields: {
+                amount: 1500,
+                categoryName: 'Viáticos',
+                driverId: 'driver-1',
+                receiptPhotoPath: 'orgs/org-a/expenses/expense-2/receipt.jpg',
+              },
+            },
+          ],
+          remove: ['expense-1'],
+        },
+      ])
+    })
+  })
+
+  test('a row needs its category and amount', async () => {
+    renderAt('/viajes/nuevo')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Agregar gasto' })
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
+    const row = screen.getByRole('group', { name: 'Gasto 1' })
+    expect(
+      await within(row).findByText('Elige la categoría')
+    ).toBeInTheDocument()
+    expect(within(row).getByText('Escribe el monto')).toBeInTheDocument()
+    expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
+  })
+})
+
+// backend specs/0026 RF-13
+describe('its expenses on its screen', () => {
+  beforeEach(() => {
+    tripsApi.readTrip.mockResolvedValue(trip({ expensesTotal: 32000 }))
+    expensesApi.readTripExpenses.mockResolvedValue([
+      expense(),
+      expense({ id: 'expense-2', amount: 150, description: 'Tipitapa' }),
+      expense({
+        id: 'expense-3',
+        categoryId: 'org-a_per_diem',
+        categoryName: 'Viáticos',
+        amount: 30000,
+      }),
+    ])
+  })
+
+  // CA-3
+  test('each category adds up, and a loss is in red', async () => {
+    renderAt('/viajes/trip-1')
+
+    const section = await screen.findByRole('region', { name: 'Gastos' })
+    await within(section).findByText('Peajes')
+    expect(section).toHaveTextContent('ViáticosC$30,000.00 NIO')
+    expect(section).toHaveTextContent('PeajesC$2,000.00 NIO')
+    expect(section).toHaveTextContent('Total de gastosC$32,000.00 NIO')
+    const profit = within(section).getByText('-C$4,500.00 NIO')
+    // In the error color, unlike its label
+    expect(getComputedStyle(profit).color).not.toBe(
+      getComputedStyle(within(section).getByText('Utilidad')).color
+    )
+    expect(
+      within(section).getByRole('button', {
+        name: 'Gasto: 6 oct · Peajes · Tipitapa, C$150.00 NIO',
+      })
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      within(section).getByRole('button', { name: 'Agregar gasto' })
+    )
+    expect(window.location.pathname).toBe('/gastos/nuevo')
+    expect(window.location.search).toBe('?viaje=trip-1')
+  })
+
+  // CA-5
+  test('deleting says its expenses stay with the truck', async () => {
+    renderAt('/viajes/trip-1')
+    await within(
+      await screen.findByRole('region', { name: 'Gastos' })
+    ).findByText('Peajes')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }))
+    expect(
+      await screen.findByText(
+        'Sus 3 gastos quedarán como gastos del camión Unidad 12. No se puede deshacer.'
+      )
+    ).toBeInTheDocument()
   })
 })

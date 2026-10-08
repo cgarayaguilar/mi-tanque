@@ -5,11 +5,14 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import Divider from '@mui/material/Divider'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -19,9 +22,12 @@ import EmptyState from 'components/EmptyState'
 import SessionGate from 'components/SessionGate'
 import TripStatusChip from 'components/TripStatusChip'
 import { useTrip } from 'hooks/useTrip'
+import { useTripExpenses } from 'hooks/useTripExpenses'
+import { totalsByCategory, type Expense } from 'schemas/expenses'
 import { rateLabel, routeName } from 'schemas/rates'
-import { tripIncome, type Trip } from 'schemas/trips'
+import { toCents, tripIncome, type Trip } from 'schemas/trips'
 import { deleteTrip } from 'services/trips'
+import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import {
   recoverFromLostPermission,
@@ -78,6 +84,56 @@ function MoneyLine({ label, amount }: { label: string; amount: string }) {
   )
 }
 
+/** "6 oct · Peajes · Tipitapa" and its amount, opening the expense. */
+function ExpenseLine({
+  expense,
+  category,
+  onClick,
+}: {
+  expense: Expense
+  category: string
+  onClick: () => void
+}) {
+  const text = [
+    format(expense.takenAt, 'd MMM', { locale: es }),
+    category,
+    expense.description,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <ButtonBase
+      onClick={onClick}
+      aria-label={`Gasto: ${text}, ${moneyTotal(expense.currency, expense.amount)}`}
+      sx={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: 2,
+        py: 1,
+        textAlign: 'left',
+        borderRadius: 1,
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ flexGrow: 1, minWidth: 0, overflowWrap: 'anywhere' }}
+      >
+        {text}
+      </Typography>
+      <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+        {moneyTotal(expense.currency, expense.amount)}
+      </Typography>
+      <ChevronRightIcon
+        fontSize="small"
+        aria-hidden="true"
+        sx={{ alignSelf: 'center', color: 'text.secondary', mr: -1 }}
+      />
+    </ButtonBase>
+  )
+}
+
 function TripDetails({ trip }: { trip: Trip }) {
   const [, navigate] = useLocation()
   const { clients, trucks, trailers, drivers, members } = useFleetStore()
@@ -85,6 +141,18 @@ function TripDetails({ trip }: { trip: Trip }) {
   const role = useSessionStore(selectActiveRole)
   const canWrite = canWriteFleet(role)
   const [confirming, setConfirming] = useState(false)
+  const orgId = useSessionStore(state => state.organization?.id ?? '')
+  const categories = useExpensesStore(state => state.categories)
+  const loadCategories = useExpensesStore(state => state.loadCategories)
+  const applyTripExpenses = useExpensesStore(state => state.applyTripExpenses)
+  const [expensesStatus, expenses, retryExpenses] = useTripExpenses(
+    orgId,
+    trip.id
+  )
+
+  useEffect(() => {
+    if (orgId) void loadCategories(orgId)
+  }, [orgId, loadCategories])
 
   // The current names, or the ones saved with the trip (RF-1)
   const nameOf = (
@@ -98,6 +166,18 @@ function TripDetails({ trip }: { trip: Trip }) {
     nameOf(drivers, trip.secondDriverId, trip.secondDriverName),
   ].filter(Boolean)
   const author = members.find(member => member.uid === trip.createdBy)
+  const truckName =
+    nameOf(trucks, trip.truckId, trip.truckName) ?? trip.truckName
+  const categoryName = (id: string) =>
+    categories.find(category => category.id === id)?.name ?? null
+
+  // What it read, or what the backend added up (RF-3) while it reads
+  const spent =
+    expensesStatus === 'ready'
+      ? toCents(expenses.reduce((sum, expense) => sum + expense.amount, 0))
+      : trip.expensesTotal
+  const profit = toCents(tripIncome(trip) - spent)
+  const byCategory = totalsByCategory(expenses, categoryName)
 
   const confirmDelete = () => {
     setConfirming(false)
@@ -109,6 +189,16 @@ function TripDetails({ trip }: { trip: Trip }) {
         description: 'Vuelve a intentarlo.',
       })
     })
+    // Its expenses stay with its truck (RF-6): the backend moves them
+    applyTripExpenses(
+      expenses.map(expense => ({
+        ...expense,
+        kind: 'truck',
+        tripId: null,
+        tripRoute: null,
+      })),
+      []
+    )
     sileo.success({ title: 'Viaje borrado' })
     navigate('/viajes')
   }
@@ -198,6 +288,106 @@ function TripDetails({ trip }: { trip: Trip }) {
         </Stack>
       </Box>
 
+      <Divider sx={{ my: 6 }} />
+
+      <Box component="section" aria-labelledby="trip-expenses-title">
+        <Typography
+          id="trip-expenses-title"
+          variant="overline"
+          component="h2"
+          sx={{ color: 'text.secondary' }}
+        >
+          Gastos
+        </Typography>
+        {expensesStatus === 'error' && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No pudimos cargar los gastos. {RETRY_HINT}
+            </Typography>
+            <Button onClick={retryExpenses} sx={{ ml: -2 }}>
+              Reintentar
+            </Button>
+          </Box>
+        )}
+        {expensesStatus === 'loading' && (
+          <Skeleton variant="rounded" height={64} sx={{ mt: 2 }} />
+        )}
+        {expensesStatus === 'ready' && (
+          <Stack spacing={1} sx={{ mt: 2 }}>
+            {expenses.length === 0 && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Este viaje no tiene gastos.
+              </Typography>
+            )}
+            {byCategory.map(item => (
+              <MoneyLine
+                key={`${item.name}|${item.currency}`}
+                label={item.name}
+                amount={moneyTotal(item.currency, item.amount)}
+              />
+            ))}
+            {expenses.length > 0 && (
+              <>
+                <Divider />
+                <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+                  {expenses.map(expense => (
+                    <li key={expense.id}>
+                      <ExpenseLine
+                        expense={expense}
+                        category={
+                          categoryName(expense.categoryId) ??
+                          expense.categoryName
+                        }
+                        onClick={() => {
+                          navigate(`/gastos/${expense.id}`)
+                        }}
+                      />
+                    </li>
+                  ))}
+                </Box>
+              </>
+            )}
+          </Stack>
+        )}
+        {canWrite && (
+          <Button
+            startIcon={<AddIcon />}
+            onClick={() => {
+              navigate(`/gastos/nuevo?viaje=${trip.id}`)
+            }}
+            sx={{ mt: 1, ml: -2 }}
+          >
+            Agregar gasto
+          </Button>
+        )}
+        <Divider sx={{ my: 2 }} />
+        <Stack spacing={1}>
+          <MoneyLine
+            label="Total de gastos"
+            amount={moneyTotal(trip.currency, spent)}
+          />
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 2,
+              alignItems: 'baseline',
+            }}
+          >
+            <Typography variant="subtitle1">Utilidad</Typography>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                whiteSpace: 'nowrap',
+                color: profit < 0 ? 'error.main' : 'text.primary',
+              }}
+            >
+              {moneyTotal(trip.currency, profit)}
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+
       {(trip.description ?? trip.notes) && (
         <>
           <Divider sx={{ my: 6 }} />
@@ -250,7 +440,15 @@ function TripDetails({ trip }: { trip: Trip }) {
       <ConfirmDialog
         open={confirming}
         title={`¿Borrar el viaje ${route}?`}
-        description="No se puede deshacer."
+        description={
+          expenses.length === 0
+            ? 'No se puede deshacer.'
+            : `${
+                expenses.length === 1
+                  ? 'Su gasto quedará como gasto'
+                  : `Sus ${String(expenses.length)} gastos quedarán como gastos`
+              } del camión ${truckName}. No se puede deshacer.`
+        }
         confirmLabel="Borrar"
         onConfirm={confirmDelete}
         onClose={() => {
