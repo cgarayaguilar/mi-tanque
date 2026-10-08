@@ -18,6 +18,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import SearchIcon from '@mui/icons-material/Search'
@@ -27,6 +28,7 @@ import EmptyState from 'components/EmptyState'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
+import { clientContact, type Client } from 'schemas/clients'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
@@ -40,6 +42,7 @@ import {
   vehicleSubtitle,
 } from 'utils/fleetLabels'
 import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
+import { foldText } from 'utils/foldText'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
@@ -144,15 +147,11 @@ const distinctNames = (names: (string | null)[]) =>
     a.localeCompare(b, 'es', { numeric: true })
   )
 
+// Without accents or capitals: "perez" finds "Pérez" (specs/0022 RF-5)
 const matches = (
   query: string,
   ...fields: (string | number | null | undefined)[]
-) =>
-  fields.some(field =>
-    String(field ?? '')
-      .toLowerCase()
-      .includes(query)
-  )
+) => fields.some(field => foldText(String(field ?? '')).includes(query))
 
 function FleetScreen() {
   const params = useParams<{ section?: string }>()
@@ -160,7 +159,7 @@ function FleetScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? null)
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, load } = useFleetStore()
+  const { status, trucks, trailers, tanks, clients, load } = useFleetStore()
   const distanceUnit = useDistanceUnit()
   const today = new Date()
   const [search, setSearch] = useState('')
@@ -168,7 +167,7 @@ function FleetScreen() {
   // Trucks by brand and model, typed names recognized (specs/0016 RF-8)
   const [brand, setBrand] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
-  const query = useDeferredValue(search.trim().toLowerCase())
+  const query = useDeferredValue(foldText(search.trim()))
   const canWrite = canWriteFleet(role)
 
   useEffect(() => {
@@ -294,35 +293,66 @@ function FleetScreen() {
               />
             ),
           }))
-        : visible(tanks, (t: FleetTank) =>
-            matches(query, t.name, equipmentName(t), t.capacityGal)
-          ).map(tank => ({
-            id: tank.id,
-            card: (
-              <FleetCard
-                label={`Tanque ${tank.name}`}
-                leading={<TankShapeIcon shape={tank.shape} size={36} />}
-                title={tank.name}
-                lines={[
-                  `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
-                  `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
-                  tank.lastMeasurement &&
-                    lastMeasurementLine(tank.lastMeasurement),
-                ]}
-                archived={tank.archived}
-                onClick={() => {
-                  open(tank.id)
-                }}
-              />
-            ),
-          }))
+        : section.collection === 'clients'
+          ? visible(clients, (c: Client) =>
+              matches(query, c.name, c.phone, c.email, c.taxId)
+            ).map(client => ({
+              id: client.id,
+              card: (
+                <FleetCard
+                  label={`Cliente ${client.name}`}
+                  leading={
+                    <BusinessOutlinedIcon
+                      sx={{ fontSize: 24, color: 'text.secondary' }}
+                    />
+                  }
+                  title={client.name}
+                  lines={[clientContact(client)]}
+                  archived={client.archived}
+                  onClick={() => {
+                    open(client.id)
+                  }}
+                />
+              ),
+            }))
+          : visible(tanks, (t: FleetTank) =>
+              matches(query, t.name, equipmentName(t), t.capacityGal)
+            ).map(tank => ({
+              id: tank.id,
+              card: (
+                <FleetCard
+                  label={`Tanque ${tank.name}`}
+                  leading={<TankShapeIcon shape={tank.shape} size={36} />}
+                  title={tank.name}
+                  lines={[
+                    `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
+                    `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
+                    tank.lastMeasurement &&
+                      lastMeasurementLine(tank.lastMeasurement),
+                  ]}
+                  archived={tank.archived}
+                  onClick={() => {
+                    open(tank.id)
+                  }}
+                />
+              ),
+            }))
 
   const total =
     section.collection === 'trucks'
       ? trucks.length
       : section.collection === 'trailers'
         ? trailers.length
-        : tanks.length
+        : section.collection === 'clients'
+          ? clients.length
+          : tanks.length
+
+  const sectionIcon =
+    section.collection === 'clients' ? (
+      <BusinessOutlinedIcon />
+    ) : (
+      <LocalShippingIcon />
+    )
 
   const renderList = () => {
     if (status === 'error' && total === 0) {
@@ -362,7 +392,7 @@ function FleetScreen() {
       return (
         <EmptyState
           headingLevel="h2"
-          icon={<LocalShippingIcon />}
+          icon={sectionIcon}
           title={`Todos tus ${section.label.toLowerCase()} están archivados`}
           description="Puedes verlos y restaurarlos cuando los necesites."
           action={{
@@ -378,7 +408,7 @@ function FleetScreen() {
       return (
         <EmptyState
           headingLevel="h2"
-          icon={<LocalShippingIcon />}
+          icon={sectionIcon}
           title={`Aún no tienes ${section.label.toLowerCase()}`}
           description={
             canWrite
@@ -481,7 +511,10 @@ function FleetScreen() {
             setModel(null)
             navigate(`/flota/${slug}`)
           }}
-          variant="fullWidth"
+          // Four sections and more to come: they slide instead of squeezing
+          // (specs/0022 RF-4)
+          variant="scrollable"
+          scrollButtons={false}
           aria-label="Secciones de la flota"
           sx={{ mt: 3, mb: 4, borderBottom: 1, borderColor: 'divider' }}
         >

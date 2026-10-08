@@ -16,7 +16,7 @@ export interface TextFieldProps {
   hint?: string
   error?: string | undefined
   registration: UseFormRegisterReturn
-  type?: 'text' | 'tel'
+  type?: 'text' | 'tel' | 'email'
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
   autoComplete?: string
   maxLength?: number

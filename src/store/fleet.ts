@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Client } from 'schemas/clients'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import type { FleetCollection, OrgMember } from 'services/fleet'
 import { useSessionStore } from 'store/session'
@@ -13,6 +14,8 @@ interface FleetItems {
   trucks: Truck[]
   trailers: Trailer[]
   tanks: FleetTank[]
+  /** The organization's clients (backend specs/0022). */
+  clients: Client[]
 }
 
 interface FleetState extends FleetItems {
@@ -27,7 +30,7 @@ interface FleetState extends FleetItems {
    */
   save: (
     collection: FleetCollection,
-    item: Truck | Trailer | FleetTank,
+    item: Truck | Trailer | FleetTank | Client,
     write: () => Promise<void>
   ) => Promise<void>
   setArchived: (
@@ -49,6 +52,7 @@ const EMPTY: FleetItems & { members: OrgMember[] } = {
   trucks: [],
   trailers: [],
   tanks: [],
+  clients: [],
   members: [],
 }
 
@@ -84,6 +88,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
         trucks: byName(fleet.trucks),
         trailers: byName(fleet.trailers),
         tanks: byName(fleet.tanks),
+        clients: byName(fleet.clients),
         members,
         status: 'ready',
       })
@@ -103,6 +108,8 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
           return { trailers: upsert(state.trailers, item as Trailer) }
         case 'tanks':
           return { tanks: upsert(state.tanks, item as FleetTank) }
+        case 'clients':
+          return { clients: upsert(state.clients, item as Client) }
       }
     })
     await write()
@@ -116,6 +123,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
       trailers:
         collection === 'trailers' ? patch(state.trailers) : state.trailers,
       tanks: collection === 'tanks' ? patch(state.tanks) : state.tanks,
+      clients: collection === 'clients' ? patch(state.clients) : state.clients,
     }))
     const api = await fleetApi()
     await api.updateFleetItem(collection, id, { archived })

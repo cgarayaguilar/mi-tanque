@@ -13,6 +13,7 @@ import {
   where,
 } from 'firebase/firestore'
 import * as z from 'zod/mini'
+import type { Client } from 'schemas/clients'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import { loadFirebase, loadStorage } from 'services/firebase'
 import { compressImage } from 'utils/compressImage'
@@ -20,7 +21,7 @@ import { reportError } from 'utils/reportError'
 import { ROLES } from 'utils/roles'
 import { withTimeout } from 'utils/withTimeout'
 
-export type FleetCollection = 'trucks' | 'trailers' | 'tanks'
+export type FleetCollection = 'trucks' | 'trailers' | 'tanks' | 'clients'
 
 // One read per collection, bounded (§2.3, specs/0003 RNF-1)
 export const MAX_FLEET_ITEMS = 500
@@ -90,6 +91,17 @@ const tankSchema = z.object({
       })
     )
   ),
+})
+
+// A catalog without photo or description (backend specs/0022 RF-1)
+const clientSchema = z.object({
+  orgId: z.string(),
+  name: z.string(),
+  phone: nullableString,
+  email: nullableString,
+  taxId: nullableString,
+  notes: nullableString,
+  archived: z.boolean(),
 })
 
 const readCollection = async <T>(
@@ -174,19 +186,22 @@ export interface Fleet {
   trucks: Truck[]
   trailers: Trailer[]
   tanks: FleetTank[]
+  clients: Client[]
 }
 
-/** The whole fleet of an organization: three bounded reads, cache-first offline. */
+/** The whole fleet of an organization: bounded reads, cache-first offline. */
 export const readFleet = async (orgId: string): Promise<Fleet> => {
-  const [trucks, trailers, tanks] = await Promise.all([
+  const [trucks, trailers, tanks, clients] = await Promise.all([
     readCollection('trucks', orgId, parseWith(truckSchema, 'trucks')),
     readCollection('trailers', orgId, parseWith(trailerSchema, 'trailers')),
     readCollection('tanks', orgId, toTank),
+    readCollection('clients', orgId, parseWith(clientSchema, 'clients')),
   ])
   return {
     trucks: trucks as Truck[],
     trailers: trailers as Trailer[],
     tanks,
+    clients,
   }
 }
 
@@ -246,7 +261,8 @@ export const createFleetItem = async (
   await setDoc(doc(db, name, id), {
     ...data,
     orgId,
-    photoPath: null,
+    // Clients have no photo (backend specs/0022 RF-1)
+    ...(name !== 'clients' && { photoPath: null }),
     archived: false,
     ...(name === 'tanks' && { lastMeasurement: null }),
     createdAt: serverTimestamp(),

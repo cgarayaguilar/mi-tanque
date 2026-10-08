@@ -55,6 +55,7 @@ beforeEach(() => {
   useFleetStore.getState().reset()
   useCloudHistoryStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [
@@ -162,6 +163,7 @@ describe('loaded and empty', () => {
 
   test('editing recalculates both with the truck of today', async () => {
     fleetApi.readFleet.mockResolvedValue({
+      clients: [],
       trucks: [
         truck({ fuelEfficiencyKmPerGal: 8.5, fuelEfficiencyEmptyKmPerGal: 11 }),
       ],

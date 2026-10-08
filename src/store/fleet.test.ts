@@ -12,6 +12,7 @@ vi.mock('services/fleet', () => api)
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [
       truck({ id: 'b', name: 'Unidad 2' }),
       truck({ id: 'a', name: 'Unidad 10' }),

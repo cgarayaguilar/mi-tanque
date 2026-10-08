@@ -12,6 +12,7 @@ import { useSessionStore } from 'store/session'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
+  client,
   ORG_ID,
   tank,
   trailer,
@@ -59,6 +60,7 @@ const type = (label: string, value: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [tank()],
@@ -358,6 +360,7 @@ test('an unknown item says it was not found', async () => {
 // rules refused every edit of the truck that kept them
 test('a truck whose driver left is saved unassigned', async () => {
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck({ assignedDriverUid: 'gone' })],
     trailers: [trailer()],
     tanks: [tank()],
@@ -495,6 +498,7 @@ describe('simpler forms (backend specs/0009)', () => {
       },
     }))
     api.readFleet.mockResolvedValue({
+      clients: [],
       trucks: [truck({ odometerKm: 102, fuelEfficiencyKmPerGal: 9.5 })],
       trailers: [trailer()],
       tanks: [tank()],
@@ -576,6 +580,7 @@ describe('simpler forms (backend specs/0009)', () => {
   // model, and going back to it reset the capacity without a word
   test('a tank whose capacity was edited is no longer its model', async () => {
     api.readFleet.mockResolvedValue({
+      clients: [],
       trucks: [truck()],
       trailers: [trailer()],
       tanks: [
@@ -810,6 +815,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
   // CA-3
   test('typed names are recognized; others open as "Otra"', async () => {
     api.readFleet.mockResolvedValue({
+      clients: [],
       trucks: [
         truck({ brand: 'freightliner', model: 'CASCADIA' }),
         truck({
@@ -830,6 +836,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 
   test('a brand that is not in the list opens as "Otra marca…"', async () => {
     api.readFleet.mockResolvedValue({
+      clients: [],
       trucks: [truck({ brand: 'Hino', model: '500' })],
       trailers: [],
       tanks: [],
@@ -865,5 +872,136 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
         /^Freightliner Cascadia \(2018\+\) · \d+ tanques$/
       )
     ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0022
+describe('clients', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      clients: [
+        client(),
+        client({ id: 'client-2', name: 'Fletes Ríos', archived: true }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a client with a phone; the rest is stored as null', async () => {
+    signIn('driver')
+    renderAt('/flota/clientes/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del cliente')
+        .then(() => 'Nombre del cliente'),
+      'Acarreos del Norte'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    type('Teléfono (opcional)', '8888 1234')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'clients',
+        'new-id',
+        ORG_ID,
+        {
+          name: 'Acarreos del Norte',
+          phone: '8888 1234',
+          email: null,
+          taxId: null,
+          notes: null,
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Cliente guardado' })
+    expect(window.location.pathname).toBe('/flota/clientes')
+    // A client has no photo
+    expect(screen.queryByText(/podrás agregarle una foto/)).toBeNull()
+  })
+
+  // CA-2
+  test('a repeated name is said on the field and nothing is saved', async () => {
+    renderAt('/flota/clientes/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del cliente')
+        .then(() => 'Nombre del cliente'),
+      'transportes perez'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+    expect(
+      await screen.findByText('Ya existe un cliente con ese nombre')
+    ).toBeInTheDocument()
+
+    type('Nombre del cliente', 'Fletes Rios')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+    expect(
+      await screen.findByText(
+        'Ya existe un cliente archivado con ese nombre. Restáuralo en Archivados'
+      )
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  test('an edit keeps its own name and an email must look like one', async () => {
+    renderAt('/flota/clientes/client-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Ver más detalles/ })
+    )
+    type('Correo (opcional)', 'compras')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(
+      await screen.findByText('Escribe un correo válido')
+    ).toBeInTheDocument()
+
+    type('Correo (opcional)', 'compras@perez.com')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'clients',
+        'client-1',
+        expect.objectContaining({
+          name: 'Transportes Pérez',
+          email: 'compras@perez.com',
+        })
+      )
+    })
+  })
+
+  test('archiving asks first; a client has no photo', async () => {
+    renderAt('/flota/clientes/client-1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Transportes Pérez' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar foto' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Archivar' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: '¿Archivar Transportes Pérez?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archivar' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith('clients', 'client-1', {
+        archived: true,
+      })
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Cliente archivado' })
+  })
+
+  // CA-4
+  test('a viewer sees the client without saving or archiving', async () => {
+    signIn('viewer')
+    renderAt('/flota/clientes/client-1')
+
+    expect(await screen.findByLabelText('Nombre del cliente')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
   })
 })

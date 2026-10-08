@@ -1,3 +1,4 @@
+import type { Client } from 'schemas/clients'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
@@ -104,5 +105,17 @@ export const cloudMeasurement = (
   estimateEmpty: null,
   odometerKm: 120500,
   source: 'app',
+  ...overrides,
+})
+
+export const client = (overrides: Partial<Client> = {}): Client => ({
+  id: 'client-1',
+  orgId: ORG_ID,
+  name: 'Transportes Pérez',
+  phone: '8888 7777',
+  email: null,
+  taxId: 'J0310000012345',
+  notes: null,
+  archived: false,
   ...overrides,
 })

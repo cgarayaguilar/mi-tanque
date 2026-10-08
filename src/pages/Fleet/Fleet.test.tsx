@@ -14,6 +14,7 @@ import { toPlainDate } from 'utils/plainDate'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
+  client,
   tank,
   trailer,
   truck,
@@ -49,6 +50,7 @@ const renderAt = (path: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [
       truck(),
       truck({ id: 'truck-2', name: 'Unidad 15', plate: 'X 999', color: null }),
@@ -124,7 +126,12 @@ test('search filters by name or plate and offers to clear', async () => {
 })
 
 test('an empty section invites to add the first one', async () => {
-  api.readFleet.mockResolvedValue({ trucks: [], trailers: [], tanks: [] })
+  api.readFleet.mockResolvedValue({
+    clients: [],
+    trucks: [],
+    trailers: [],
+    tanks: [],
+  })
   renderAt('/flota')
 
   fireEvent.click(await screen.findByRole('button', { name: 'Agregar camión' }))
@@ -134,6 +141,7 @@ test('an empty section invites to add the first one', async () => {
 
 test('when everything is archived it says so and shows them (CA-6)', async () => {
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck({ archived: true })],
     trailers: [],
     tanks: [],
@@ -168,6 +176,7 @@ test('a viewer sees the fleet without "Agregar" (CA-9)', async () => {
 
 test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck()],
     trailers: [],
     tanks: [
@@ -191,6 +200,7 @@ test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
 test('trucks and trailers say when their insurance is due, not when archived', async () => {
   const inFiveDays = toPlainDate(addDays(new Date(), 5))
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [
       truck({ id: 't1', name: 'Unidad 1', insuranceExpiresOn: inFiveDays }),
       truck({
@@ -219,6 +229,7 @@ test('trucks and trailers say when their insurance is due, not when archived', a
 // backend specs/0016 CA-5: trucks by brand and model, typed names recognized
 test('trucks filter by brand, then model', async () => {
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [
       truck(),
       truck({
@@ -254,6 +265,7 @@ test('trucks filter by brand, then model', async () => {
 // specs/0017 RF-9, RF-10, CA-4: archived ones are a chip of the same row
 test('the archived chip shows the archived ones, in every tab', async () => {
   api.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [
       truck(),
       truck({ id: 'truck-2', name: 'Unidad 15', archived: true }),
@@ -279,4 +291,99 @@ test('the archived chip shows the archived ones, in every tab', async () => {
       .getAllByRole('button')
       .map(button => button.textContent)
   ).toEqual(['Archivados'])
+})
+
+// backend specs/0022 CA-3, CA-4
+describe('clients', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      clients: [
+        client(),
+        client({
+          id: 'client-2',
+          name: 'Acarreos del Norte',
+          phone: null,
+          email: 'pagos@norte.com',
+          taxId: null,
+        }),
+        client({ id: 'client-3', name: 'Fletes Ríos', archived: true }),
+      ],
+      trucks: [truck()],
+      trailers: [],
+      tanks: [],
+    })
+  })
+
+  test('the tab lists them by name with their contact', async () => {
+    renderAt('/flota/clientes')
+
+    const list = await screen.findByRole('list', { name: 'Clientes' })
+    const cards = within(list).getAllByRole('button')
+    expect(cards.map(card => card.getAttribute('aria-label'))).toEqual([
+      'Cliente Acarreos del Norte',
+      'Cliente Transportes Pérez',
+    ])
+    expect(cards[1]).toHaveTextContent('8888 7777 · J0310000012345')
+  })
+
+  test('search finds by phone, email or a name without accents', async () => {
+    renderAt('/flota/clientes')
+    const search = await screen.findByRole('searchbox', {
+      name: 'Buscar clientes',
+    })
+
+    fireEvent.change(search, { target: { value: '8888' } })
+    expect(
+      await screen.findByRole('button', { name: 'Cliente Transportes Pérez' })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Cliente Acarreos del Norte' })
+    ).toBeNull()
+
+    fireEvent.change(search, { target: { value: 'PEREZ' } })
+    expect(
+      await screen.findByRole('button', { name: 'Cliente Transportes Pérez' })
+    ).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: 'norte.com' } })
+    expect(
+      await screen.findByRole('button', { name: 'Cliente Acarreos del Norte' })
+    ).toBeInTheDocument()
+  })
+
+  test('an archived one shows only with the chip', async () => {
+    renderAt('/flota/clientes')
+    await screen.findByRole('list', { name: 'Clientes' })
+    expect(
+      screen.queryByRole('button', { name: 'Cliente Fletes Ríos' })
+    ).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archivados' }))
+    expect(
+      await screen.findByRole('button', { name: 'Cliente Fletes Ríos' })
+    ).toBeInTheDocument()
+  })
+
+  test('without clients it invites to add one, only to who can write', async () => {
+    api.readFleet.mockResolvedValue({
+      clients: [],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/clientes')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Agregar cliente' })
+    )
+    expect(window.location.pathname).toBe('/flota/clientes/nuevo')
+  })
+
+  test('a viewer sees them without "Agregar"', async () => {
+    signIn('viewer')
+    renderAt('/flota/clientes')
+    expect(
+      await screen.findByRole('button', { name: 'Cliente Transportes Pérez' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
+  })
 })

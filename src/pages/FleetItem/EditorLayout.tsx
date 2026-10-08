@@ -24,7 +24,8 @@ interface EditorLayoutProps {
     id: string
     name: string
     archived: boolean
-    photoPath: string | null
+    /** Only in sections with photos (not clients). */
+    photoPath?: string | null
   } | null
   /** The id the new item will have (made when the form opened). */
   id: string
@@ -38,7 +39,7 @@ interface EditorLayoutProps {
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1)
 
-/** Shared frame of the truck, trailer and tank screens (specs/0003). */
+/** Shared frame of the fleet's screens (specs/0003) and clients' (0022). */
 export default function EditorLayout({
   section,
   item,
@@ -112,11 +113,11 @@ export default function EditorLayout({
         </Button>
       )}
 
-      {item && (
+      {item && section.photo && (
         <Box sx={{ mt: 8 }}>
           <PhotoField
             alt={`Foto de ${item.name}`}
-            path={item.photoPath}
+            path={item.photoPath ?? null}
             loadUrl={photoUrl}
             upload={file =>
               uploadFleetPhoto(section.collection, orgId, id, file)
@@ -128,7 +129,7 @@ export default function EditorLayout({
           />
         </Box>
       )}
-      {!item && canWrite && (
+      {!item && canWrite && section.photo && (
         <Typography
           variant="caption"
           component="p"

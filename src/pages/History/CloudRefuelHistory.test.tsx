@@ -101,6 +101,7 @@ beforeEach(() => {
   useCloudHistoryStore.getState().reset()
   useCloudRefuelsStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [tank()],

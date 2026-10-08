@@ -8,6 +8,7 @@ export const FLEET_SECTIONS = [
     label: 'Camiones',
     one: 'camión',
     add: 'Agregar camión',
+    photo: true,
   },
   {
     slug: 'remolques',
@@ -15,6 +16,7 @@ export const FLEET_SECTIONS = [
     label: 'Remolques',
     one: 'remolque',
     add: 'Agregar remolque',
+    photo: true,
   },
   {
     slug: 'tanques',
@@ -22,6 +24,16 @@ export const FLEET_SECTIONS = [
     label: 'Tanques',
     one: 'tanque',
     add: 'Agregar tanque',
+    photo: true,
+  },
+  // A catalog of the organization, without photo (backend specs/0022 RF-4)
+  {
+    slug: 'clientes',
+    collection: 'clients',
+    label: 'Clientes',
+    one: 'cliente',
+    add: 'Agregar cliente',
+    photo: false,
   },
 ] as const satisfies readonly {
   slug: string
@@ -29,6 +41,8 @@ export const FLEET_SECTIONS = [
   label: string
   one: string
   add: string
+  /** Its items have a photo. */
+  photo: boolean
 }[]
 
 export type FleetSection = (typeof FLEET_SECTIONS)[number]
