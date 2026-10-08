@@ -40,6 +40,10 @@ import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 
+// The backend's moves take a second or two; after this, a reload shows them
+const REFRESH_MS = 2500
+const MAX_REFRESHES = 4
+
 /** "lun 6 oct 2026, 08:00" */
 const tripDateTime = (date: Date) =>
   format(date, 'EEE d MMM yyyy, HH:mm', { locale: es })
@@ -145,10 +149,28 @@ function TripDetails({ trip }: { trip: Trip }) {
   const categories = useExpensesStore(state => state.categories)
   const loadCategories = useExpensesStore(state => state.loadCategories)
   const applyTripExpenses = useExpensesStore(state => state.applyTripExpenses)
-  const [expensesStatus, expenses, retryExpenses] = useTripExpenses(
-    orgId,
-    trip.id
-  )
+  const [expensesStatus, expenses, retryExpenses, refreshExpenses] =
+    useTripExpenses(orgId, trip.id)
+  // Just edited, the backend moves its expenses a moment later (0026 RF-6,
+  // 0027 RF-5): while one does not go with the trip's truck and trailer,
+  // they are read again, a few times (audit 0027)
+  const [refreshes, setRefreshes] = useState(0)
+  const settling =
+    expensesStatus === 'ready' &&
+    expenses.some(
+      expense =>
+        expense.truckId !== trip.truckId || expense.trailerId !== trip.trailerId
+    )
+  useEffect(() => {
+    if (!settling || refreshes >= MAX_REFRESHES) return
+    const timer = setTimeout(() => {
+      setRefreshes(value => value + 1)
+      refreshExpenses()
+    }, REFRESH_MS)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [settling, refreshes, refreshExpenses])
 
   useEffect(() => {
     if (orgId) void loadCategories(orgId)

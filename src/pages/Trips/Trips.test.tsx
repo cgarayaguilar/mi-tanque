@@ -673,6 +673,30 @@ describe('its expenses on its screen', () => {
     expect(section).toHaveTextContent('Total de gastosC$1,850.00 NIO')
   })
 
+  // Audit 0027: just edited, the backend moves its expenses a moment later;
+  // the screen reads them again until they go with the trip
+  test('an expense the backend is moving is read again until it settles', async () => {
+    tripsApi.readTrip.mockResolvedValue(trip({ truckId: 'truck-2' }))
+    expensesApi.readTripExpenses
+      .mockResolvedValueOnce([
+        expense({ id: 'r1', refuelId: 'r1', description: 'Relleno de Tanque' }),
+      ])
+      .mockResolvedValue([])
+    renderAt('/viajes/trip-1')
+
+    const section = await screen.findByRole('region', { name: 'Gastos' })
+    expect(
+      await within(section).findByText(/Relleno de Tanque/)
+    ).toBeInTheDocument()
+    expect(
+      await within(section).findByText(
+        'Este viaje no tiene gastos.',
+        {},
+        { timeout: 4000 }
+      )
+    ).toBeInTheDocument()
+  })
+
   // CA-5
   test('deleting says its expenses stay with the truck', async () => {
     renderAt('/viajes/trip-1')

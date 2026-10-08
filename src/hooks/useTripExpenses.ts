@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Expense } from 'schemas/expenses'
 import { readTripExpenses } from 'services/expenses'
 import { useExpensesStore } from 'store/expenses'
@@ -15,7 +15,7 @@ export type TripExpensesStatus = 'loading' | 'ready' | 'error'
 export const useTripExpenses = (
   orgId: string,
   tripId: string | null
-): [TripExpensesStatus, Expense[], () => void] => {
+): [TripExpensesStatus, Expense[], () => void, () => void] => {
   const known = useExpensesStore(state => state.known)
   const replaceTripExpenses = useExpensesStore(
     state => state.replaceTripExpenses
@@ -51,15 +51,22 @@ export const useTripExpenses = (
         .sort((a, b) => a.takenAt.getTime() - b.takenAt.getTime()),
     [known, tripId]
   )
+  // Reads again, showing what it has meanwhile; stable for effects
+  const refresh = useCallback(() => {
+    setAttempt(value => value + 1)
+  }, [])
+
   const status: TripExpensesStatus =
     !tripId || read?.tripId !== tripId ? 'loading' : read.status
 
   return [
     tripId ? status : 'ready',
     expenses,
+    // Retry: shows the loading state again
     () => {
       setRead(null)
       setAttempt(value => value + 1)
     },
+    refresh,
   ]
 }
