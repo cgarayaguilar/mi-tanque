@@ -52,6 +52,11 @@ interface RefuelFormProps {
   capacityGal: number
   /** The organization's currency; '' without an account (RF-2). */
   defaultCurrency: Currency | ''
+  /**
+   * With an account, the organization's currency: the refuel goes in it,
+   * without a picker (backend specs/0027 RF-7). Without an account, absent.
+   */
+  organizationCurrency?: Currency | undefined
   /** Latest level of the tank, for "before" without inches (RF-3). */
   lastGallons: number | null
   stations: readonly string[]
@@ -110,6 +115,7 @@ export default function RefuelForm({
   maxInches,
   capacityGal,
   defaultCurrency,
+  organizationCurrency,
   lastGallons,
   stations,
   odometer,
@@ -284,14 +290,14 @@ export default function RefuelForm({
       </Box>
       {/* With an account, the organization's currency (backend specs/0027
           RF-7); one edited keeps the one it was saved in */}
-      {defaultCurrency && currency ? (
+      {organizationCurrency && currency ? (
         <Typography
           variant="caption"
           component="p"
           sx={{ color: 'text.secondary', mt: -3 }}
         >
           En {CURRENCY_DETAILS[currency].name.toLowerCase()},{' '}
-          {currency === defaultCurrency
+          {currency === organizationCurrency
             ? 'la moneda de tu organización.'
             : 'la moneda en que se registró.'}
         </Typography>

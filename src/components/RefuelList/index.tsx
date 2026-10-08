@@ -18,6 +18,7 @@ import ConfirmDialog from 'components/ConfirmDialog'
 import RefuelForm, { levelText, type RefuelResult } from 'components/RefuelForm'
 import Stat from 'components/Stat'
 import { useLoad } from 'hooks/useLoad'
+import type { Currency } from 'schemas/account'
 import { KM_PER_MILE } from 'schemas/fleet'
 import { moneyTotal, unitPrices } from 'utils/formatMoney'
 import type { RefuelFormValues } from 'schemas/refuelForm'
@@ -377,9 +378,12 @@ export default function RefuelList({
   contextFor,
   onEdit,
   onDelete,
+  organizationCurrency,
 }: {
   items: readonly RefuelItem[]
   canChange: (item: RefuelItem) => boolean
+  /** With an account: corrections keep the currency (specs/0027 RF-7). */
+  organizationCurrency?: Currency | undefined
   /** The tank of a refuel, for its edit form; null if it is gone. */
   contextFor: (item: RefuelItem) => RefuelTankContext | null
   onEdit: (item: RefuelItem, result: RefuelResult) => void
@@ -433,6 +437,7 @@ export default function RefuelList({
                 maxInches={context.maxInches}
                 capacityGal={context.capacityGal}
                 defaultCurrency={editing.currency}
+                organizationCurrency={organizationCurrency}
                 // "Before" stays what it was when the refuel happened
                 lastGallons={editing.gallonsBefore}
                 stations={[]}

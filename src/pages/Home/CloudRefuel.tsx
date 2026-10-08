@@ -67,6 +67,7 @@ export default function CloudRefuel({
         maxInches={maxInchesFor(tank)}
         capacityGal={tank.capacityGal}
         defaultCurrency={currency}
+        organizationCurrency={currency}
         lastGallons={
           saved?.gallonsAfter ?? tank.lastMeasurement?.gallons ?? null
         }

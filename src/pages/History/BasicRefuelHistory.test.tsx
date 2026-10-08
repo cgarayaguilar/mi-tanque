@@ -116,6 +116,9 @@ test('a refuel is corrected and deleted on this phone (RF-11)', async () => {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }))
   const dialog = screen.getByRole('dialog', { name: 'Corregir relleno' })
   expect(within(dialog).getByLabelText('Cantidad echada')).toHaveValue('50')
+  // Audit 0027: without an account the currency is still chosen here
+  expect(within(dialog).getByLabelText('Moneda')).toBeInTheDocument()
+  expect(within(dialog).queryByText(/la moneda de tu organización/)).toBeNull()
   fireEvent.change(within(dialog).getByLabelText('Precio'), {
     target: { value: '31' },
   })
