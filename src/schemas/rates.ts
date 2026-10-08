@@ -134,9 +134,12 @@ export const duplicateRateMessage = (other: Rate) =>
 
 /**
  * The places already used, origins and destinations together, once each
- * however they were written (RF-7), in alphabetical order.
+ * however they were written (RF-7), in alphabetical order: of the rates
+ * and, since specs/0025, of the trips.
  */
-export const knownPlaces = (rates: readonly Rate[]) => {
+export const knownPlaces = (
+  rates: readonly Pick<Rate, 'origin' | 'destination'>[]
+) => {
   const places = new Map<string, string>()
   for (const rate of rates) {
     for (const place of [rate.origin, rate.destination]) {

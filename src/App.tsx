@@ -22,6 +22,10 @@ const Welcome = lazy(() => import('pages/Welcome'))
 const Account = lazy(() => import('pages/Account'))
 const Fleet = lazy(() => import('pages/Fleet'))
 const FleetItem = lazy(() => import('pages/FleetItem'))
+// Trips (backend specs/0025)
+const Trips = lazy(() => import('pages/Trips'))
+const Trip = lazy(() => import('pages/Trip'))
+const TripEditor = lazy(() => import('pages/TripEditor'))
 // An invitation link (specs/0005)
 const Invitation = lazy(() => import('pages/Invitation'))
 // Offers the basic mode's data once per organization (specs/0004 RF-15)
@@ -82,6 +86,14 @@ export default function App() {
         <Route path="/flota" component={Fleet} />
         <Route path="/flota/:section" component={Fleet} />
         <Route path="/flota/:section/:id" component={FleetItem} />
+        <Route path="/viajes" component={Trips} />
+        {/* One route: without a Switch, /viajes/nuevo would match both */}
+        <Route path="/viajes/:id">
+          {(params: { id: string }) =>
+            params.id === 'nuevo' ? <TripEditor /> : <Trip />
+          }
+        </Route>
+        <Route path="/viajes/:id/editar" component={TripEditor} />
         <Route path="/invitacion/:token" component={Invitation} />
       </Suspense>
       {/* Its own boundary: loading its chunk must not blank the page */}

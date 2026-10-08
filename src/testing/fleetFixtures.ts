@@ -1,6 +1,7 @@
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
 import type { Rate } from 'schemas/rates'
+import type { Trip } from 'schemas/trips'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
@@ -147,5 +148,43 @@ export const rate = (overrides: Partial<Rate> = {}): Rate => ({
   description: null,
   label: 'Managua - San José - C$25,000.00',
   archived: false,
+  ...overrides,
+})
+
+export const trip = (overrides: Partial<Trip> = {}): Trip => ({
+  id: 'trip-1',
+  orgId: ORG_ID,
+  status: 'scheduled',
+  startAt: new Date(2026, 9, 6, 8, 0),
+  endAt: null,
+  year: 2026,
+  month: 10,
+  yearMonth: '2026-10',
+  monthLabel: 'octubre 2026',
+  weekStart: '2026-10-05',
+  weekLabel: 'del 5 oct al 11 oct',
+  mode: 'rate',
+  rateId: 'rate-1',
+  origin: 'Managua',
+  destination: 'San José',
+  price: 25000,
+  extras: [{ description: 'Parada en León', amount: 2500 }],
+  currency: 'NIO',
+  clientId: 'client-1',
+  clientName: 'Transportes Pérez',
+  truckId: 'truck-1',
+  truckName: 'Unidad 12',
+  trailerId: 'trailer-1',
+  trailerName: 'Caja 7',
+  driverId: 'driver-1',
+  driverName: 'Pedro Ruiz',
+  secondDriverId: null,
+  secondDriverName: null,
+  driverIds: ['driver-1'],
+  tripNumber: null,
+  description: null,
+  notes: null,
+  createdAt: new Date(2026, 9, 6, 8, 15),
+  createdBy: 'luis',
   ...overrides,
 })
