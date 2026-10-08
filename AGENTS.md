@@ -171,6 +171,12 @@ en cada push y PR.
   opcional a un miembro (`memberUid`), que no se repite entre conductores activos y que el backend
   borra cuando el miembro sale. El aviso de la licencia y el del seguro son el mismo
   `expiryNotice` (`utils/insurance`: `licenseNotice`, `insuranceNotice`).
+- **Tarifas (specs/0024):** otra sección de Flota (`/flota/tarifas`, colección `rates`,
+  `components/RateFields`, `schemas/rates`). Su `name` ("Managua → San José") no se guarda: lo arma
+  el servicio al leer. La etiqueta (`rateLabel`) y la moneda (la de la organización al crearla, fija
+  después) se guardan. Origen y destino sugieren los lugares ya usados (`knownPlaces`) y se guardan
+  con la forma ya usada (`knownSpelling`). Los textos de Flota concuerdan en género con
+  `sectionWords` (`feminine` en `utils/fleetSections`).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
