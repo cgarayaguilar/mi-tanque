@@ -34,6 +34,11 @@ interface EditorLayoutProps {
   children: ReactNode
   formId: string
   saving: boolean
+  /**
+   * Why it cannot be restored, or null: a driver whose account is linked
+   * to another active driver (specs/0023 RF-8; audit 0027).
+   */
+  restoreIssue?: (() => string | null) | undefined
 }
 
 const capitalize = (text: string) =>
@@ -48,6 +53,7 @@ export default function EditorLayout({
   children,
   formId,
   saving,
+  restoreIssue,
 }: EditorLayoutProps) {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? '')
@@ -60,6 +66,14 @@ export default function EditorLayout({
 
   const archive = (archived: boolean) => {
     setConfirming(false)
+    const issue = archived ? null : (restoreIssue?.() ?? null)
+    if (issue) {
+      sileo.error({
+        title: `No pudimos restaurar ${words.the} ${section.one}`,
+        description: issue,
+      })
+      return
+    }
     setArchived(section.collection, id, archived).catch((error: unknown) => {
       reportError(error, {
         operation: 'archiveFleetItem',
@@ -96,7 +110,7 @@ export default function EditorLayout({
         >
           {item ? item.name : `${words.newOne} ${section.one}`}
         </Typography>
-        {item?.archived && <Chip label="Archivado" size="small" />}
+        {item?.archived && <Chip label={`Archivad${words.it}`} size="small" />}
       </Stack>
 
       {children}
@@ -163,7 +177,7 @@ export default function EditorLayout({
       <ConfirmDialog
         open={confirming}
         title={`¿Archivar ${item?.name ?? ''}?`}
-        description={`Dejará de aparecer en la flota y en los formularios. Su historial se conserva y puedes restaurarlo desde "Ver archivados".`}
+        description={`Dejará de aparecer en la flota y en los formularios. Su historial se conserva y puedes restaurarl${words.it} desde "Archivad${words.them}".`}
         confirmLabel="Archivar"
         onConfirm={() => {
           archive(true)

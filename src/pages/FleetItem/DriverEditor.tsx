@@ -81,7 +81,7 @@ export default function DriverEditor({
       : null
     if (linked) {
       setError('memberUid', {
-        message: `La cuenta de ${memberName(values.memberUid)} ya está enlazada a ${linked.name}`,
+        message: `${memberName(values.memberUid)} ya está enlazada a ${linked.name}`,
       })
       if (!details.open) details.toggle()
       return
@@ -116,6 +116,14 @@ export default function DriverEditor({
       canWrite={canWrite}
       formId={FORM_ID}
       saving={isSubmitting}
+      restoreIssue={() => {
+        const linked = driver?.memberUid
+          ? driverLinkedTo(driver.memberUid, drivers, id)
+          : null
+        return linked && driver?.memberUid
+          ? `${memberName(driver.memberUid)} ya está enlazada a ${linked.name}. Quita ese enlace primero.`
+          : null
+      }}
     >
       <Box
         component="form"

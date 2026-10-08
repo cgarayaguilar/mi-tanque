@@ -1108,9 +1108,7 @@ describe('drivers', () => {
     await choose('Miembro del equipo (opcional)', 'Ana López (Chofer)')
     fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
     expect(
-      await screen.findByText(
-        'La cuenta de Ana López ya está enlazada a Pedro Ruiz'
-      )
+      await screen.findByText('Ana López ya está enlazada a Pedro Ruiz')
     ).toBeInTheDocument()
     expect(api.createFleetItem).not.toHaveBeenCalled()
   })
@@ -1130,6 +1128,35 @@ describe('drivers', () => {
         expect.objectContaining({ memberUid: 'ana', name: 'Pedro Ruiz' })
       )
     })
+  })
+
+  // Audit 0027 (0023 RF-8): restoring cannot leave two drivers linked
+  test('a driver whose member is linked to another is not restored', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      clients: [],
+      drivers: [
+        driver({ memberUid: 'ana' }),
+        driver({
+          id: 'driver-2',
+          name: 'Luis Mora',
+          archived: true,
+          memberUid: 'ana',
+        }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+    renderAt('/flota/conductores/driver-2')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Restaurar' }))
+    expect(sileo.error).toHaveBeenCalledWith({
+      title: 'No pudimos restaurar el conductor',
+      description:
+        'Ana López ya está enlazada a Pedro Ruiz. Quita ese enlace primero.',
+    })
+    expect(api.updateFleetItem).not.toHaveBeenCalled()
   })
 
   test('a viewer sees the driver without saving or archiving', async () => {

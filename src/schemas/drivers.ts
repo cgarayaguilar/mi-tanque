@@ -1,7 +1,7 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
 import { optionalText, requiredText } from 'schemas/fleet'
-import { foldText } from 'utils/foldText'
+import { foldText, squeezeSpaces } from 'utils/foldText'
 import { isPlainDate } from 'utils/plainDate'
 
 /** Mirrors the rules of `drivers` (backend specs/0023 RF-1). */
@@ -42,7 +42,7 @@ export type DriverFormValues = z.infer<typeof driverFormSchema>
 const textOrNull = (value: string) => value.trim() || null
 
 export const driverFromForm = (values: DriverFormValues) => ({
-  name: values.name.trim(),
+  name: squeezeSpaces(values.name),
   phone: textOrNull(values.phone),
   licenseNumber: textOrNull(values.licenseNumber),
   licenseExpiresOn: values.licenseExpiresOn || null,

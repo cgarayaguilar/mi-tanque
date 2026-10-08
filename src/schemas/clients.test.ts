@@ -103,3 +103,10 @@ test('the contact line has what the client has (RF-5)', () => {
     clientContact(client({ phone: null, email: null, taxId: null }))
   ).toBeNull()
 })
+
+// Audit 0027: "Acarreos   del Norte" is saved as "Acarreos del Norte"
+test('a name is saved without doubled spaces', () => {
+  expect(
+    clientFromForm({ ...empty, name: '  Acarreos   del Norte ' }).name
+  ).toBe('Acarreos del Norte')
+})

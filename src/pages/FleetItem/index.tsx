@@ -49,7 +49,7 @@ function FleetItemScreen() {
     <EmptyState
       icon={<SearchOffIcon />}
       title={`No encontramos ${sectionWords(section).that} ${section.one}`}
-      description="Puede que lo hayan archivado o que pertenezca a otra organización."
+      description={`Puede que l${sectionWords(section).it} hayan archivado o que pertenezca a otra organización.`}
       action={{
         label: `Ver ${section.label.toLowerCase()}`,
         onClick: () => {

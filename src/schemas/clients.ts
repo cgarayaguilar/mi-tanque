@@ -1,7 +1,7 @@
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
 import { optionalText, requiredText } from 'schemas/fleet'
-import { foldText } from 'utils/foldText'
+import { foldText, squeezeSpaces } from 'utils/foldText'
 
 /** Mirrors the rules of `clients` (backend specs/0022 RF-1). */
 export const CLIENT_LIMITS = {
@@ -44,7 +44,7 @@ export type ClientFormValues = z.infer<typeof clientFormSchema>
 const textOrNull = (value: string) => value.trim() || null
 
 export const clientFromForm = (values: ClientFormValues) => ({
-  name: values.name.trim(),
+  name: squeezeSpaces(values.name),
   phone: textOrNull(values.phone),
   email: textOrNull(values.email),
   taxId: textOrNull(values.taxId),

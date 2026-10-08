@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 import type { Currency } from 'schemas/account'
 import type { Client } from 'schemas/clients'
 import { optionalText, requiredText } from 'schemas/fleet'
-import { foldText } from 'utils/foldText'
+import { foldText, squeezeSpaces } from 'utils/foldText'
 import { currencySymbol } from 'utils/formatMoney'
 import { formatEditable, formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
@@ -83,8 +83,8 @@ export const rateFromForm = (
   currency: Currency,
   clients: readonly Client[]
 ) => {
-  const origin = values.origin.trim()
-  const destination = values.destination.trim()
+  const origin = squeezeSpaces(values.origin)
+  const destination = squeezeSpaces(values.destination)
   const price = toCents(parseDecimal(values.price))
   const client = clients.find(item => item.id === values.clientId) ?? null
   return {
@@ -114,7 +114,10 @@ const placeKey = (place: string) => foldText(place).trim().replace(/\s+/g, ' ')
  * (RF-8): the same route with another price is another rate.
  */
 export const sameRate = (
-  candidate: Pick<Rate, 'origin' | 'destination' | 'clientId' | 'price'>,
+  candidate: Pick<
+    Rate,
+    'origin' | 'destination' | 'clientId' | 'price' | 'currency'
+  >,
   rates: readonly Rate[],
   selfId: string
 ): Rate | null =>
@@ -124,7 +127,9 @@ export const sameRate = (
       placeKey(rate.origin) === placeKey(candidate.origin) &&
       placeKey(rate.destination) === placeKey(candidate.destination) &&
       rate.clientId === candidate.clientId &&
-      rate.price === candidate.price
+      rate.price === candidate.price &&
+      // The same number in another currency is another rate (audit 0027)
+      rate.currency === candidate.currency
   ) ?? null
 
 export const duplicateRateMessage = (other: Rate) =>

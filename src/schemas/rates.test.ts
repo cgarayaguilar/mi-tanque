@@ -97,6 +97,7 @@ describe('a repeated rate', () => {
     destination: '  San  Jose ',
     clientId: 'client-1',
     price: 25000,
+    currency: 'NIO' as const,
   }
 
   test('same route, client and price, without accents or capitals', () => {
@@ -107,6 +108,8 @@ describe('a repeated rate', () => {
   test('another price or another client is another rate', () => {
     expect(sameRate({ ...candidate, price: 27000 }, rates, 'new')).toBeNull()
     expect(sameRate({ ...candidate, clientId: null }, rates, 'new')).toBeNull()
+    // Audit 0027: the same number in another currency
+    expect(sameRate({ ...candidate, currency: 'USD' }, rates, 'new')).toBeNull()
   })
 
   test('an archived one asks to restore it', () => {

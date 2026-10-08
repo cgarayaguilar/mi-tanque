@@ -50,6 +50,7 @@ import {
   FLEET_SECTIONS,
   sectionBySlug,
   sectionWords,
+  type FleetSection,
 } from 'utils/fleetSections'
 import { foldText } from 'utils/foldText'
 import { formatNumber } from 'utils/formatNumber'
@@ -555,7 +556,12 @@ function FleetScreen() {
         <EmptyState
           headingLevel="h2"
           icon={sectionIcon}
-          title={`Aún no tienes ${section.label.toLowerCase()}`}
+          title={
+            // specs/0022 RF-5
+            section.collection === 'clients'
+              ? 'Agrega tus clientes'
+              : `Aún no tienes ${section.label.toLowerCase()}`
+          }
           description={
             canWrite
               ? `Agrega tu ${words.first} ${section.one} para tener su información a mano.`
@@ -577,16 +583,18 @@ function FleetScreen() {
         <EmptyState
           headingLevel="h2"
           icon={<SearchOffIcon />}
-          title={showArchived ? 'No hay archivados' : 'Sin resultados'}
+          title={
+            showArchived ? `No hay archivad${words.them}` : 'Sin resultados'
+          }
           description={
             showArchived
               ? `Aquí aparecen ${words.thePlural} ${section.label.toLowerCase()} que archives.`
-              : 'Prueba con otro nombre, placa o medida.'
+              : SEARCH_HINTS[section.collection]
           }
           action={
             showArchived
               ? {
-                  label: 'Ver activos',
+                  label: `Ver activ${words.them}`,
                   onClick: () => {
                     setShowArchived(false)
                   },
@@ -691,21 +699,23 @@ function FleetScreen() {
         {/* One row of chips (specs/0017 RF-9) */}
         <Box sx={{ my: 3 }}>
           <FilterBar>
-            {section.collection === 'trucks' && brandOptions.length > 1 && (
-              <FilterChip
-                label="Marca"
-                allLabel="Todas"
-                options={brandOptions.map(value => ({ value, label: value }))}
-                value={brand}
-                onChange={next => {
-                  setBrand(next)
-                  setModel(null)
-                }}
-              />
-            )}
+            {/* A chosen filter stays visible to clear it (audit 0027) */}
+            {section.collection === 'trucks' &&
+              (brandOptions.length > 1 || brand !== null) && (
+                <FilterChip
+                  label="Marca"
+                  allLabel="Todas"
+                  options={brandOptions.map(value => ({ value, label: value }))}
+                  value={brand}
+                  onChange={next => {
+                    setBrand(next)
+                    setModel(null)
+                  }}
+                />
+              )}
             {section.collection === 'trucks' &&
               brand !== null &&
-              modelOptions.length > 1 && (
+              (modelOptions.length > 1 || model !== null) && (
                 <FilterChip
                   label="Modelo"
                   allLabel="Todos"
@@ -717,15 +727,16 @@ function FleetScreen() {
                   onChange={setModel}
                 />
               )}
-            {section.collection === 'rates' && rateClientOptions.length > 1 && (
-              <FilterChip
-                label="Cliente"
-                allLabel="Todos"
-                options={rateClientOptions}
-                value={rateClient}
-                onChange={setRateClient}
-              />
-            )}
+            {section.collection === 'rates' &&
+              (rateClientOptions.length > 1 || rateClient !== null) && (
+                <FilterChip
+                  label="Cliente"
+                  allLabel="Todos"
+                  options={rateClientOptions}
+                  value={rateClient}
+                  onChange={setRateClient}
+                />
+              )}
             <FilterToggle
               label="Archivados"
               on={showArchived}
@@ -739,6 +750,16 @@ function FleetScreen() {
       <NavBar />
     </Box>
   )
+}
+
+// What the search looks in, per section (audit 0027)
+const SEARCH_HINTS: Record<FleetSection['collection'], string> = {
+  trucks: 'Prueba con otro nombre, placa o medida.',
+  trailers: 'Prueba con otro nombre, placa o medida.',
+  tanks: 'Prueba con otro nombre o medida.',
+  clients: 'Prueba con otro nombre, teléfono, correo o número fiscal.',
+  drivers: 'Prueba con otro nombre, teléfono o licencia.',
+  rates: 'Prueba con otro origen, destino o cliente.',
 }
 
 export default function Fleet() {
