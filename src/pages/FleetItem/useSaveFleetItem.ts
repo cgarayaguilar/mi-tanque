@@ -6,6 +6,7 @@ import {
   type FleetCollection,
 } from 'services/fleet'
 import type { Client } from 'schemas/clients'
+import type { Driver } from 'schemas/drivers'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission } from 'store/session'
@@ -24,7 +25,7 @@ export const useSaveFleetItem = (section: FleetSection) => {
   const [, navigate] = useLocation()
 
   return (
-    item: Truck | Trailer | FleetTank | Client,
+    item: Truck | Trailer | FleetTank | Client | Driver,
     fields: object,
     isNew: boolean
   ): void => {

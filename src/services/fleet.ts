@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import * as z from 'zod/mini'
 import type { Client } from 'schemas/clients'
+import type { Driver } from 'schemas/drivers'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import { loadFirebase, loadStorage } from 'services/firebase'
 import { compressImage } from 'utils/compressImage'
@@ -21,7 +22,11 @@ import { reportError } from 'utils/reportError'
 import { ROLES } from 'utils/roles'
 import { withTimeout } from 'utils/withTimeout'
 
-export type FleetCollection = 'trucks' | 'trailers' | 'tanks' | 'clients'
+export type FleetCollection =
+  'trucks' | 'trailers' | 'tanks' | 'clients' | 'drivers'
+
+// The catalogs of specs/0022 and 0023 have no photo
+const WITH_PHOTO: readonly FleetCollection[] = ['trucks', 'trailers', 'tanks']
 
 // One read per collection, bounded (§2.3, specs/0003 RNF-1)
 export const MAX_FLEET_ITEMS = 500
@@ -101,6 +106,17 @@ const clientSchema = z.object({
   email: nullableString,
   taxId: nullableString,
   notes: nullableString,
+  archived: z.boolean(),
+})
+
+// Linked to a member if they have an account (backend specs/0023 RF-1)
+const driverSchema = z.object({
+  orgId: z.string(),
+  name: z.string(),
+  phone: nullableString,
+  licenseNumber: nullableString,
+  licenseExpiresOn: nullableString,
+  memberUid: nullableString,
   archived: z.boolean(),
 })
 
@@ -187,21 +203,24 @@ export interface Fleet {
   trailers: Trailer[]
   tanks: FleetTank[]
   clients: Client[]
+  drivers: Driver[]
 }
 
 /** The whole fleet of an organization: bounded reads, cache-first offline. */
 export const readFleet = async (orgId: string): Promise<Fleet> => {
-  const [trucks, trailers, tanks, clients] = await Promise.all([
+  const [trucks, trailers, tanks, clients, drivers] = await Promise.all([
     readCollection('trucks', orgId, parseWith(truckSchema, 'trucks')),
     readCollection('trailers', orgId, parseWith(trailerSchema, 'trailers')),
     readCollection('tanks', orgId, toTank),
     readCollection('clients', orgId, parseWith(clientSchema, 'clients')),
+    readCollection('drivers', orgId, parseWith(driverSchema, 'drivers')),
   ])
   return {
     trucks: trucks as Truck[],
     trailers: trailers as Trailer[],
     tanks,
     clients,
+    drivers,
   }
 }
 
@@ -261,8 +280,7 @@ export const createFleetItem = async (
   await setDoc(doc(db, name, id), {
     ...data,
     orgId,
-    // Clients have no photo (backend specs/0022 RF-1)
-    ...(name !== 'clients' && { photoPath: null }),
+    ...(WITH_PHOTO.includes(name) && { photoPath: null }),
     archived: false,
     ...(name === 'tanks' && { lastMeasurement: null }),
     createdAt: serverTimestamp(),

@@ -1,4 +1,5 @@
 import type { Client } from 'schemas/clients'
+import type { Driver } from 'schemas/drivers'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
@@ -116,6 +117,18 @@ export const client = (overrides: Partial<Client> = {}): Client => ({
   email: null,
   taxId: 'J0310000012345',
   notes: null,
+  archived: false,
+  ...overrides,
+})
+
+export const driver = (overrides: Partial<Driver> = {}): Driver => ({
+  id: 'driver-1',
+  orgId: ORG_ID,
+  name: 'Pedro Ruiz',
+  phone: '8888 7777',
+  licenseNumber: 'A-123456',
+  licenseExpiresOn: null,
+  memberUid: null,
   archived: false,
   ...overrides,
 })

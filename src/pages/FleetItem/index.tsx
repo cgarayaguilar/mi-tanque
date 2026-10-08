@@ -11,6 +11,7 @@ import { selectActiveRole, useSessionStore } from 'store/session'
 import { sectionBySlug } from 'utils/fleetSections'
 import { canWriteFleet } from 'utils/roles'
 import ClientEditor from './ClientEditor'
+import DriverEditor from './DriverEditor'
 import TankEditor from './TankEditor'
 import TrailerEditor from './TrailerEditor'
 import TruckEditor from './TruckEditor'
@@ -21,7 +22,8 @@ function FleetItemScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? '')
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, clients, load } = useFleetStore()
+  const { status, trucks, trailers, tanks, clients, drivers, load } =
+    useFleetStore()
   const isNew = params.id === 'nuevo'
   // The new item's id exists from the moment the form opens (ADR 0003)
   const [newId] = useState(newFleetId)
@@ -89,6 +91,14 @@ function FleetItemScreen() {
         notFound
       ) : (
         <ClientEditor key={id} {...props} client={client} />
+      )
+    }
+    case 'drivers': {
+      const driver = isNew ? null : drivers.find(item => item.id === id)
+      return driver === undefined ? (
+        notFound
+      ) : (
+        <DriverEditor key={id} {...props} driver={driver} />
       )
     }
   }

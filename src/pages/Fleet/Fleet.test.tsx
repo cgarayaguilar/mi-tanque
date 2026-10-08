@@ -15,6 +15,7 @@ import type { Role } from 'utils/roles'
 import {
   accountWithRole,
   client,
+  driver,
   tank,
   trailer,
   truck,
@@ -22,7 +23,10 @@ import {
 
 const api = vi.hoisted(() => ({
   readFleet: vi.fn(),
-  readMembers: vi.fn(() => Promise.resolve([])),
+  readMembers: vi.fn(
+    (): Promise<{ uid: string; displayName: string; role: string }[]> =>
+      Promise.resolve([])
+  ),
   updateFleetItem: vi.fn(() => Promise.resolve()),
   newFleetId: vi.fn(() => 'new-id'),
 }))
@@ -50,6 +54,7 @@ const renderAt = (path: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [
       truck(),
@@ -127,6 +132,7 @@ test('search filters by name or plate and offers to clear', async () => {
 
 test('an empty section invites to add the first one', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [],
     trailers: [],
@@ -141,6 +147,7 @@ test('an empty section invites to add the first one', async () => {
 
 test('when everything is archived it says so and shows them (CA-6)', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [truck({ archived: true })],
     trailers: [],
@@ -176,6 +183,7 @@ test('a viewer sees the fleet without "Agregar" (CA-9)', async () => {
 
 test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [truck()],
     trailers: [],
@@ -200,6 +208,7 @@ test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
 test('trucks and trailers say when their insurance is due, not when archived', async () => {
   const inFiveDays = toPlainDate(addDays(new Date(), 5))
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [
       truck({ id: 't1', name: 'Unidad 1', insuranceExpiresOn: inFiveDays }),
@@ -229,6 +238,7 @@ test('trucks and trailers say when their insurance is due, not when archived', a
 // backend specs/0016 CA-5: trucks by brand and model, typed names recognized
 test('trucks filter by brand, then model', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [
       truck(),
@@ -265,6 +275,7 @@ test('trucks filter by brand, then model', async () => {
 // specs/0017 RF-9, RF-10, CA-4: archived ones are a chip of the same row
 test('the archived chip shows the archived ones, in every tab', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [
       truck(),
@@ -297,6 +308,7 @@ test('the archived chip shows the archived ones, in every tab', async () => {
 describe('clients', () => {
   beforeEach(() => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [
         client(),
         client({
@@ -366,6 +378,7 @@ describe('clients', () => {
 
   test('without clients it invites to add one, only to who can write', async () => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [],
       trucks: [],
       trailers: [],
@@ -385,5 +398,60 @@ describe('clients', () => {
       await screen.findByRole('button', { name: 'Cliente Transportes Pérez' })
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
+  })
+})
+
+// backend specs/0023 RF-6
+describe('drivers', () => {
+  beforeEach(() => {
+    api.readMembers.mockResolvedValue([
+      { uid: 'ana', displayName: 'Ana López', role: 'driver' },
+    ])
+    api.readFleet.mockResolvedValue({
+      clients: [],
+      drivers: [
+        driver({
+          memberUid: 'ana',
+          licenseExpiresOn: toPlainDate(addDays(new Date(), 5)),
+        }),
+        driver({
+          id: 'driver-2',
+          name: 'Marta Gómez',
+          phone: null,
+          licenseNumber: 'B-998877',
+          licenseExpiresOn: '2020-01-01',
+          archived: true,
+        }),
+      ],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+  })
+
+  test('a card has the contact, the account and the license notice', async () => {
+    renderAt('/flota/conductores')
+
+    const card = await screen.findByRole('button', {
+      name: 'Conductor Pedro Ruiz, Licencia vence en 5 días',
+    })
+    expect(card).toHaveTextContent('8888 7777 · Licencia A-123456')
+    expect(card).toHaveTextContent('Cuenta: Ana López')
+  })
+
+  test('search finds by license number; an archived one gives no notice', async () => {
+    renderAt('/flota/conductores')
+    await screen.findByRole('list', { name: 'Conductores' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archivados' }))
+    fireEvent.change(
+      screen.getByRole('searchbox', { name: 'Buscar conductores' }),
+      {
+        target: { value: 'b-998' },
+      }
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Conductor Marta Gómez' })
+    ).toBeInTheDocument()
   })
 })

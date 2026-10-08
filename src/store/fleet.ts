@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Client } from 'schemas/clients'
+import type { Driver } from 'schemas/drivers'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import type { FleetCollection, OrgMember } from 'services/fleet'
 import { useSessionStore } from 'store/session'
@@ -16,6 +17,8 @@ interface FleetItems {
   tanks: FleetTank[]
   /** The organization's clients (backend specs/0022). */
   clients: Client[]
+  /** The organization's drivers (backend specs/0023). */
+  drivers: Driver[]
 }
 
 interface FleetState extends FleetItems {
@@ -30,7 +33,7 @@ interface FleetState extends FleetItems {
    */
   save: (
     collection: FleetCollection,
-    item: Truck | Trailer | FleetTank | Client,
+    item: Truck | Trailer | FleetTank | Client | Driver,
     write: () => Promise<void>
   ) => Promise<void>
   setArchived: (
@@ -53,6 +56,7 @@ const EMPTY: FleetItems & { members: OrgMember[] } = {
   trailers: [],
   tanks: [],
   clients: [],
+  drivers: [],
   members: [],
 }
 
@@ -89,6 +93,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
         trailers: byName(fleet.trailers),
         tanks: byName(fleet.tanks),
         clients: byName(fleet.clients),
+        drivers: byName(fleet.drivers),
         members,
         status: 'ready',
       })
@@ -110,6 +115,8 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
           return { tanks: upsert(state.tanks, item as FleetTank) }
         case 'clients':
           return { clients: upsert(state.clients, item as Client) }
+        case 'drivers':
+          return { drivers: upsert(state.drivers, item as Driver) }
       }
     })
     await write()
@@ -124,6 +131,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
         collection === 'trailers' ? patch(state.trailers) : state.trailers,
       tanks: collection === 'tanks' ? patch(state.tanks) : state.tanks,
       clients: collection === 'clients' ? patch(state.clients) : state.clients,
+      drivers: collection === 'drivers' ? patch(state.drivers) : state.drivers,
     }))
     const api = await fleetApi()
     await api.updateFleetItem(collection, id, { archived })

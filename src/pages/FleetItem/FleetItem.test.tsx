@@ -6,6 +6,7 @@ import {
   within,
 } from '@testing-library/react'
 import { sileo } from 'sileo'
+import { toPlainDate } from 'utils/plainDate'
 import App from '../../App'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
@@ -13,6 +14,7 @@ import type { Role } from 'utils/roles'
 import {
   accountWithRole,
   client,
+  driver,
   ORG_ID,
   tank,
   trailer,
@@ -60,6 +62,7 @@ const type = (label: string, value: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [truck()],
     trailers: [trailer()],
@@ -360,6 +363,7 @@ test('an unknown item says it was not found', async () => {
 // rules refused every edit of the truck that kept them
 test('a truck whose driver left is saved unassigned', async () => {
   api.readFleet.mockResolvedValue({
+    drivers: [],
     clients: [],
     trucks: [truck({ assignedDriverUid: 'gone' })],
     trailers: [trailer()],
@@ -498,6 +502,7 @@ describe('simpler forms (backend specs/0009)', () => {
       },
     }))
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [],
       trucks: [truck({ odometerKm: 102, fuelEfficiencyKmPerGal: 9.5 })],
       trailers: [trailer()],
@@ -580,6 +585,7 @@ describe('simpler forms (backend specs/0009)', () => {
   // model, and going back to it reset the capacity without a word
   test('a tank whose capacity was edited is no longer its model', async () => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [],
       trucks: [truck()],
       trailers: [trailer()],
@@ -815,6 +821,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
   // CA-3
   test('typed names are recognized; others open as "Otra"', async () => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [],
       trucks: [
         truck({ brand: 'freightliner', model: 'CASCADIA' }),
@@ -836,6 +843,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 
   test('a brand that is not in the list opens as "Otra marca…"', async () => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [],
       trucks: [truck({ brand: 'Hino', model: '500' })],
       trailers: [],
@@ -879,6 +887,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 describe('clients', () => {
   beforeEach(() => {
     api.readFleet.mockResolvedValue({
+      drivers: [],
       clients: [
         client(),
         client({ id: 'client-2', name: 'Fletes Ríos', archived: true }),
@@ -1001,6 +1010,124 @@ describe('clients', () => {
     renderAt('/flota/clientes/client-1')
 
     expect(await screen.findByLabelText('Nombre del cliente')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
+  })
+})
+
+// backend specs/0023
+describe('drivers', () => {
+  const inDays = (days: number) => {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    return toPlainDate(date)
+  }
+
+  beforeEach(() => {
+    api.readMembers.mockResolvedValue([
+      { uid: 'luis', displayName: 'Luis', role: 'owner' },
+      { uid: 'ana', displayName: 'Ana López', role: 'driver' },
+    ])
+    api.readFleet.mockResolvedValue({
+      clients: [],
+      drivers: [
+        driver({ memberUid: 'ana', licenseExpiresOn: inDays(20) }),
+        driver({ id: 'driver-2', name: 'Luis Mora', archived: true }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a driver; the rest is stored as null', async () => {
+    signIn('driver')
+    renderAt('/flota/conductores/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del conductor')
+        .then(() => 'Nombre del conductor'),
+      'Marta Gómez'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    type('Número de licencia (opcional)', 'B-998877')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'drivers',
+        'new-id',
+        ORG_ID,
+        {
+          name: 'Marta Gómez',
+          phone: null,
+          licenseNumber: 'B-998877',
+          licenseExpiresOn: null,
+          memberUid: null,
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Conductor guardado' })
+  })
+
+  test('the license notice shows on the driver too', async () => {
+    renderAt('/flota/conductores/driver-1')
+    expect(
+      await screen.findByText('Licencia vence en 20 días')
+    ).toBeInTheDocument()
+  })
+
+  // CA-2
+  test('a repeated name or a member already linked is said, and nothing is saved', async () => {
+    renderAt('/flota/conductores/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del conductor')
+        .then(() => 'Nombre del conductor'),
+      'pedro ruiz'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+    expect(
+      await screen.findByText('Ya existe un conductor con ese nombre')
+    ).toBeInTheDocument()
+
+    type('Nombre del conductor', 'Marta Gómez')
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    await choose('Miembro del equipo (opcional)', 'Ana López (Chofer)')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+    expect(
+      await screen.findByText(
+        'La cuenta de Ana López ya está enlazada a Pedro Ruiz'
+      )
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  test('the driver linked to a member keeps the link when edited', async () => {
+    renderAt('/flota/conductores/driver-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Ver más detalles/ })
+    )
+    expect(chosen('Miembro del equipo (opcional)')).toBe('Ana López (Chofer)')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'drivers',
+        'driver-1',
+        expect.objectContaining({ memberUid: 'ana', name: 'Pedro Ruiz' })
+      )
+    })
+  })
+
+  test('a viewer sees the driver without saving or archiving', async () => {
+    signIn('viewer')
+    renderAt('/flota/conductores/driver-1')
+
+    expect(await screen.findByLabelText('Nombre del conductor')).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
   })

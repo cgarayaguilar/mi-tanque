@@ -18,6 +18,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
@@ -29,6 +30,7 @@ import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
 import { clientContact, type Client } from 'schemas/clients'
+import { driverContact, type Driver } from 'schemas/drivers'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
@@ -49,7 +51,11 @@ import { useDistanceUnit } from 'hooks/useDistanceUnit'
 import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
 import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
-import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
+import {
+  insuranceNotice,
+  licenseNotice,
+  type InsuranceNotice,
+} from 'utils/insurance'
 import { RETRY_HINT } from 'utils/withTimeout'
 
 const CARD_HEIGHT = 88
@@ -159,7 +165,8 @@ function FleetScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? null)
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, clients, load } = useFleetStore()
+  const { status, trucks, trailers, tanks, clients, drivers, members, load } =
+    useFleetStore()
   const distanceUnit = useDistanceUnit()
   const today = new Date()
   const [search, setSearch] = useState('')
@@ -181,6 +188,10 @@ function FleetScreen() {
   const trailerName = useMemo(
     () => new Map(trailers.map(trailer => [trailer.id, trailer.name])),
     [trailers]
+  )
+  const memberName = useMemo(
+    () => new Map(members.map(member => [member.uid, member.displayName])),
+    [members]
   )
   const tanksPerTruck = useMemo(() => {
     const counts = new Map<string, number>()
@@ -293,50 +304,82 @@ function FleetScreen() {
               />
             ),
           }))
-        : section.collection === 'clients'
-          ? visible(clients, (c: Client) =>
-              matches(query, c.name, c.phone, c.email, c.taxId)
-            ).map(client => ({
-              id: client.id,
+        : section.collection === 'drivers'
+          ? visible(drivers, (d: Driver) =>
+              matches(query, d.name, d.phone, d.licenseNumber)
+            ).map(driver => ({
+              id: driver.id,
               card: (
                 <FleetCard
-                  label={`Cliente ${client.name}`}
+                  label={`Conductor ${driver.name}`}
                   leading={
-                    <BusinessOutlinedIcon
+                    <BadgeOutlinedIcon
                       sx={{ fontSize: 24, color: 'text.secondary' }}
                     />
                   }
-                  title={client.name}
-                  lines={[clientContact(client)]}
-                  archived={client.archived}
-                  onClick={() => {
-                    open(client.id)
-                  }}
-                />
-              ),
-            }))
-          : visible(tanks, (t: FleetTank) =>
-              matches(query, t.name, equipmentName(t), t.capacityGal)
-            ).map(tank => ({
-              id: tank.id,
-              card: (
-                <FleetCard
-                  label={`Tanque ${tank.name}`}
-                  leading={<TankShapeIcon shape={tank.shape} size={36} />}
-                  title={tank.name}
+                  title={driver.name}
                   lines={[
-                    `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
-                    `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
-                    tank.lastMeasurement &&
-                      lastMeasurementLine(tank.lastMeasurement),
+                    driverContact(driver),
+                    driver.memberUid
+                      ? `Cuenta: ${memberName.get(driver.memberUid) ?? 'un miembro'}`
+                      : null,
                   ]}
-                  archived={tank.archived}
+                  archived={driver.archived}
+                  notice={licenseNotice(
+                    driver.licenseExpiresOn,
+                    today,
+                    driver.archived
+                  )}
                   onClick={() => {
-                    open(tank.id)
+                    open(driver.id)
                   }}
                 />
               ),
             }))
+          : section.collection === 'clients'
+            ? visible(clients, (c: Client) =>
+                matches(query, c.name, c.phone, c.email, c.taxId)
+              ).map(client => ({
+                id: client.id,
+                card: (
+                  <FleetCard
+                    label={`Cliente ${client.name}`}
+                    leading={
+                      <BusinessOutlinedIcon
+                        sx={{ fontSize: 24, color: 'text.secondary' }}
+                      />
+                    }
+                    title={client.name}
+                    lines={[clientContact(client)]}
+                    archived={client.archived}
+                    onClick={() => {
+                      open(client.id)
+                    }}
+                  />
+                ),
+              }))
+            : visible(tanks, (t: FleetTank) =>
+                matches(query, t.name, equipmentName(t), t.capacityGal)
+              ).map(tank => ({
+                id: tank.id,
+                card: (
+                  <FleetCard
+                    label={`Tanque ${tank.name}`}
+                    leading={<TankShapeIcon shape={tank.shape} size={36} />}
+                    title={tank.name}
+                    lines={[
+                      `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
+                      `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
+                      tank.lastMeasurement &&
+                        lastMeasurementLine(tank.lastMeasurement),
+                    ]}
+                    archived={tank.archived}
+                    onClick={() => {
+                      open(tank.id)
+                    }}
+                  />
+                ),
+              }))
 
   const total =
     section.collection === 'trucks'
@@ -345,11 +388,15 @@ function FleetScreen() {
         ? trailers.length
         : section.collection === 'clients'
           ? clients.length
-          : tanks.length
+          : section.collection === 'drivers'
+            ? drivers.length
+            : tanks.length
 
   const sectionIcon =
     section.collection === 'clients' ? (
       <BusinessOutlinedIcon />
+    ) : section.collection === 'drivers' ? (
+      <BadgeOutlinedIcon />
     ) : (
       <LocalShippingIcon />
     )

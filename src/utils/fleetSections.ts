@@ -35,6 +35,15 @@ export const FLEET_SECTIONS = [
     add: 'Agregar cliente',
     photo: false,
   },
+  // Who drives the trips, with or without an account (specs/0023 RF-5)
+  {
+    slug: 'conductores',
+    collection: 'drivers',
+    label: 'Conductores',
+    one: 'conductor',
+    add: 'Agregar conductor',
+    photo: false,
+  },
 ] as const satisfies readonly {
   slug: string
   collection: FleetCollection

@@ -25,7 +25,13 @@ vi.mock('services/team', () => ({
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(() =>
-    Promise.resolve({ trucks: [], trailers: [], tanks: [], clients: [] })
+    Promise.resolve({
+      trucks: [],
+      trailers: [],
+      tanks: [],
+      clients: [],
+      drivers: [],
+    })
   ),
   readMembers: vi.fn(() => Promise.resolve([])),
 }))
