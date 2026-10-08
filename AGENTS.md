@@ -166,6 +166,11 @@ en cada push y PR.
   son `components/ClientFields`, con su esquema en `schemas/clients`, para reutilizarlos en el
   diálogo "Nuevo cliente" del viaje (specs/0025). El nombre no se repite: lo revisa la app con
   `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
+- **Conductores (specs/0023):** igual que Clientes (`/flota/conductores`, colección `drivers`,
+  `components/DriverFields`, `schemas/drivers`), con el vencimiento de la licencia y un enlace
+  opcional a un miembro (`memberUid`), que no se repite entre conductores activos y que el backend
+  borra cuando el miembro sale. El aviso de la licencia y el del seguro son el mismo
+  `expiryNotice` (`utils/insurance`: `licenseNotice`, `insuranceNotice`).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
