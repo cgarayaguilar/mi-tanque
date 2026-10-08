@@ -12,18 +12,24 @@ import { reportError } from 'utils/reportError'
 interface PhotoFieldProps {
   /** Alt text of the photo, e.g. "Foto de Unidad 12". */
   alt: string
+  /** Its title; "Foto" for an item of the fleet. */
+  label?: string
   path: string | null
   /** Resolves the stored path to a URL (services/fleet). */
   loadUrl: (path: string) => Promise<string>
-  /** Compresses and uploads; resolves with the new path and URL. */
-  upload: (file: File) => Promise<{ path: string; url: string }>
-  onUploaded: (path: string) => void
+  /**
+   * Compresses and uploads; resolves with the new path and URL. Without it
+   * the photo is only shown (a refuel's invoice on its expense, specs/0027).
+   */
+  upload?: (file: File) => Promise<{ path: string; url: string }>
+  onUploaded?: (path: string) => void
   disabled?: boolean
 }
 
 /** The item's single photo (specs/0003 RF-13): shown, added or replaced. */
 export default function PhotoField({
   alt,
+  label = 'Foto',
   path,
   loadUrl,
   upload,
@@ -54,7 +60,7 @@ export default function PhotoField({
   }, [path, loadUrl])
 
   const choose = async (file: File | undefined) => {
-    if (!file) return
+    if (!file || !upload) return
     // Without signal the upload retries for minutes with the spinner on
     // (audit 2026-10-01): a photo needs a connection, so say it now
     if (!navigator.onLine) {
@@ -69,7 +75,7 @@ export default function PhotoField({
     try {
       const result = await upload(file)
       setUrl(result.url)
-      onUploaded(result.path)
+      onUploaded?.(result.path)
       sileo.success({ title: 'Foto guardada' })
     } catch (error) {
       reportError(error, { operation: 'uploadFleetPhoto' })
@@ -86,7 +92,7 @@ export default function PhotoField({
   return (
     <Box>
       <Typography variant="subtitle2" component="p" sx={{ mb: 2 }}>
-        Foto
+        {label}
       </Typography>
       {path && !url ? (
         <Skeleton
@@ -115,33 +121,37 @@ export default function PhotoField({
           />
         )
       )}
-      <input
-        ref={inputRef}
-        id={inputId}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={event => void choose(event.target.files?.[0])}
-      />
-      <Button
-        variant="outlined"
-        startIcon={<AddAPhotoIcon />}
-        loading={busy}
-        loadingPosition="start"
-        disabled={disabled || !online}
-        onClick={() => inputRef.current?.click()}
-        sx={{ mt: 2 }}
-      >
-        {path ? 'Cambiar foto' : 'Agregar foto'}
-      </Button>
-      {!online && (
-        <Typography
-          variant="caption"
-          component="p"
-          sx={{ mt: 1, color: 'text.secondary' }}
-        >
-          Necesitas conexión para subir la foto.
-        </Typography>
+      {upload && (
+        <>
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={event => void choose(event.target.files?.[0])}
+          />
+          <Button
+            variant="outlined"
+            startIcon={<AddAPhotoIcon />}
+            loading={busy}
+            loadingPosition="start"
+            disabled={disabled || !online}
+            onClick={() => inputRef.current?.click()}
+            sx={{ mt: 2 }}
+          >
+            {path ? 'Cambiar foto' : 'Agregar foto'}
+          </Button>
+          {!online && (
+            <Typography
+              variant="caption"
+              component="p"
+              sx={{ mt: 1, color: 'text.secondary' }}
+            >
+              Necesitas conexión para subir la foto.
+            </Typography>
+          )}
+        </>
       )}
     </Box>
   )

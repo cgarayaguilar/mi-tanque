@@ -18,6 +18,9 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined'
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined'
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import SearchIcon from '@mui/icons-material/Search'
@@ -27,11 +30,15 @@ import EmptyState from 'components/EmptyState'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
+import { clientContact, type Client } from 'schemas/clients'
+import { driverContact, type Driver } from 'schemas/drivers'
+import type { Rate } from 'schemas/rates'
+import { moneyTotal } from 'utils/formatMoney'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
-import { layout, radius, softShadow } from 'theme/tokens'
+import { layout, radius, softShadow, typeScale } from 'theme/tokens'
 import {
   tankMeasures,
   tankShapeLabel,
@@ -39,22 +46,37 @@ import {
   truckFigures,
   vehicleSubtitle,
 } from 'utils/fleetLabels'
-import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
+import {
+  FLEET_SECTIONS,
+  sectionBySlug,
+  sectionWords,
+  type FleetSection,
+} from 'utils/fleetSections'
+import { foldText } from 'utils/foldText'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
 import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
 import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
-import { insuranceNotice, type InsuranceNotice } from 'utils/insurance'
+import {
+  insuranceNotice,
+  licenseNotice,
+  type InsuranceNotice,
+} from 'utils/insurance'
 import { RETRY_HINT } from 'utils/withTimeout'
 
 const CARD_HEIGHT = 88
+
+// The "General" option of the rates' client filter (specs/0024 RF-5)
+const GENERAL = '__general'
 
 interface CardProps {
   label: string
   leading: ReactNode
   title: string
+  /** A figure under the title, larger: a rate's price (specs/0024 RF-5). */
+  figure?: string
   lines: (string | null)[]
   archived: boolean
   /** The insurance's notice, if it is due soon (backend specs/0011 RF-4). */
@@ -66,6 +88,7 @@ function FleetCard({
   label,
   leading,
   title,
+  figure,
   lines,
   archived,
   notice = null,
@@ -103,6 +126,15 @@ function FleetCard({
         >
           {title}
         </Typography>
+        {figure && (
+          <Typography
+            component="span"
+            noWrap
+            sx={{ ...typeScale.figureSm, display: 'block', my: 0.5 }}
+          >
+            {figure}
+          </Typography>
+        )}
         {lines.filter(Boolean).map(line => (
           <Typography
             key={line}
@@ -144,15 +176,11 @@ const distinctNames = (names: (string | null)[]) =>
     a.localeCompare(b, 'es', { numeric: true })
   )
 
+// Without accents or capitals: "perez" finds "Pérez" (specs/0022 RF-5)
 const matches = (
   query: string,
   ...fields: (string | number | null | undefined)[]
-) =>
-  fields.some(field =>
-    String(field ?? '')
-      .toLowerCase()
-      .includes(query)
-  )
+) => fields.some(field => foldText(String(field ?? '')).includes(query))
 
 function FleetScreen() {
   const params = useParams<{ section?: string }>()
@@ -160,15 +188,27 @@ function FleetScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? null)
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, load } = useFleetStore()
+  const {
+    status,
+    trucks,
+    trailers,
+    tanks,
+    clients,
+    drivers,
+    rates,
+    members,
+    load,
+  } = useFleetStore()
   const distanceUnit = useDistanceUnit()
   const today = new Date()
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   // Trucks by brand and model, typed names recognized (specs/0016 RF-8)
   const [brand, setBrand] = useState<string | null>(null)
+  // Rates by client: an id, GENERAL or all (specs/0024 RF-5)
+  const [rateClient, setRateClient] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
-  const query = useDeferredValue(search.trim().toLowerCase())
+  const query = useDeferredValue(foldText(search.trim()))
   const canWrite = canWriteFleet(role)
 
   useEffect(() => {
@@ -182,6 +222,19 @@ function FleetScreen() {
   const trailerName = useMemo(
     () => new Map(trailers.map(trailer => [trailer.id, trailer.name])),
     [trailers]
+  )
+  const clientName = useMemo(
+    () => new Map(clients.map(client => [client.id, client.name])),
+    [clients]
+  )
+  // The client's current name; the copy saved with the rate otherwise
+  const rateClientName = (rate: Rate) =>
+    rate.clientId === null
+      ? null
+      : (clientName.get(rate.clientId) ?? rate.clientName)
+  const memberName = useMemo(
+    () => new Map(members.map(member => [member.uid, member.displayName])),
+    [members]
   )
   const tanksPerTruck = useMemo(() => {
     const counts = new Map<string, number>()
@@ -219,6 +272,23 @@ function FleetScreen() {
             .filter(truck => truckBrand(truck) === brand)
             .map(truckModel)
         )
+
+  // "General" and the clients that have rates, among those shown
+  const shownRates = rates.filter(rate => rate.archived === showArchived)
+  const rateClients = new Map<string, string>()
+  for (const rate of shownRates) {
+    if (rate.clientId !== null && !rateClients.has(rate.clientId)) {
+      rateClients.set(rate.clientId, rateClientName(rate) ?? rate.clientId)
+    }
+  }
+  const rateClientOptions = [
+    ...(shownRates.some(rate => rate.clientId === null)
+      ? [{ value: GENERAL, label: 'General' }]
+      : []),
+    ...[...rateClients]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es')),
+  ]
 
   const cards: { id: string; card: ReactNode }[] =
     section.collection === 'trucks'
@@ -294,35 +364,142 @@ function FleetScreen() {
               />
             ),
           }))
-        : visible(tanks, (t: FleetTank) =>
-            matches(query, t.name, equipmentName(t), t.capacityGal)
-          ).map(tank => ({
-            id: tank.id,
-            card: (
-              <FleetCard
-                label={`Tanque ${tank.name}`}
-                leading={<TankShapeIcon shape={tank.shape} size={36} />}
-                title={tank.name}
-                lines={[
-                  `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
-                  `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
-                  tank.lastMeasurement &&
-                    lastMeasurementLine(tank.lastMeasurement),
-                ]}
-                archived={tank.archived}
-                onClick={() => {
-                  open(tank.id)
-                }}
-              />
-            ),
-          }))
+        : section.collection === 'rates'
+          ? visible(
+              rates,
+              (r: Rate) =>
+                (rateClient === null ||
+                  (rateClient === GENERAL
+                    ? r.clientId === null
+                    : r.clientId === rateClient)) &&
+                matches(
+                  query,
+                  r.origin,
+                  r.destination,
+                  rateClientName(r),
+                  r.description
+                )
+            ).map(rate => ({
+              id: rate.id,
+              card: (
+                <FleetCard
+                  label={`Tarifa ${rate.name}`}
+                  leading={
+                    <RequestQuoteOutlinedIcon
+                      sx={{ fontSize: 24, color: 'text.secondary' }}
+                    />
+                  }
+                  title={rate.name}
+                  figure={moneyTotal(rate.currency, rate.price)}
+                  lines={[rateClientName(rate) ?? 'General', rate.description]}
+                  archived={rate.archived}
+                  onClick={() => {
+                    open(rate.id)
+                  }}
+                />
+              ),
+            }))
+          : section.collection === 'drivers'
+            ? visible(drivers, (d: Driver) =>
+                matches(query, d.name, d.phone, d.licenseNumber)
+              ).map(driver => ({
+                id: driver.id,
+                card: (
+                  <FleetCard
+                    label={`Conductor ${driver.name}`}
+                    leading={
+                      <BadgeOutlinedIcon
+                        sx={{ fontSize: 24, color: 'text.secondary' }}
+                      />
+                    }
+                    title={driver.name}
+                    lines={[
+                      driverContact(driver),
+                      driver.memberUid
+                        ? `Cuenta: ${memberName.get(driver.memberUid) ?? 'un miembro'}`
+                        : null,
+                    ]}
+                    archived={driver.archived}
+                    notice={licenseNotice(
+                      driver.licenseExpiresOn,
+                      today,
+                      driver.archived
+                    )}
+                    onClick={() => {
+                      open(driver.id)
+                    }}
+                  />
+                ),
+              }))
+            : section.collection === 'clients'
+              ? visible(clients, (c: Client) =>
+                  matches(query, c.name, c.phone, c.email, c.taxId)
+                ).map(client => ({
+                  id: client.id,
+                  card: (
+                    <FleetCard
+                      label={`Cliente ${client.name}`}
+                      leading={
+                        <BusinessOutlinedIcon
+                          sx={{ fontSize: 24, color: 'text.secondary' }}
+                        />
+                      }
+                      title={client.name}
+                      lines={[clientContact(client)]}
+                      archived={client.archived}
+                      onClick={() => {
+                        open(client.id)
+                      }}
+                    />
+                  ),
+                }))
+              : visible(tanks, (t: FleetTank) =>
+                  matches(query, t.name, equipmentName(t), t.capacityGal)
+                ).map(tank => ({
+                  id: tank.id,
+                  card: (
+                    <FleetCard
+                      label={`Tanque ${tank.name}`}
+                      leading={<TankShapeIcon shape={tank.shape} size={36} />}
+                      title={tank.name}
+                      lines={[
+                        `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
+                        `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
+                        tank.lastMeasurement &&
+                          lastMeasurementLine(tank.lastMeasurement),
+                      ]}
+                      archived={tank.archived}
+                      onClick={() => {
+                        open(tank.id)
+                      }}
+                    />
+                  ),
+                }))
 
   const total =
     section.collection === 'trucks'
       ? trucks.length
       : section.collection === 'trailers'
         ? trailers.length
-        : tanks.length
+        : section.collection === 'clients'
+          ? clients.length
+          : section.collection === 'drivers'
+            ? drivers.length
+            : section.collection === 'rates'
+              ? rates.length
+              : tanks.length
+
+  const words = sectionWords(section)
+  const sectionIcon =
+    section.collection === 'clients' ? (
+      <BusinessOutlinedIcon />
+    ) : section.collection === 'drivers' ? (
+      <BadgeOutlinedIcon />
+    ) : section.collection === 'rates' ? (
+      <RequestQuoteOutlinedIcon />
+    ) : (
+      <LocalShippingIcon />
+    )
 
   const renderList = () => {
     if (status === 'error' && total === 0) {
@@ -362,9 +539,9 @@ function FleetScreen() {
       return (
         <EmptyState
           headingLevel="h2"
-          icon={<LocalShippingIcon />}
-          title={`Todos tus ${section.label.toLowerCase()} están archivados`}
-          description="Puedes verlos y restaurarlos cuando los necesites."
+          icon={sectionIcon}
+          title={`${words.all} ${section.label.toLowerCase()} están archivad${words.them}`}
+          description={`Puedes ver${words.thePlural} y restaurar${words.thePlural} cuando ${words.thePlural} necesites.`}
           action={{
             label: 'Ver archivados',
             onClick: () => {
@@ -378,12 +555,17 @@ function FleetScreen() {
       return (
         <EmptyState
           headingLevel="h2"
-          icon={<LocalShippingIcon />}
-          title={`Aún no tienes ${section.label.toLowerCase()}`}
+          icon={sectionIcon}
+          title={
+            // specs/0022 RF-5
+            section.collection === 'clients'
+              ? 'Agrega tus clientes'
+              : `Aún no tienes ${section.label.toLowerCase()}`
+          }
           description={
             canWrite
-              ? `Agrega tu primer ${section.one} para tener su información a mano.`
-              : 'Cuando tu equipo los agregue, aparecerán aquí.'
+              ? `Agrega tu ${words.first} ${section.one} para tener su información a mano.`
+              : `Cuando tu equipo ${words.thePlural} agregue, aparecerán aquí.`
           }
           {...(canWrite && {
             action: {
@@ -401,16 +583,18 @@ function FleetScreen() {
         <EmptyState
           headingLevel="h2"
           icon={<SearchOffIcon />}
-          title={showArchived ? 'No hay archivados' : 'Sin resultados'}
+          title={
+            showArchived ? `No hay archivad${words.them}` : 'Sin resultados'
+          }
           description={
             showArchived
-              ? `Aquí aparecen los ${section.label.toLowerCase()} que archives.`
-              : 'Prueba con otro nombre, placa o medida.'
+              ? `Aquí aparecen ${words.thePlural} ${section.label.toLowerCase()} que archives.`
+              : SEARCH_HINTS[section.collection]
           }
           action={
             showArchived
               ? {
-                  label: 'Ver activos',
+                  label: `Ver activ${words.them}`,
                   onClick: () => {
                     setShowArchived(false)
                   },
@@ -478,10 +662,14 @@ function FleetScreen() {
           onChange={(_, slug: string) => {
             setSearch('')
             setBrand(null)
+            setRateClient(null)
             setModel(null)
             navigate(`/flota/${slug}`)
           }}
-          variant="fullWidth"
+          // Four sections and more to come: they slide instead of squeezing
+          // (specs/0022 RF-4)
+          variant="scrollable"
+          scrollButtons={false}
           aria-label="Secciones de la flota"
           sx={{ mt: 3, mb: 4, borderBottom: 1, borderColor: 'divider' }}
         >
@@ -511,21 +699,23 @@ function FleetScreen() {
         {/* One row of chips (specs/0017 RF-9) */}
         <Box sx={{ my: 3 }}>
           <FilterBar>
-            {section.collection === 'trucks' && brandOptions.length > 1 && (
-              <FilterChip
-                label="Marca"
-                allLabel="Todas"
-                options={brandOptions.map(value => ({ value, label: value }))}
-                value={brand}
-                onChange={next => {
-                  setBrand(next)
-                  setModel(null)
-                }}
-              />
-            )}
+            {/* A chosen filter stays visible to clear it (audit 0027) */}
+            {section.collection === 'trucks' &&
+              (brandOptions.length > 1 || brand !== null) && (
+                <FilterChip
+                  label="Marca"
+                  allLabel="Todas"
+                  options={brandOptions.map(value => ({ value, label: value }))}
+                  value={brand}
+                  onChange={next => {
+                    setBrand(next)
+                    setModel(null)
+                  }}
+                />
+              )}
             {section.collection === 'trucks' &&
               brand !== null &&
-              modelOptions.length > 1 && (
+              (modelOptions.length > 1 || model !== null) && (
                 <FilterChip
                   label="Modelo"
                   allLabel="Todos"
@@ -535,6 +725,16 @@ function FleetScreen() {
                   }))}
                   value={model}
                   onChange={setModel}
+                />
+              )}
+            {section.collection === 'rates' &&
+              (rateClientOptions.length > 1 || rateClient !== null) && (
+                <FilterChip
+                  label="Cliente"
+                  allLabel="Todos"
+                  options={rateClientOptions}
+                  value={rateClient}
+                  onChange={setRateClient}
                 />
               )}
             <FilterToggle
@@ -550,6 +750,16 @@ function FleetScreen() {
       <NavBar />
     </Box>
   )
+}
+
+// What the search looks in, per section (audit 0027)
+const SEARCH_HINTS: Record<FleetSection['collection'], string> = {
+  trucks: 'Prueba con otro nombre, placa o medida.',
+  trailers: 'Prueba con otro nombre, placa o medida.',
+  tanks: 'Prueba con otro nombre o medida.',
+  clients: 'Prueba con otro nombre, teléfono, correo o número fiscal.',
+  drivers: 'Prueba con otro nombre, teléfono o licencia.',
+  rates: 'Prueba con otro origen, destino o cliente.',
 }
 
 export default function Fleet() {

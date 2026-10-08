@@ -8,8 +8,11 @@ import SessionGate from 'components/SessionGate'
 import { newFleetId } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
-import { sectionBySlug } from 'utils/fleetSections'
+import { sectionBySlug, sectionWords } from 'utils/fleetSections'
 import { canWriteFleet } from 'utils/roles'
+import ClientEditor from './ClientEditor'
+import DriverEditor from './DriverEditor'
+import RateEditor from './RateEditor'
 import TankEditor from './TankEditor'
 import TrailerEditor from './TrailerEditor'
 import TruckEditor from './TruckEditor'
@@ -20,7 +23,8 @@ function FleetItemScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? '')
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, load } = useFleetStore()
+  const { status, trucks, trailers, tanks, clients, drivers, rates, load } =
+    useFleetStore()
   const isNew = params.id === 'nuevo'
   // The new item's id exists from the moment the form opens (ADR 0003)
   const [newId] = useState(newFleetId)
@@ -44,8 +48,8 @@ function FleetItemScreen() {
   const notFound = (
     <EmptyState
       icon={<SearchOffIcon />}
-      title={`No encontramos ese ${section.one}`}
-      description="Puede que lo hayan archivado o que pertenezca a otra organización."
+      title={`No encontramos ${sectionWords(section).that} ${section.one}`}
+      description={`Puede que l${sectionWords(section).it} hayan archivado o que pertenezca a otra organización.`}
       action={{
         label: `Ver ${section.label.toLowerCase()}`,
         onClick: () => {
@@ -80,6 +84,30 @@ function FleetItemScreen() {
         notFound
       ) : (
         <TankEditor key={id} {...props} tank={tank} />
+      )
+    }
+    case 'clients': {
+      const client = isNew ? null : clients.find(item => item.id === id)
+      return client === undefined ? (
+        notFound
+      ) : (
+        <ClientEditor key={id} {...props} client={client} />
+      )
+    }
+    case 'drivers': {
+      const driver = isNew ? null : drivers.find(item => item.id === id)
+      return driver === undefined ? (
+        notFound
+      ) : (
+        <DriverEditor key={id} {...props} driver={driver} />
+      )
+    }
+    case 'rates': {
+      const rate = isNew ? null : rates.find(item => item.id === id)
+      return rate === undefined ? (
+        notFound
+      ) : (
+        <RateEditor key={id} {...props} rate={rate} />
       )
     }
   }

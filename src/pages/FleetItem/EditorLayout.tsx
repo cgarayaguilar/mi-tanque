@@ -14,7 +14,7 @@ import PhotoField from 'components/PhotoField'
 import { photoUrl, uploadFleetPhoto } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
-import type { FleetSection } from 'utils/fleetSections'
+import { sectionWords, type FleetSection } from 'utils/fleetSections'
 import { reportError } from 'utils/reportError'
 
 interface EditorLayoutProps {
@@ -24,7 +24,8 @@ interface EditorLayoutProps {
     id: string
     name: string
     archived: boolean
-    photoPath: string | null
+    /** Only in sections with photos (not clients). */
+    photoPath?: string | null
   } | null
   /** The id the new item will have (made when the form opened). */
   id: string
@@ -33,12 +34,17 @@ interface EditorLayoutProps {
   children: ReactNode
   formId: string
   saving: boolean
+  /**
+   * Why it cannot be restored, or null: a driver whose account is linked
+   * to another active driver (specs/0023 RF-8; audit 0027).
+   */
+  restoreIssue?: (() => string | null) | undefined
 }
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1)
 
-/** Shared frame of the truck, trailer and tank screens (specs/0003). */
+/** Shared frame of the fleet's screens (specs/0003) and clients' (0022). */
 export default function EditorLayout({
   section,
   item,
@@ -47,6 +53,7 @@ export default function EditorLayout({
   children,
   formId,
   saving,
+  restoreIssue,
 }: EditorLayoutProps) {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? '')
@@ -55,9 +62,18 @@ export default function EditorLayout({
   const [confirming, setConfirming] = useState(false)
   const back = `/flota/${section.slug}`
   const one = capitalize(section.one)
+  const words = sectionWords(section)
 
   const archive = (archived: boolean) => {
     setConfirming(false)
+    const issue = archived ? null : (restoreIssue?.() ?? null)
+    if (issue) {
+      sileo.error({
+        title: `No pudimos restaurar ${words.the} ${section.one}`,
+        description: issue,
+      })
+      return
+    }
     setArchived(section.collection, id, archived).catch((error: unknown) => {
       reportError(error, {
         operation: 'archiveFleetItem',
@@ -65,11 +81,13 @@ export default function EditorLayout({
       })
       if (recoverFromLostPermission(error)) return
       sileo.error({
-        title: `No pudimos ${archived ? 'archivar' : 'restaurar'} el ${section.one}`,
+        title: `No pudimos ${archived ? 'archivar' : 'restaurar'} ${words.the} ${section.one}`,
         description: 'Revisa tu conexión y vuelve a intentarlo.',
       })
     })
-    sileo.success({ title: `${one} ${archived ? 'archivado' : 'restaurado'}` })
+    sileo.success({
+      title: `${one} ${archived ? 'archivad' : 'restaurad'}${words.it}`,
+    })
     navigate(back)
   }
 
@@ -90,9 +108,9 @@ export default function EditorLayout({
           component="h1"
           sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
         >
-          {item ? item.name : `Nuevo ${section.one}`}
+          {item ? item.name : `${words.newOne} ${section.one}`}
         </Typography>
-        {item?.archived && <Chip label="Archivado" size="small" />}
+        {item?.archived && <Chip label={`Archivad${words.it}`} size="small" />}
       </Stack>
 
       {children}
@@ -112,11 +130,11 @@ export default function EditorLayout({
         </Button>
       )}
 
-      {item && (
+      {item && section.photo && (
         <Box sx={{ mt: 8 }}>
           <PhotoField
             alt={`Foto de ${item.name}`}
-            path={item.photoPath}
+            path={item.photoPath ?? null}
             loadUrl={photoUrl}
             upload={file =>
               uploadFleetPhoto(section.collection, orgId, id, file)
@@ -128,7 +146,7 @@ export default function EditorLayout({
           />
         </Box>
       )}
-      {!item && canWrite && (
+      {!item && canWrite && section.photo && (
         <Typography
           variant="caption"
           component="p"
@@ -159,7 +177,7 @@ export default function EditorLayout({
       <ConfirmDialog
         open={confirming}
         title={`¿Archivar ${item?.name ?? ''}?`}
-        description={`Dejará de aparecer en la flota y en los formularios. Su historial se conserva y puedes restaurarlo desde "Ver archivados".`}
+        description={`Dejará de aparecer en la flota y en los formularios. Su historial se conserva y puedes restaurarl${words.it} desde "Archivad${words.them}".`}
         confirmLabel="Archivar"
         onConfirm={() => {
           archive(true)

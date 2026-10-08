@@ -61,6 +61,9 @@ export default function CloudRefuelHistory({
   onChangePeriod: () => void
 }) {
   const orgId = useSessionStore(state => state.organization?.id ?? '')
+  const organizationCurrency = useSessionStore(
+    state => state.organization?.defaultCurrency
+  )
   const uid = useSessionStore(state => state.user?.uid)
   const role = useSessionStore(selectActiveRole)
   const refuels = useCloudRefuelsStore()
@@ -170,6 +173,7 @@ export default function CloudRefuelHistory({
       <RefuelPeriodSummary items={items} efficiency={efficiency} />
       <RefuelList
         items={items}
+        organizationCurrency={organizationCurrency}
         canChange={item => {
           const refuel = byId.get(item.id)
           return refuel !== undefined && canChangeReading(refuel, role, uid)

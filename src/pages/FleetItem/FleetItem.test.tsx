@@ -6,12 +6,16 @@ import {
   within,
 } from '@testing-library/react'
 import { sileo } from 'sileo'
+import { toPlainDate } from 'utils/plainDate'
 import App from '../../App'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
+  client,
+  driver,
+  rate,
   ORG_ID,
   tank,
   trailer,
@@ -59,6 +63,9 @@ const type = (label: string, value: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [tank()],
@@ -358,6 +365,9 @@ test('an unknown item says it was not found', async () => {
 // rules refused every edit of the truck that kept them
 test('a truck whose driver left is saved unassigned', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
     trucks: [truck({ assignedDriverUid: 'gone' })],
     trailers: [trailer()],
     tanks: [tank()],
@@ -495,6 +505,9 @@ describe('simpler forms (backend specs/0009)', () => {
       },
     }))
     api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
       trucks: [truck({ odometerKm: 102, fuelEfficiencyKmPerGal: 9.5 })],
       trailers: [trailer()],
       tanks: [tank()],
@@ -576,6 +589,9 @@ describe('simpler forms (backend specs/0009)', () => {
   // model, and going back to it reset the capacity without a word
   test('a tank whose capacity was edited is no longer its model', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
       trucks: [truck()],
       trailers: [trailer()],
       tanks: [
@@ -810,6 +826,9 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
   // CA-3
   test('typed names are recognized; others open as "Otra"', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
       trucks: [
         truck({ brand: 'freightliner', model: 'CASCADIA' }),
         truck({
@@ -830,6 +849,9 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 
   test('a brand that is not in the list opens as "Otra marca…"', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
       trucks: [truck({ brand: 'Hino', model: '500' })],
       trailers: [],
       tanks: [],
@@ -865,5 +887,419 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
         /^Freightliner Cascadia \(2018\+\) · \d+ tanques$/
       )
     ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0022
+describe('clients', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [
+        client(),
+        client({ id: 'client-2', name: 'Fletes Ríos', archived: true }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a client with a phone; the rest is stored as null', async () => {
+    signIn('driver')
+    renderAt('/flota/clientes/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del cliente')
+        .then(() => 'Nombre del cliente'),
+      'Acarreos del Norte'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    type('Teléfono (opcional)', '8888 1234')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'clients',
+        'new-id',
+        ORG_ID,
+        {
+          name: 'Acarreos del Norte',
+          phone: '8888 1234',
+          email: null,
+          taxId: null,
+          notes: null,
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Cliente guardado' })
+    expect(window.location.pathname).toBe('/flota/clientes')
+    // A client has no photo
+    expect(screen.queryByText(/podrás agregarle una foto/)).toBeNull()
+  })
+
+  // CA-2
+  test('a repeated name is said on the field and nothing is saved', async () => {
+    renderAt('/flota/clientes/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del cliente')
+        .then(() => 'Nombre del cliente'),
+      'transportes perez'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+    expect(
+      await screen.findByText('Ya existe un cliente con ese nombre')
+    ).toBeInTheDocument()
+
+    type('Nombre del cliente', 'Fletes Rios')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }))
+    expect(
+      await screen.findByText(
+        'Ya existe un cliente archivado con ese nombre. Restáuralo en Archivados'
+      )
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  test('an edit keeps its own name and an email must look like one', async () => {
+    renderAt('/flota/clientes/client-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Ver más detalles/ })
+    )
+    type('Correo (opcional)', 'compras')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(
+      await screen.findByText('Escribe un correo válido')
+    ).toBeInTheDocument()
+
+    type('Correo (opcional)', 'compras@perez.com')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'clients',
+        'client-1',
+        expect.objectContaining({
+          name: 'Transportes Pérez',
+          email: 'compras@perez.com',
+        })
+      )
+    })
+  })
+
+  test('archiving asks first; a client has no photo', async () => {
+    renderAt('/flota/clientes/client-1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Transportes Pérez' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar foto' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Archivar' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: '¿Archivar Transportes Pérez?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archivar' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith('clients', 'client-1', {
+        archived: true,
+      })
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Cliente archivado' })
+  })
+
+  // CA-4
+  test('a viewer sees the client without saving or archiving', async () => {
+    signIn('viewer')
+    renderAt('/flota/clientes/client-1')
+
+    expect(await screen.findByLabelText('Nombre del cliente')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
+  })
+})
+
+// backend specs/0023
+describe('drivers', () => {
+  const inDays = (days: number) => {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    return toPlainDate(date)
+  }
+
+  beforeEach(() => {
+    api.readMembers.mockResolvedValue([
+      { uid: 'luis', displayName: 'Luis', role: 'owner' },
+      { uid: 'ana', displayName: 'Ana López', role: 'driver' },
+    ])
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      clients: [],
+      drivers: [
+        driver({ memberUid: 'ana', licenseExpiresOn: inDays(20) }),
+        driver({ id: 'driver-2', name: 'Luis Mora', archived: true }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a driver; the rest is stored as null', async () => {
+    signIn('driver')
+    renderAt('/flota/conductores/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del conductor')
+        .then(() => 'Nombre del conductor'),
+      'Marta Gómez'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    type('Número de licencia (opcional)', 'B-998877')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'drivers',
+        'new-id',
+        ORG_ID,
+        {
+          name: 'Marta Gómez',
+          phone: null,
+          licenseNumber: 'B-998877',
+          licenseExpiresOn: null,
+          memberUid: null,
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Conductor guardado' })
+  })
+
+  test('the license notice shows on the driver too', async () => {
+    renderAt('/flota/conductores/driver-1')
+    expect(
+      await screen.findByText('Licencia vence en 20 días')
+    ).toBeInTheDocument()
+  })
+
+  // CA-2
+  test('a repeated name or a member already linked is said, and nothing is saved', async () => {
+    renderAt('/flota/conductores/nuevo')
+
+    type(
+      await screen
+        .findByLabelText('Nombre del conductor')
+        .then(() => 'Nombre del conductor'),
+      'pedro ruiz'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+    expect(
+      await screen.findByText('Ya existe un conductor con ese nombre')
+    ).toBeInTheDocument()
+
+    type('Nombre del conductor', 'Marta Gómez')
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más detalles' }))
+    await choose('Miembro del equipo (opcional)', 'Ana López (Chofer)')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar conductor' }))
+    expect(
+      await screen.findByText('Ana López ya está enlazada a Pedro Ruiz')
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  test('the driver linked to a member keeps the link when edited', async () => {
+    renderAt('/flota/conductores/driver-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Ver más detalles/ })
+    )
+    expect(chosen('Miembro del equipo (opcional)')).toBe('Ana López (Chofer)')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'drivers',
+        'driver-1',
+        expect.objectContaining({ memberUid: 'ana', name: 'Pedro Ruiz' })
+      )
+    })
+  })
+
+  // Audit 0027 (0023 RF-8): restoring cannot leave two drivers linked
+  test('a driver whose member is linked to another is not restored', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      clients: [],
+      drivers: [
+        driver({ memberUid: 'ana' }),
+        driver({
+          id: 'driver-2',
+          name: 'Luis Mora',
+          archived: true,
+          memberUid: 'ana',
+        }),
+      ],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+    renderAt('/flota/conductores/driver-2')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Restaurar' }))
+    expect(sileo.error).toHaveBeenCalledWith({
+      title: 'No pudimos restaurar el conductor',
+      description:
+        'Ana López ya está enlazada a Pedro Ruiz. Quita ese enlace primero.',
+    })
+    expect(api.updateFleetItem).not.toHaveBeenCalled()
+  })
+
+  test('a viewer sees the driver without saving or archiving', async () => {
+    signIn('viewer')
+    renderAt('/flota/conductores/driver-1')
+
+    expect(await screen.findByLabelText('Nombre del conductor')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
+  })
+})
+
+// backend specs/0024
+describe('rates', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      rates: [
+        rate(),
+        rate({
+          id: 'rate-2',
+          name: 'León → Managua',
+          origin: 'León',
+          destination: 'Managua',
+          clientId: null,
+          clientName: null,
+          price: 9000,
+          label: 'León - Managua - C$9,000.00',
+        }),
+      ],
+      drivers: [],
+      clients: [client()],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a rate of a client, in the organization currency', async () => {
+    signIn('driver')
+    renderAt('/flota/tarifas/nuevo')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Nueva tarifa' })
+    ).toBeInTheDocument()
+    type('Origen', 'Managua')
+    type('Destino', 'Tegucigalpa')
+    type('Precio', '31500')
+    await choose('Cliente (opcional)', 'Transportes Pérez')
+    expect(
+      screen.getByText('Se verá así: Managua - Tegucigalpa - C$31,500.00')
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'new-id',
+        ORG_ID,
+        {
+          origin: 'Managua',
+          destination: 'Tegucigalpa',
+          price: 31500,
+          currency: 'NIO',
+          clientId: 'client-1',
+          clientName: 'Transportes Pérez',
+          description: null,
+          label: 'Managua - Tegucigalpa - C$31,500.00',
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Tarifa guardada' })
+  })
+
+  // CA-2
+  test('the same route, client and price is said; another price saves', async () => {
+    renderAt('/flota/tarifas/nuevo')
+
+    type(await screen.findByLabelText('Origen').then(() => 'Origen'), 'managua')
+    type('Destino', 'San Jose')
+    type('Precio', '25000')
+    await choose('Cliente (opcional)', 'Transportes Pérez')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+    expect(
+      await screen.findByText(
+        'Ya existe esta tarifa: Managua - San José - C$25,000.00'
+      )
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+
+    type('Precio', '27000')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'new-id',
+        ORG_ID,
+        // Written as the organization already has them (RF-7)
+        expect.objectContaining({
+          origin: 'Managua',
+          destination: 'San José',
+          price: 27000,
+        })
+      )
+    })
+  })
+
+  test('an edit keeps the currency the rate was made in', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [rate({ currency: 'USD', price: 1200, label: 'x' })],
+      drivers: [],
+      clients: [client()],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/tarifas/rate-1')
+
+    expect(await screen.findByText('$')).toBeInTheDocument()
+    type('Precio', '1300')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'rate-1',
+        expect.objectContaining({
+          currency: 'USD',
+          price: 1300,
+          label: 'Managua - San José - $1,300.00',
+        })
+      )
+    })
+  })
+
+  test('archiving says it in feminine', async () => {
+    renderAt('/flota/tarifas/rate-1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: '¿Archivar Managua → San José?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archivar' }))
+    await waitFor(() => {
+      expect(sileo.success).toHaveBeenCalledWith({ title: 'Tarifa archivada' })
+    })
   })
 })

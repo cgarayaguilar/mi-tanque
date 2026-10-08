@@ -15,7 +15,11 @@ import MoreDetails, {
 } from 'components/MoreDetails'
 import Stat from 'components/Stat'
 import TextField from 'components/TextField'
-import { CURRENCY_OPTIONS, type Currency } from 'schemas/account'
+import {
+  CURRENCY_DETAILS,
+  CURRENCY_OPTIONS,
+  type Currency,
+} from 'schemas/account'
 import { KM_PER_MILE } from 'schemas/fleet'
 import {
   optionalNumber,
@@ -48,6 +52,11 @@ interface RefuelFormProps {
   capacityGal: number
   /** The organization's currency; '' without an account (RF-2). */
   defaultCurrency: Currency | ''
+  /**
+   * With an account, the organization's currency: the refuel goes in it,
+   * without a picker (backend specs/0027 RF-7). Without an account, absent.
+   */
+  organizationCurrency?: Currency | undefined
   /** Latest level of the tank, for "before" without inches (RF-3). */
   lastGallons: number | null
   stations: readonly string[]
@@ -106,6 +115,7 @@ export default function RefuelForm({
   maxInches,
   capacityGal,
   defaultCurrency,
+  organizationCurrency,
   lastGallons,
   stations,
   odometer,
@@ -278,15 +288,30 @@ export default function RefuelForm({
           compact
         />
       </Box>
-      <AutocompleteField
-        id="refuelCurrency"
-        label="Moneda"
-        placeholder="Elige la moneda"
-        options={CURRENCY_OPTIONS}
-        error={errors.currency?.message}
-        control={control}
-        name="currency"
-      />
+      {/* With an account, the organization's currency (backend specs/0027
+          RF-7); one edited keeps the one it was saved in */}
+      {organizationCurrency && currency ? (
+        <Typography
+          variant="caption"
+          component="p"
+          sx={{ color: 'text.secondary', mt: -3 }}
+        >
+          En {CURRENCY_DETAILS[currency].name.toLowerCase()},{' '}
+          {currency === organizationCurrency
+            ? 'la moneda de tu organización.'
+            : 'la moneda en que se registró.'}
+        </Typography>
+      ) : (
+        <AutocompleteField
+          id="refuelCurrency"
+          label="Moneda"
+          placeholder="Elige la moneda"
+          options={CURRENCY_OPTIONS}
+          error={errors.currency?.message}
+          control={control}
+          name="currency"
+        />
+      )}
 
       <Box
         aria-live="polite"

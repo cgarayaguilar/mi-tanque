@@ -148,7 +148,7 @@ export type FleetTank = FleetItemBase & {
 
 // ---- Form fields ---------------------------------------------------------
 
-const requiredText = (missing: string, max: number) =>
+export const requiredText = (missing: string, max: number) =>
   z
     .string()
     .check(
@@ -157,7 +157,7 @@ const requiredText = (missing: string, max: number) =>
       z.maxLength(max, { error: `Usa ${String(max)} caracteres como máximo` })
     )
 
-const optionalText = (max: number) =>
+export const optionalText = (max: number) =>
   z
     .string()
     .check(

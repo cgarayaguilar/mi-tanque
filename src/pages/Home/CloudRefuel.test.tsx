@@ -86,6 +86,9 @@ beforeEach(() => {
   window.localStorage.clear()
   useFleetStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [LEFT, RIGHT],
@@ -100,10 +103,11 @@ afterEach(() => {
 
 test('a truck refuel saves the amounts, the levels and the truck totals (CA-1, RF-9)', async () => {
   await openRefuel()
-  // The organization's currency is proposed
-  expect(screen.getByLabelText('Moneda')).toHaveValue(
-    'Córdobas nicaragüenses (C$)'
-  )
+  // backend specs/0027 RF-7: the organization's currency, without a picker
+  expect(screen.queryByLabelText('Moneda')).toBeNull()
+  expect(
+    screen.getByText('En córdobas nicaragüenses, la moneda de tu organización.')
+  ).toBeInTheDocument()
   type('Cantidad echada', '50')
   type('Precio', '30')
   // specs/0012 RF-11: the odometer waits in "Ver más detalles"

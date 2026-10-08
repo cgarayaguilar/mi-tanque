@@ -161,6 +161,60 @@ en cada push y PR.
   escribir, `parseTankDimensions`. El cálculo sin cuenta pasa por `localGeometry` y
   `localMaxInches` (`utils/fuelReading`), y el texto de un tanque por `utils/tankText`. En los
   tests, `cylinder({…})` de `src/testing/localTank` arma un cilindro.
+- **Clientes (specs/0022):** una sección más de Flota (`/flota/clientes`), en el mismo store y
+  servicio (`useFleetStore().clients`, colección `clients`), sin foto (`section.photo`). Los campos
+  son `components/ClientFields`, con su esquema en `schemas/clients`, para reutilizarlos en el
+  diálogo "Nuevo cliente" del viaje (specs/0025). El nombre no se repite: lo revisa la app con
+  `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
+- **Conductores (specs/0023):** igual que Clientes (`/flota/conductores`, colección `drivers`,
+  `components/DriverFields`, `schemas/drivers`), con el vencimiento de la licencia y un enlace
+  opcional a un miembro (`memberUid`), que no se repite entre conductores activos y que el backend
+  borra cuando el miembro sale. El aviso de la licencia y el del seguro son el mismo
+  `expiryNotice` (`utils/insurance`: `licenseNotice`, `insuranceNotice`).
+- **Tarifas (specs/0024):** otra sección de Flota (`/flota/tarifas`, colección `rates`,
+  `components/RateFields`, `schemas/rates`). Su `name` ("Managua → San José") no se guarda: lo arma
+  el servicio al leer. La etiqueta (`rateLabel`) y la moneda (la de la organización al crearla, fija
+  después) se guardan. Origen y destino sugieren los lugares ya usados (`knownPlaces`) y se guardan
+  con la forma ya usada (`knownSpelling`). Los textos de Flota concuerdan en género con
+  `sectionWords` (`feminine` en `utils/fleetSections`).
+- **Viajes (specs/0025):** botón **Viajes** en la barra (con cuatro o más botones, icono arriba y
+  texto abajo). Páginas lazy `Trips` (lista), `Trip` (detalle) y `TripEditor` (`/viajes/nuevo` y
+  `/viajes/:id/editar`; una sola ruta `/viajes/:id` elige editor o detalle, porque sin `Switch`
+  coincidirían las dos). `services/trips` (estático solo en esas páginas y en `hooks/useTrip`) y
+  `store/trips` (con `import()`, lee todo el periodo hasta 1000 y recuerda los viajes por id en
+  `known`). El formulario es `pages/TripEditor/TripForm`; la conversión, `tripFromForm` en
+  `schemas/trips` (copia la tarifa; al editar con la misma tarifa conserva su copia y su moneda).
+  Semana y mes: `utils/tripPeriod` (lunes a domingo, hora del teléfono). Fecha y hora:
+  `components/DateTimeField` y `utils/dateTimeValue`. **Las reglas no revisan cada extra** (Firestore
+  evalúa como máximo 1000 expresiones por regla): la app los valida al escribir y al leer
+  (`toExtras` en `services/trips`). El test "ten extras, two drivers…" de `tripRules` es la guardia
+  de ese límite: cualquier campo nuevo del viaje tiene que mantenerlo en verde.
+- **Gastos (specs/0026):** botón **Gastos** en la barra. Páginas lazy `Expenses` (lista),
+  `Expense` (`/gastos/nuevo`, `/gastos/nuevo?viaje={id}` y `/gastos/{id}`) y `ExpenseCategories`
+  (`/gastos/categorias`); una sola ruta `/gastos/:id` elige entre categorías y gasto, como la de
+  viajes. `services/expenses` (estático solo en esas páginas, en `TripEditor`, `Trip` y en
+  `hooks/useExpense`/`useTripExpenses`) y `store/expenses` (con **un solo** `import()` en curso:
+  en Vitest, dos `import()` en el mismo tick pueden dar el módulo real). Las categorías son de la
+  organización, con las 9 precargadas con id fijo `{orgId}_{clave}` (`presetCategoriesOf`); las
+  siembra la primera persona que puede escribir al abrir Gastos (Lectura las ve sin guardarlas) y
+  el store no hace dos lecturas a la vez (dos siembras seguidas: la segunda es un `update` que las
+  reglas rechazan). "Combustible" (`system: 'fuel'`) no se archiva. Un gasto de viaje copia el
+  camión y el remolque del viaje (`tripLink`); el **trigger** del backend mantiene
+  `expensesTotal` del viaje y mueve sus gastos si cambia o se borra: la app nunca escribe ese
+  campo. El formulario del viaje guarda sus renglones de gastos en **un lote** con el viaje
+  (`saveTripWithExpenses`, `tripExpenseChanges`): solo escribe los renglones nuevos o cambiados,
+  hasta `TRIP_LIMITS.expenses` (10), porque las reglas de un lote leen como máximo 20 documentos
+  (el emulador no lo hace cumplir). La fecha de un gasto no puede pasar de mañana
+  (`expenseDateIssue`, como las reglas).
+- **Rellenos y su gasto (specs/0027):** cada relleno con cuenta tiene su gasto de Combustible,
+  `expenses/{id del relleno}`, con `refuelId`; lo crea, actualiza y borra el trigger
+  `onRefuelExpense` del backend (al viaje En curso de su camión o remolque). La app escribe
+  `refuelId: null` en todo gasto suyo, nunca crea ni borra el de un relleno, y solo le cambia a qué
+  corresponde y la descripción: `pages/Expense/RefuelExpenseForm` (`refuelExpenseChanges`,
+  `tripCarriesRefuel`, `updateRefuelExpense`; el relleno se lee con `readRefuelOfExpense`). En
+  el formulario del viaje no es un renglón: se muestra aparte y nunca se quita. Con cuenta, el
+  relleno va en la moneda de la organización y `RefuelForm` no muestra selector (los importados
+  del teléfono conservan la suya).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

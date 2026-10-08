@@ -1,3 +1,12 @@
+import type { Client } from 'schemas/clients'
+import type { Driver } from 'schemas/drivers'
+import {
+  presetCategoriesOf,
+  type ExpenseCategory,
+} from 'schemas/expenseCategories'
+import type { Expense } from 'schemas/expenses'
+import type { Rate } from 'schemas/rates'
+import type { Trip } from 'schemas/trips'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
@@ -104,5 +113,114 @@ export const cloudMeasurement = (
   estimateEmpty: null,
   odometerKm: 120500,
   source: 'app',
+  ...overrides,
+})
+
+export const client = (overrides: Partial<Client> = {}): Client => ({
+  id: 'client-1',
+  orgId: ORG_ID,
+  name: 'Transportes Pérez',
+  phone: '8888 7777',
+  email: null,
+  taxId: 'J0310000012345',
+  notes: null,
+  archived: false,
+  ...overrides,
+})
+
+export const driver = (overrides: Partial<Driver> = {}): Driver => ({
+  id: 'driver-1',
+  orgId: ORG_ID,
+  name: 'Pedro Ruiz',
+  phone: '8888 7777',
+  licenseNumber: 'A-123456',
+  licenseExpiresOn: null,
+  memberUid: null,
+  archived: false,
+  ...overrides,
+})
+
+export const rate = (overrides: Partial<Rate> = {}): Rate => ({
+  id: 'rate-1',
+  orgId: ORG_ID,
+  name: 'Managua → San José',
+  origin: 'Managua',
+  destination: 'San José',
+  price: 25000,
+  currency: 'NIO',
+  clientId: 'client-1',
+  clientName: 'Transportes Pérez',
+  description: null,
+  label: 'Managua - San José - C$25,000.00',
+  archived: false,
+  ...overrides,
+})
+
+export const trip = (overrides: Partial<Trip> = {}): Trip => ({
+  id: 'trip-1',
+  orgId: ORG_ID,
+  status: 'scheduled',
+  startAt: new Date(2026, 9, 6, 8, 0),
+  endAt: null,
+  year: 2026,
+  month: 10,
+  yearMonth: '2026-10',
+  monthLabel: 'octubre 2026',
+  weekStart: '2026-10-05',
+  weekLabel: 'del 5 oct al 11 oct',
+  mode: 'rate',
+  rateId: 'rate-1',
+  origin: 'Managua',
+  destination: 'San José',
+  price: 25000,
+  extras: [{ description: 'Parada en León', amount: 2500 }],
+  currency: 'NIO',
+  clientId: 'client-1',
+  clientName: 'Transportes Pérez',
+  truckId: 'truck-1',
+  truckName: 'Unidad 12',
+  trailerId: 'trailer-1',
+  trailerName: 'Caja 7',
+  driverId: 'driver-1',
+  driverName: 'Pedro Ruiz',
+  secondDriverId: null,
+  secondDriverName: null,
+  driverIds: ['driver-1'],
+  expensesTotal: 0,
+  tripNumber: null,
+  description: null,
+  notes: null,
+  createdAt: new Date(2026, 9, 6, 8, 15),
+  createdBy: 'luis',
+  ...overrides,
+})
+
+/** The nine an organization starts with (specs/0026 RF-1). */
+export const presetCategories = (): ExpenseCategory[] =>
+  presetCategoriesOf(ORG_ID)
+
+/** A trip's toll: C$1,850 of "Peajes" on Managua → San José. */
+export const expense = (overrides: Partial<Expense> = {}): Expense => ({
+  id: 'expense-1',
+  orgId: ORG_ID,
+  takenAt: new Date(2026, 9, 6, 10, 30),
+  amount: 1850,
+  currency: 'NIO',
+  categoryId: 'org-a_tolls',
+  categoryName: 'Peajes',
+  description: null,
+  kind: 'trip',
+  tripId: 'trip-1',
+  tripRoute: 'Managua → San José',
+  truckId: 'truck-1',
+  truckName: 'Unidad 12',
+  trailerId: 'trailer-1',
+  trailerName: 'Caja 7',
+  driverId: null,
+  driverName: null,
+  receiptPhotoPath: null,
+  refuelId: null,
+  createdAt: new Date(2026, 9, 6, 10, 35),
+  createdBy: 'luis',
   ...overrides,
 })

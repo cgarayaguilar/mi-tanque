@@ -112,6 +112,9 @@ beforeEach(() => {
   window.localStorage.clear()
   useFleetStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [LEFT, RIGHT, REEFER, LOOSE],
@@ -231,6 +234,9 @@ describe('loaded and empty', () => {
   }
   const withTruck = (efficiencies: Partial<Truck>) => {
     fleetApi.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
       trucks: [truck(efficiencies)],
       trailers: [trailer()],
       tanks: [LEFT, RIGHT, REEFER, LOOSE],
@@ -394,7 +400,14 @@ test('Lectura calculates without saving', async () => {
 })
 
 test('without tanks it invites to add one', async () => {
-  fleetApi.readFleet.mockResolvedValue({ trucks: [], trailers: [], tanks: [] })
+  fleetApi.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
+    trucks: [],
+    trailers: [],
+    tanks: [],
+  })
   renderHome()
   expect(
     await screen.findByText('Agrega tus tanques para medir')
