@@ -14,7 +14,7 @@ import PhotoField from 'components/PhotoField'
 import { photoUrl, uploadFleetPhoto } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
-import type { FleetSection } from 'utils/fleetSections'
+import { sectionWords, type FleetSection } from 'utils/fleetSections'
 import { reportError } from 'utils/reportError'
 
 interface EditorLayoutProps {
@@ -56,6 +56,7 @@ export default function EditorLayout({
   const [confirming, setConfirming] = useState(false)
   const back = `/flota/${section.slug}`
   const one = capitalize(section.one)
+  const words = sectionWords(section)
 
   const archive = (archived: boolean) => {
     setConfirming(false)
@@ -66,11 +67,13 @@ export default function EditorLayout({
       })
       if (recoverFromLostPermission(error)) return
       sileo.error({
-        title: `No pudimos ${archived ? 'archivar' : 'restaurar'} el ${section.one}`,
+        title: `No pudimos ${archived ? 'archivar' : 'restaurar'} ${words.the} ${section.one}`,
         description: 'Revisa tu conexión y vuelve a intentarlo.',
       })
     })
-    sileo.success({ title: `${one} ${archived ? 'archivado' : 'restaurado'}` })
+    sileo.success({
+      title: `${one} ${archived ? 'archivad' : 'restaurad'}${words.it}`,
+    })
     navigate(back)
   }
 
@@ -91,7 +94,7 @@ export default function EditorLayout({
           component="h1"
           sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
         >
-          {item ? item.name : `Nuevo ${section.one}`}
+          {item ? item.name : `${words.newOne} ${section.one}`}
         </Typography>
         {item?.archived && <Chip label="Archivado" size="small" />}
       </Stack>

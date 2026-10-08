@@ -55,6 +55,7 @@ beforeEach(() => {
   useFleetStore.getState().reset()
   useCloudHistoryStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck()],
@@ -164,6 +165,7 @@ describe('loaded and empty', () => {
 
   test('editing recalculates both with the truck of today', async () => {
     fleetApi.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [

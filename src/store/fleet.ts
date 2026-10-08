@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
+import type { Rate } from 'schemas/rates'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import type { FleetCollection, OrgMember } from 'services/fleet'
 import { useSessionStore } from 'store/session'
@@ -19,6 +20,8 @@ interface FleetItems {
   clients: Client[]
   /** The organization's drivers (backend specs/0023). */
   drivers: Driver[]
+  /** The organization's rates (backend specs/0024). */
+  rates: Rate[]
 }
 
 interface FleetState extends FleetItems {
@@ -33,7 +36,7 @@ interface FleetState extends FleetItems {
    */
   save: (
     collection: FleetCollection,
-    item: Truck | Trailer | FleetTank | Client | Driver,
+    item: Truck | Trailer | FleetTank | Client | Driver | Rate,
     write: () => Promise<void>
   ) => Promise<void>
   setArchived: (
@@ -57,6 +60,7 @@ const EMPTY: FleetItems & { members: OrgMember[] } = {
   tanks: [],
   clients: [],
   drivers: [],
+  rates: [],
   members: [],
 }
 
@@ -67,6 +71,13 @@ const byName = <T extends { name: string }>(items: T[]) =>
 
 const upsert = <T extends { id: string; name: string }>(items: T[], item: T) =>
   byName([...items.filter(existing => existing.id !== item.id), item])
+
+// By route, then the cheapest first (specs/0024 RF-5)
+const byRoute = (rates: Rate[]) =>
+  [...rates].sort(
+    (a, b) =>
+      a.name.localeCompare(b.name, 'es', { numeric: true }) || a.price - b.price
+  )
 
 // Only the latest load writes: a slow read of the previous organization must
 // not show its fleet in the new one
@@ -94,6 +105,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
         tanks: byName(fleet.tanks),
         clients: byName(fleet.clients),
         drivers: byName(fleet.drivers),
+        rates: byRoute(fleet.rates),
         members,
         status: 'ready',
       })
@@ -117,6 +129,13 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
           return { clients: upsert(state.clients, item as Client) }
         case 'drivers':
           return { drivers: upsert(state.drivers, item as Driver) }
+        case 'rates':
+          return {
+            rates: byRoute([
+              ...state.rates.filter(rate => rate.id !== item.id),
+              item as Rate,
+            ]),
+          }
       }
     })
     await write()
@@ -132,6 +151,7 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
       tanks: collection === 'tanks' ? patch(state.tanks) : state.tanks,
       clients: collection === 'clients' ? patch(state.clients) : state.clients,
       drivers: collection === 'drivers' ? patch(state.drivers) : state.drivers,
+      rates: collection === 'rates' ? patch(state.rates) : state.rates,
     }))
     const api = await fleetApi()
     await api.updateFleetItem(collection, id, { archived })

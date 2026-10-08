@@ -15,6 +15,7 @@ import {
   accountWithRole,
   client,
   driver,
+  rate,
   ORG_ID,
   tank,
   trailer,
@@ -62,6 +63,7 @@ const type = (label: string, value: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck()],
@@ -363,6 +365,7 @@ test('an unknown item says it was not found', async () => {
 // rules refused every edit of the truck that kept them
 test('a truck whose driver left is saved unassigned', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck({ assignedDriverUid: 'gone' })],
@@ -502,6 +505,7 @@ describe('simpler forms (backend specs/0009)', () => {
       },
     }))
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [truck({ odometerKm: 102, fuelEfficiencyKmPerGal: 9.5 })],
@@ -585,6 +589,7 @@ describe('simpler forms (backend specs/0009)', () => {
   // model, and going back to it reset the capacity without a word
   test('a tank whose capacity was edited is no longer its model', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [truck()],
@@ -821,6 +826,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
   // CA-3
   test('typed names are recognized; others open as "Otra"', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [
@@ -843,6 +849,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 
   test('a brand that is not in the list opens as "Otra marca…"', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [truck({ brand: 'Hino', model: '500' })],
@@ -887,6 +894,7 @@ describe('truck brand and model from the list (backend specs/0016)', () => {
 describe('clients', () => {
   beforeEach(() => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [
         client(),
@@ -1029,6 +1037,7 @@ describe('drivers', () => {
       { uid: 'ana', displayName: 'Ana López', role: 'driver' },
     ])
     api.readFleet.mockResolvedValue({
+      rates: [],
       clients: [],
       drivers: [
         driver({ memberUid: 'ana', licenseExpiresOn: inDays(20) }),
@@ -1130,5 +1139,140 @@ describe('drivers', () => {
     expect(await screen.findByLabelText('Nombre del conductor')).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Archivar' })).toBeNull()
+  })
+})
+
+// backend specs/0024
+describe('rates', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      rates: [
+        rate(),
+        rate({
+          id: 'rate-2',
+          name: 'León → Managua',
+          origin: 'León',
+          destination: 'Managua',
+          clientId: null,
+          clientName: null,
+          price: 9000,
+          label: 'León - Managua - C$9,000.00',
+        }),
+      ],
+      drivers: [],
+      clients: [client()],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [tank()],
+    })
+  })
+
+  // CA-1
+  test('a driver adds a rate of a client, in the organization currency', async () => {
+    signIn('driver')
+    renderAt('/flota/tarifas/nuevo')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Nueva tarifa' })
+    ).toBeInTheDocument()
+    type('Origen', 'Managua')
+    type('Destino', 'Tegucigalpa')
+    type('Precio', '31500')
+    await choose('Cliente (opcional)', 'Transportes Pérez')
+    expect(
+      screen.getByText('Se verá así: Managua - Tegucigalpa - C$31,500.00')
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'new-id',
+        ORG_ID,
+        {
+          origin: 'Managua',
+          destination: 'Tegucigalpa',
+          price: 31500,
+          currency: 'NIO',
+          clientId: 'client-1',
+          clientName: 'Transportes Pérez',
+          description: null,
+          label: 'Managua - Tegucigalpa - C$31,500.00',
+        }
+      )
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Tarifa guardada' })
+  })
+
+  // CA-2
+  test('the same route, client and price is said; another price saves', async () => {
+    renderAt('/flota/tarifas/nuevo')
+
+    type(await screen.findByLabelText('Origen').then(() => 'Origen'), 'managua')
+    type('Destino', 'San Jose')
+    type('Precio', '25000')
+    await choose('Cliente (opcional)', 'Transportes Pérez')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+    expect(
+      await screen.findByText(
+        'Ya existe esta tarifa: Managua - San José - C$25,000.00'
+      )
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+
+    type('Precio', '27000')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'new-id',
+        ORG_ID,
+        // Written as the organization already has them (RF-7)
+        expect.objectContaining({
+          origin: 'Managua',
+          destination: 'San José',
+          price: 27000,
+        })
+      )
+    })
+  })
+
+  test('an edit keeps the currency the rate was made in', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [rate({ currency: 'USD', price: 1200, label: 'x' })],
+      drivers: [],
+      clients: [client()],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/tarifas/rate-1')
+
+    expect(await screen.findByText('$')).toBeInTheDocument()
+    type('Precio', '1300')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'rate-1',
+        expect.objectContaining({
+          currency: 'USD',
+          price: 1300,
+          label: 'Managua - San José - $1,300.00',
+        })
+      )
+    })
+  })
+
+  test('archiving says it in feminine', async () => {
+    renderAt('/flota/tarifas/rate-1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: '¿Archivar Managua → San José?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archivar' }))
+    await waitFor(() => {
+      expect(sileo.success).toHaveBeenCalledWith({ title: 'Tarifa archivada' })
+    })
   })
 })

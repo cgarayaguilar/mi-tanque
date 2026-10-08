@@ -1,5 +1,6 @@
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
+import type { Rate } from 'schemas/rates'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import type { CloudMeasurement } from 'services/cloudMeasurements'
 import type { Account } from 'services/session'
@@ -129,6 +130,22 @@ export const driver = (overrides: Partial<Driver> = {}): Driver => ({
   licenseNumber: 'A-123456',
   licenseExpiresOn: null,
   memberUid: null,
+  archived: false,
+  ...overrides,
+})
+
+export const rate = (overrides: Partial<Rate> = {}): Rate => ({
+  id: 'rate-1',
+  orgId: ORG_ID,
+  name: 'Managua → San José',
+  origin: 'Managua',
+  destination: 'San José',
+  price: 25000,
+  currency: 'NIO',
+  clientId: 'client-1',
+  clientName: 'Transportes Pérez',
+  description: null,
+  label: 'Managua - San José - C$25,000.00',
   archived: false,
   ...overrides,
 })

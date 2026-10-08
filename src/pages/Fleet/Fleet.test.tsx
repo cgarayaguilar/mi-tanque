@@ -16,6 +16,7 @@ import {
   accountWithRole,
   client,
   driver,
+  rate,
   tank,
   trailer,
   truck,
@@ -54,6 +55,7 @@ const renderAt = (path: string) => {
 beforeEach(() => {
   useFleetStore.getState().reset()
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [
@@ -132,6 +134,7 @@ test('search filters by name or plate and offers to clear', async () => {
 
 test('an empty section invites to add the first one', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [],
@@ -147,6 +150,7 @@ test('an empty section invites to add the first one', async () => {
 
 test('when everything is archived it says so and shows them (CA-6)', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck({ archived: true })],
@@ -183,6 +187,7 @@ test('a viewer sees the fleet without "Agregar" (CA-9)', async () => {
 
 test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck()],
@@ -208,6 +213,7 @@ test('a tank card shows its last measurement (specs/0004 RF-18)', async () => {
 test('trucks and trailers say when their insurance is due, not when archived', async () => {
   const inFiveDays = toPlainDate(addDays(new Date(), 5))
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [
@@ -238,6 +244,7 @@ test('trucks and trailers say when their insurance is due, not when archived', a
 // backend specs/0016 CA-5: trucks by brand and model, typed names recognized
 test('trucks filter by brand, then model', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [
@@ -275,6 +282,7 @@ test('trucks filter by brand, then model', async () => {
 // specs/0017 RF-9, RF-10, CA-4: archived ones are a chip of the same row
 test('the archived chip shows the archived ones, in every tab', async () => {
   api.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [
@@ -308,6 +316,7 @@ test('the archived chip shows the archived ones, in every tab', async () => {
 describe('clients', () => {
   beforeEach(() => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [
         client(),
@@ -378,6 +387,7 @@ describe('clients', () => {
 
   test('without clients it invites to add one, only to who can write', async () => {
     api.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [],
@@ -408,6 +418,7 @@ describe('drivers', () => {
       { uid: 'ana', displayName: 'Ana López', role: 'driver' },
     ])
     api.readFleet.mockResolvedValue({
+      rates: [],
       clients: [],
       drivers: [
         driver({
@@ -452,6 +463,92 @@ describe('drivers', () => {
     )
     expect(
       await screen.findByRole('button', { name: 'Conductor Marta Gómez' })
+    ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0024 RF-5, CA-4
+describe('rates', () => {
+  beforeEach(() => {
+    api.readFleet.mockResolvedValue({
+      rates: [
+        rate(),
+        rate({
+          id: 'rate-2',
+          name: 'León → Managua',
+          origin: 'León',
+          destination: 'Managua',
+          clientId: null,
+          clientName: null,
+          price: 1250000,
+          description: 'Contenedor de 40 pies',
+        }),
+      ],
+      drivers: [],
+      // Renamed since the rate was saved: the current name shows
+      clients: [client({ name: 'Transportes Pérez S.A.' })],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+  })
+
+  test('a card has the route, the price, the client or "General"', async () => {
+    renderAt('/flota/tarifas')
+
+    const list = await screen.findByRole('list', { name: 'Tarifas' })
+    const cards = within(list).getAllByRole('button')
+    expect(cards.map(card => card.getAttribute('aria-label'))).toEqual([
+      'Tarifa León → Managua',
+      'Tarifa Managua → San José',
+    ])
+    expect(cards[0]).toHaveTextContent('C$1,250,000.00 NIO')
+    expect(cards[0]).toHaveTextContent('General')
+    expect(cards[0]).toHaveTextContent('Contenedor de 40 pies')
+    expect(cards[1]).toHaveTextContent('Transportes Pérez S.A.')
+  })
+
+  test('the client filter and the search narrow them', async () => {
+    renderAt('/flota/tarifas')
+    await screen.findByRole('list', { name: 'Tarifas' })
+
+    await filterBy('Cliente', 'General')
+    expect(
+      screen.queryByRole('button', { name: 'Tarifa Managua → San José' })
+    ).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Tarifa León → Managua' })
+    ).toBeInTheDocument()
+
+    await filterBy('Cliente', 'Todos')
+    fireEvent.change(
+      screen.getByRole('searchbox', { name: 'Buscar tarifas' }),
+      {
+        target: { value: 'jose' },
+      }
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Tarifa Managua → San José' })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Tarifa León → Managua' })
+    ).toBeNull()
+  })
+
+  test('without rates it invites to add the first one, in feminine', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/tarifas')
+    expect(
+      await screen.findByText(
+        'Agrega tu primera tarifa para tener su información a mano.'
+      )
     ).toBeInTheDocument()
   })
 })

@@ -18,6 +18,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined'
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
@@ -31,11 +32,13 @@ import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
 import { clientContact, type Client } from 'schemas/clients'
 import { driverContact, type Driver } from 'schemas/drivers'
+import type { Rate } from 'schemas/rates'
+import { moneyTotal } from 'utils/formatMoney'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
-import { layout, radius, softShadow } from 'theme/tokens'
+import { layout, radius, softShadow, typeScale } from 'theme/tokens'
 import {
   tankMeasures,
   tankShapeLabel,
@@ -43,7 +46,11 @@ import {
   truckFigures,
   vehicleSubtitle,
 } from 'utils/fleetLabels'
-import { FLEET_SECTIONS, sectionBySlug } from 'utils/fleetSections'
+import {
+  FLEET_SECTIONS,
+  sectionBySlug,
+  sectionWords,
+} from 'utils/fleetSections'
 import { foldText } from 'utils/foldText'
 import { formatNumber } from 'utils/formatNumber'
 import { canWriteFleet } from 'utils/roles'
@@ -60,10 +67,15 @@ import { RETRY_HINT } from 'utils/withTimeout'
 
 const CARD_HEIGHT = 88
 
+// The "General" option of the rates' client filter (specs/0024 RF-5)
+const GENERAL = '__general'
+
 interface CardProps {
   label: string
   leading: ReactNode
   title: string
+  /** A figure under the title, larger: a rate's price (specs/0024 RF-5). */
+  figure?: string
   lines: (string | null)[]
   archived: boolean
   /** The insurance's notice, if it is due soon (backend specs/0011 RF-4). */
@@ -75,6 +87,7 @@ function FleetCard({
   label,
   leading,
   title,
+  figure,
   lines,
   archived,
   notice = null,
@@ -112,6 +125,15 @@ function FleetCard({
         >
           {title}
         </Typography>
+        {figure && (
+          <Typography
+            component="span"
+            noWrap
+            sx={{ ...typeScale.figureSm, display: 'block', my: 0.5 }}
+          >
+            {figure}
+          </Typography>
+        )}
         {lines.filter(Boolean).map(line => (
           <Typography
             key={line}
@@ -165,14 +187,25 @@ function FleetScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? null)
   const role = useSessionStore(selectActiveRole)
-  const { status, trucks, trailers, tanks, clients, drivers, members, load } =
-    useFleetStore()
+  const {
+    status,
+    trucks,
+    trailers,
+    tanks,
+    clients,
+    drivers,
+    rates,
+    members,
+    load,
+  } = useFleetStore()
   const distanceUnit = useDistanceUnit()
   const today = new Date()
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   // Trucks by brand and model, typed names recognized (specs/0016 RF-8)
   const [brand, setBrand] = useState<string | null>(null)
+  // Rates by client: an id, GENERAL or all (specs/0024 RF-5)
+  const [rateClient, setRateClient] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
   const query = useDeferredValue(foldText(search.trim()))
   const canWrite = canWriteFleet(role)
@@ -189,6 +222,15 @@ function FleetScreen() {
     () => new Map(trailers.map(trailer => [trailer.id, trailer.name])),
     [trailers]
   )
+  const clientName = useMemo(
+    () => new Map(clients.map(client => [client.id, client.name])),
+    [clients]
+  )
+  // The client's current name; the copy saved with the rate otherwise
+  const rateClientName = (rate: Rate) =>
+    rate.clientId === null
+      ? null
+      : (clientName.get(rate.clientId) ?? rate.clientName)
   const memberName = useMemo(
     () => new Map(members.map(member => [member.uid, member.displayName])),
     [members]
@@ -229,6 +271,23 @@ function FleetScreen() {
             .filter(truck => truckBrand(truck) === brand)
             .map(truckModel)
         )
+
+  // "General" and the clients that have rates, among those shown
+  const shownRates = rates.filter(rate => rate.archived === showArchived)
+  const rateClients = new Map<string, string>()
+  for (const rate of shownRates) {
+    if (rate.clientId !== null && !rateClients.has(rate.clientId)) {
+      rateClients.set(rate.clientId, rateClientName(rate) ?? rate.clientId)
+    }
+  }
+  const rateClientOptions = [
+    ...(shownRates.some(rate => rate.clientId === null)
+      ? [{ value: GENERAL, label: 'General' }]
+      : []),
+    ...[...rateClients]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es')),
+  ]
 
   const cards: { id: string; card: ReactNode }[] =
     section.collection === 'trucks'
@@ -304,82 +363,117 @@ function FleetScreen() {
               />
             ),
           }))
-        : section.collection === 'drivers'
-          ? visible(drivers, (d: Driver) =>
-              matches(query, d.name, d.phone, d.licenseNumber)
-            ).map(driver => ({
-              id: driver.id,
+        : section.collection === 'rates'
+          ? visible(
+              rates,
+              (r: Rate) =>
+                (rateClient === null ||
+                  (rateClient === GENERAL
+                    ? r.clientId === null
+                    : r.clientId === rateClient)) &&
+                matches(
+                  query,
+                  r.origin,
+                  r.destination,
+                  rateClientName(r),
+                  r.description
+                )
+            ).map(rate => ({
+              id: rate.id,
               card: (
                 <FleetCard
-                  label={`Conductor ${driver.name}`}
+                  label={`Tarifa ${rate.name}`}
                   leading={
-                    <BadgeOutlinedIcon
+                    <RequestQuoteOutlinedIcon
                       sx={{ fontSize: 24, color: 'text.secondary' }}
                     />
                   }
-                  title={driver.name}
-                  lines={[
-                    driverContact(driver),
-                    driver.memberUid
-                      ? `Cuenta: ${memberName.get(driver.memberUid) ?? 'un miembro'}`
-                      : null,
-                  ]}
-                  archived={driver.archived}
-                  notice={licenseNotice(
-                    driver.licenseExpiresOn,
-                    today,
-                    driver.archived
-                  )}
+                  title={rate.name}
+                  figure={moneyTotal(rate.currency, rate.price)}
+                  lines={[rateClientName(rate) ?? 'General', rate.description]}
+                  archived={rate.archived}
                   onClick={() => {
-                    open(driver.id)
+                    open(rate.id)
                   }}
                 />
               ),
             }))
-          : section.collection === 'clients'
-            ? visible(clients, (c: Client) =>
-                matches(query, c.name, c.phone, c.email, c.taxId)
-              ).map(client => ({
-                id: client.id,
+          : section.collection === 'drivers'
+            ? visible(drivers, (d: Driver) =>
+                matches(query, d.name, d.phone, d.licenseNumber)
+              ).map(driver => ({
+                id: driver.id,
                 card: (
                   <FleetCard
-                    label={`Cliente ${client.name}`}
+                    label={`Conductor ${driver.name}`}
                     leading={
-                      <BusinessOutlinedIcon
+                      <BadgeOutlinedIcon
                         sx={{ fontSize: 24, color: 'text.secondary' }}
                       />
                     }
-                    title={client.name}
-                    lines={[clientContact(client)]}
-                    archived={client.archived}
-                    onClick={() => {
-                      open(client.id)
-                    }}
-                  />
-                ),
-              }))
-            : visible(tanks, (t: FleetTank) =>
-                matches(query, t.name, equipmentName(t), t.capacityGal)
-              ).map(tank => ({
-                id: tank.id,
-                card: (
-                  <FleetCard
-                    label={`Tanque ${tank.name}`}
-                    leading={<TankShapeIcon shape={tank.shape} size={36} />}
-                    title={tank.name}
+                    title={driver.name}
                     lines={[
-                      `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
-                      `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
-                      tank.lastMeasurement &&
-                        lastMeasurementLine(tank.lastMeasurement),
+                      driverContact(driver),
+                      driver.memberUid
+                        ? `Cuenta: ${memberName.get(driver.memberUid) ?? 'un miembro'}`
+                        : null,
                     ]}
-                    archived={tank.archived}
+                    archived={driver.archived}
+                    notice={licenseNotice(
+                      driver.licenseExpiresOn,
+                      today,
+                      driver.archived
+                    )}
                     onClick={() => {
-                      open(tank.id)
+                      open(driver.id)
                     }}
                   />
                 ),
               }))
+            : section.collection === 'clients'
+              ? visible(clients, (c: Client) =>
+                  matches(query, c.name, c.phone, c.email, c.taxId)
+                ).map(client => ({
+                  id: client.id,
+                  card: (
+                    <FleetCard
+                      label={`Cliente ${client.name}`}
+                      leading={
+                        <BusinessOutlinedIcon
+                          sx={{ fontSize: 24, color: 'text.secondary' }}
+                        />
+                      }
+                      title={client.name}
+                      lines={[clientContact(client)]}
+                      archived={client.archived}
+                      onClick={() => {
+                        open(client.id)
+                      }}
+                    />
+                  ),
+                }))
+              : visible(tanks, (t: FleetTank) =>
+                  matches(query, t.name, equipmentName(t), t.capacityGal)
+                ).map(tank => ({
+                  id: tank.id,
+                  card: (
+                    <FleetCard
+                      label={`Tanque ${tank.name}`}
+                      leading={<TankShapeIcon shape={tank.shape} size={36} />}
+                      title={tank.name}
+                      lines={[
+                        `${tankShapeLabel(tank)} · ${tankMeasures(tank)}`,
+                        `${formatNumber(tank.capacityGal)} gal · ${equipmentName(tank)}`,
+                        tank.lastMeasurement &&
+                          lastMeasurementLine(tank.lastMeasurement),
+                      ]}
+                      archived={tank.archived}
+                      onClick={() => {
+                        open(tank.id)
+                      }}
+                    />
+                  ),
+                }))
 
   const total =
     section.collection === 'trucks'
@@ -390,13 +484,18 @@ function FleetScreen() {
           ? clients.length
           : section.collection === 'drivers'
             ? drivers.length
-            : tanks.length
+            : section.collection === 'rates'
+              ? rates.length
+              : tanks.length
 
+  const words = sectionWords(section)
   const sectionIcon =
     section.collection === 'clients' ? (
       <BusinessOutlinedIcon />
     ) : section.collection === 'drivers' ? (
       <BadgeOutlinedIcon />
+    ) : section.collection === 'rates' ? (
+      <RequestQuoteOutlinedIcon />
     ) : (
       <LocalShippingIcon />
     )
@@ -440,8 +539,8 @@ function FleetScreen() {
         <EmptyState
           headingLevel="h2"
           icon={sectionIcon}
-          title={`Todos tus ${section.label.toLowerCase()} están archivados`}
-          description="Puedes verlos y restaurarlos cuando los necesites."
+          title={`${words.all} ${section.label.toLowerCase()} están archivad${words.them}`}
+          description={`Puedes ver${words.thePlural} y restaurar${words.thePlural} cuando ${words.thePlural} necesites.`}
           action={{
             label: 'Ver archivados',
             onClick: () => {
@@ -459,8 +558,8 @@ function FleetScreen() {
           title={`Aún no tienes ${section.label.toLowerCase()}`}
           description={
             canWrite
-              ? `Agrega tu primer ${section.one} para tener su información a mano.`
-              : 'Cuando tu equipo los agregue, aparecerán aquí.'
+              ? `Agrega tu ${words.first} ${section.one} para tener su información a mano.`
+              : `Cuando tu equipo ${words.thePlural} agregue, aparecerán aquí.`
           }
           {...(canWrite && {
             action: {
@@ -481,7 +580,7 @@ function FleetScreen() {
           title={showArchived ? 'No hay archivados' : 'Sin resultados'}
           description={
             showArchived
-              ? `Aquí aparecen los ${section.label.toLowerCase()} que archives.`
+              ? `Aquí aparecen ${words.thePlural} ${section.label.toLowerCase()} que archives.`
               : 'Prueba con otro nombre, placa o medida.'
           }
           action={
@@ -555,6 +654,7 @@ function FleetScreen() {
           onChange={(_, slug: string) => {
             setSearch('')
             setBrand(null)
+            setRateClient(null)
             setModel(null)
             navigate(`/flota/${slug}`)
           }}
@@ -617,6 +717,15 @@ function FleetScreen() {
                   onChange={setModel}
                 />
               )}
+            {section.collection === 'rates' && rateClientOptions.length > 1 && (
+              <FilterChip
+                label="Cliente"
+                allLabel="Todos"
+                options={rateClientOptions}
+                value={rateClient}
+                onChange={setRateClient}
+              />
+            )}
             <FilterToggle
               label="Archivados"
               on={showArchived}

@@ -7,10 +7,11 @@ import {
 } from 'services/fleet'
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
+import type { Rate } from 'schemas/rates'
 import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission } from 'store/session'
-import type { FleetSection } from 'utils/fleetSections'
+import { sectionWords, type FleetSection } from 'utils/fleetSections'
 import { reportError } from 'utils/reportError'
 
 const capitalize = (text: string) =>
@@ -25,7 +26,7 @@ export const useSaveFleetItem = (section: FleetSection) => {
   const [, navigate] = useLocation()
 
   return (
-    item: Truck | Trailer | FleetTank | Client | Driver,
+    item: Truck | Trailer | FleetTank | Client | Driver | Rate,
     fields: object,
     isNew: boolean
   ): void => {
@@ -39,12 +40,12 @@ export const useSaveFleetItem = (section: FleetSection) => {
       reportError(error, { operation: 'saveFleetItem', collection })
       if (recoverFromLostPermission(error)) return
       sileo.error({
-        title: `No pudimos guardar el ${section.one} ${item.name}`,
+        title: `No pudimos guardar ${sectionWords(section).the} ${section.one} ${item.name}`,
         description: 'Revisa los datos y vuelve a intentarlo.',
       })
     })
     sileo.success({
-      title: `${capitalize(section.one)} guardado`,
+      title: `${capitalize(section.one)} guardad${sectionWords(section).it}`,
       ...(!navigator.onLine && {
         description: 'Se subirá cuando tengas señal.',
       }),

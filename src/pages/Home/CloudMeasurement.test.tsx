@@ -112,6 +112,7 @@ beforeEach(() => {
   window.localStorage.clear()
   useFleetStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck()],
@@ -233,6 +234,7 @@ describe('loaded and empty', () => {
   }
   const withTruck = (efficiencies: Partial<Truck>) => {
     fleetApi.readFleet.mockResolvedValue({
+      rates: [],
       drivers: [],
       clients: [],
       trucks: [truck(efficiencies)],
@@ -399,6 +401,7 @@ test('Lectura calculates without saving', async () => {
 
 test('without tanks it invites to add one', async () => {
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [],

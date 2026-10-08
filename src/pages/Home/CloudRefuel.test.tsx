@@ -86,6 +86,7 @@ beforeEach(() => {
   window.localStorage.clear()
   useFleetStore.getState().reset()
   fleetApi.readFleet.mockResolvedValue({
+    rates: [],
     drivers: [],
     clients: [],
     trucks: [truck()],
