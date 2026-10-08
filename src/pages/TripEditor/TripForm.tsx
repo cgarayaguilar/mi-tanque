@@ -25,6 +25,7 @@ import TextField from 'components/TextField'
 import type { Currency } from 'schemas/account'
 import {
   expenseToRow,
+  isRefuelExpense,
   tripExpenseChanges,
   type Expense,
 } from 'schemas/expenses'
@@ -84,12 +85,20 @@ const STATUS_OPTIONS = TRIP_STATUSES.map(status => ({
 /** A trip's form, to create or edit it (backend specs/0025 RF-9, RF-10). */
 export default function TripForm({
   trip,
-  expenses: tripExpenses,
+  expenses: allTripExpenses,
   id,
   orgId,
   currency,
 }: TripFormProps) {
   const [, navigate] = useLocation()
+  // A refuel's expense follows its refuel (specs/0027 RF-10): shown, not a row
+  const refuelExpenses = allTripExpenses.filter(isRefuelExpense)
+  const tripExpenses = allTripExpenses.filter(
+    expense => !isRefuelExpense(expense)
+  )
+  const refuelsTotal = refuelExpenses
+    .filter(expense => expense.currency === (trip?.currency ?? currency))
+    .reduce((sum, expense) => sum + expense.amount, 0)
   const { clients, trucks, trailers, drivers, rates } = useFleetStore()
   const tripsSeen = useTripsStore(state => state.known)
   const saveTrip = useTripsStore(state => state.save)
@@ -168,7 +177,7 @@ export default function TripForm({
     (values.expenses ?? []).reduce((sum, row) => {
       const amount = parseDecimal(row.amount ?? '')
       return sum + (Number.isNaN(amount) ? 0 : amount)
-    }, 0)
+    }, refuelsTotal)
   )
 
   // A new row's date is the trip's start, or now if it starts later (RF-12)
@@ -240,7 +249,10 @@ export default function TripForm({
       ...fields,
       // The backend keeps it (RF-3); meanwhile, what the rows add up to
       expensesTotal: toCents(
-        values.expenses.reduce((sum, row) => sum + parseDecimal(row.amount), 0)
+        values.expenses.reduce(
+          (sum, row) => sum + parseDecimal(row.amount),
+          refuelsTotal
+        )
       ),
       createdAt: trip?.createdAt ?? null,
       createdBy: trip?.createdBy ?? uid,
@@ -591,6 +603,49 @@ export default function TripForm({
           >
             Gastos (opcional)
           </Typography>
+          {refuelExpenses.length > 0 && (
+            <Box
+              component="ul"
+              aria-label="Gastos de rellenos"
+              sx={{ listStyle: 'none', m: 0, mb: 3, p: 0 }}
+            >
+              {refuelExpenses.map(expense => (
+                <Box
+                  component="li"
+                  key={expense.id}
+                  sx={{
+                    py: 2,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 2,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {categories.find(item => item.id === expense.categoryId)
+                        ?.name ?? expense.categoryName}
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      {moneyTotal(expense.currency, expense.amount)}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    component="p"
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    {expense.description ?? 'De un relleno'} · se cambia en el
+                    relleno
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
           <Stack spacing={3}>
             {expenseRows.fields.map((field, index) => {
               const row = `expenses.${String(index)}` as `expenses.${number}`

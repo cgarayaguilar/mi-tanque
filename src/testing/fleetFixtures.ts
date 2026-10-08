@@ -219,6 +219,7 @@ export const expense = (overrides: Partial<Expense> = {}): Expense => ({
   driverId: null,
   driverName: null,
   receiptPhotoPath: null,
+  refuelId: null,
   createdAt: new Date(2026, 9, 6, 10, 35),
   createdBy: 'luis',
   ...overrides,

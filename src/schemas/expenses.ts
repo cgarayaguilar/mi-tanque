@@ -51,6 +51,11 @@ export interface Expense {
   driverId: string | null
   driverName: string | null
   receiptPhotoPath: string | null
+  /**
+   * The refuel that made it (specs/0027 RF-1): its amount, date and category
+   * follow the refuel, and only its link and description change here.
+   */
+  refuelId: string | null
   /** When it was added; null while it waits for the server. */
   createdAt: Date | null
   createdBy: string
@@ -276,6 +281,7 @@ export const tripExpenseChanges = (
     saved.push({
       id: row.id,
       orgId: trip.orgId,
+      refuelId: null,
       createdAt: old?.createdAt ?? null,
       createdBy: old?.createdBy ?? uid,
       ...fields,
@@ -338,3 +344,83 @@ export const totalsByCurrency = (
   }
   return [...totals].map(([currency, amount]) => ({ currency, amount }))
 }
+
+// ---- A refuel's expense (specs/0027) --------------------------------------
+
+/** The refuel behind an expense: what limits what it can belong to. */
+export interface RefuelOfExpense {
+  tankName: string
+  equipment: { kind: 'truck' | 'trailer' | 'none'; id: string | null }
+}
+
+export const isRefuelExpense = (expense: Pick<Expense, 'refuelId'>) =>
+  expense.refuelId !== null
+
+/** What it is without a trip: its truck, its trailer or general (RF-3). */
+export const refuelBaseKind = (
+  equipment: RefuelOfExpense['equipment']
+): ExpenseKind =>
+  equipment.id && equipment.kind !== 'none' ? equipment.kind : 'general'
+
+/** Whether a trip carries the refuel's truck or trailer (RF-6). */
+export const tripCarriesRefuel = (
+  trip: Pick<Trip, 'truckId' | 'trailerId'>,
+  equipment: RefuelOfExpense['equipment']
+) =>
+  (equipment.kind === 'truck' && trip.truckId === equipment.id) ||
+  (equipment.kind === 'trailer' && trip.trailerId === equipment.id)
+
+export const refuelExpenseFormSchema = z
+  .object({
+    kind: z.enum(EXPENSE_KINDS),
+    tripId: z.string(),
+    description: z.string().check(
+      z.trim(),
+      z.maxLength(EXPENSE_LIMITS.description, {
+        error: `Usa ${String(EXPENSE_LIMITS.description)} caracteres como máximo`,
+      })
+    ),
+  })
+  .check(
+    z.superRefine((values, ctx) => {
+      if (values.kind === 'trip' && !values.tripId)
+        issueAt(ctx, values, ['tripId'], 'Elige el viaje')
+    })
+  )
+
+export type RefuelExpenseFormValues = z.infer<typeof refuelExpenseFormSchema>
+
+/**
+ * The changes of a refuel's expense (RF-6, RF-9): what it belongs to and
+ * its description, nothing else. `equipmentName` names its truck or
+ * trailer when it goes back to it.
+ */
+export const refuelExpenseChanges = (
+  values: RefuelExpenseFormValues,
+  refuel: RefuelOfExpense,
+  trip: Trip | null,
+  equipmentName: string | null
+) => {
+  const { kind, id } = refuel.equipment
+  const link =
+    values.kind === 'trip' && trip
+      ? tripLink(trip)
+      : kind === 'truck' && id
+        ? {
+            ...NO_LINK,
+            kind: 'truck' as const,
+            truckId: id,
+            truckName: equipmentName ?? 'Camión',
+          }
+        : kind === 'trailer' && id
+          ? {
+              ...NO_LINK,
+              kind: 'trailer' as const,
+              trailerId: id,
+              trailerName: equipmentName ?? 'Remolque',
+            }
+          : { ...NO_LINK, kind: 'general' as const }
+  return { ...link, description: values.description.trim() || null }
+}
+
+export type RefuelExpenseChanges = ReturnType<typeof refuelExpenseChanges>

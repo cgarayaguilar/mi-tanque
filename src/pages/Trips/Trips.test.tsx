@@ -517,6 +517,43 @@ describe('its expenses in the form', () => {
     })
   })
 
+  // backend specs/0027 RF-10: a refuel's is shown, not a row, and stays
+  test("a refuel's expense is shown apart and is never removed", async () => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    expensesApi.readTripExpenses.mockResolvedValue([
+      expense(),
+      expense({
+        id: 'r1',
+        refuelId: 'r1',
+        categoryId: 'org-a_fuel',
+        categoryName: 'Combustible',
+        amount: 4500,
+        description: 'Relleno de Tanque izquierdo',
+      }),
+    ])
+    renderAt('/viajes/trip-1/editar')
+
+    const refuels = await screen.findByRole('list', {
+      name: 'Gastos de rellenos',
+    })
+    expect(refuels).toHaveTextContent('CombustibleC$4,500.00 NIO')
+    expect(refuels).toHaveTextContent('Relleno de Tanque izquierdo')
+    expect(screen.queryByRole('group', { name: 'Gasto 2' })).toBeNull()
+    expect(screen.getByText('Gastos: C$6,350.00 NIO')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar el gasto 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(tripsApi.saveTripWithExpenses.mock.lastCall).toMatchObject([
+        'trip-1',
+        'org-a',
+        {},
+        false,
+        { create: [], update: [], remove: ['expense-1'] },
+      ])
+    })
+  })
+
   test('a row needs its category and amount', async () => {
     renderAt('/viajes/nuevo')
     fireEvent.click(

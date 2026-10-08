@@ -10,6 +10,9 @@ import {
   expenseLinkText,
   expenseToForm,
   expenseToRow,
+  refuelBaseKind,
+  refuelExpenseChanges,
+  tripCarriesRefuel,
   totalsByCategory,
   totalsByCurrency,
   tripExpenseChanges,
@@ -282,5 +285,70 @@ describe('categories', () => {
     expect(archived && duplicateCategoryMessage(archived)).toBe(
       'Ya existe una categoría archivada con ese nombre. Restáurala en Archivadas'
     )
+  })
+})
+
+// backend specs/0027 RF-6, RF-9
+describe("a refuel's expense", () => {
+  const truckRefuel = {
+    tankName: 'Tanque izquierdo',
+    equipment: { kind: 'truck' as const, id: 'truck-1' },
+  }
+  const trailerRefuel = {
+    tankName: 'Termo',
+    equipment: { kind: 'trailer' as const, id: 'trailer-1' },
+  }
+
+  test('without a trip: its truck, its trailer or general', () => {
+    expect(refuelBaseKind(truckRefuel.equipment)).toBe('truck')
+    expect(refuelBaseKind(trailerRefuel.equipment)).toBe('trailer')
+    expect(refuelBaseKind({ kind: 'none', id: null })).toBe('general')
+  })
+
+  test('a trip takes it only if it carries its truck or trailer', () => {
+    expect(tripCarriesRefuel(trip(), truckRefuel.equipment)).toBe(true)
+    expect(
+      tripCarriesRefuel(trip({ truckId: 'truck-2' }), truckRefuel.equipment)
+    ).toBe(false)
+    expect(
+      tripCarriesRefuel(trip({ truckId: 'truck-2' }), trailerRefuel.equipment)
+    ).toBe(true)
+  })
+
+  test('the changes are its link and description, nothing else', () => {
+    expect(
+      refuelExpenseChanges(
+        { kind: 'trip', tripId: 'trip-1', description: ' Diésel ' },
+        truckRefuel,
+        trip(),
+        'Unidad 12'
+      )
+    ).toEqual({
+      kind: 'trip',
+      tripId: 'trip-1',
+      tripRoute: 'Managua → San José',
+      truckId: 'truck-1',
+      truckName: 'Unidad 12',
+      trailerId: 'trailer-1',
+      trailerName: 'Caja 7',
+      description: 'Diésel',
+    })
+    expect(
+      refuelExpenseChanges(
+        { kind: 'trailer', tripId: '', description: '' },
+        trailerRefuel,
+        null,
+        'Caja 7'
+      )
+    ).toEqual({
+      kind: 'trailer',
+      tripId: null,
+      tripRoute: null,
+      truckId: null,
+      truckName: null,
+      trailerId: 'trailer-1',
+      trailerName: 'Caja 7',
+      description: null,
+    })
   })
 })

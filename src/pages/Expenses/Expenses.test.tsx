@@ -50,6 +50,8 @@ const expensesApi = vi.hoisted(() => ({
   updateExpense: vi.fn(() => Promise.resolve()),
   deleteExpense: vi.fn(() => Promise.resolve()),
   uploadReceipt: vi.fn(),
+  readRefuelOfExpense: vi.fn(),
+  updateRefuelExpense: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/expenses', () => expensesApi)
 
@@ -454,6 +456,126 @@ describe('the categories', () => {
     )
     expect(expensesApi.updateCategory).toHaveBeenCalledWith('org-a_tires', {
       archived: false,
+    })
+  })
+})
+
+// backend specs/0027 RF-9, RF-10, CA-4
+describe("a refuel's expense", () => {
+  const refuelExpense = expense({
+    id: 'r1',
+    refuelId: 'r1',
+    kind: 'truck',
+    tripId: null,
+    tripRoute: null,
+    trailerId: null,
+    trailerName: null,
+    categoryId: 'org-a_fuel',
+    categoryName: 'Combustible',
+    amount: 4500,
+    description: 'Relleno de Tanque izquierdo',
+    takenAt: new Date(2026, 9, 6, 12),
+  })
+
+  beforeEach(() => {
+    expensesApi.readExpense.mockResolvedValue(refuelExpense)
+    expensesApi.readRefuelOfExpense.mockResolvedValue({
+      tankName: 'Tanque izquierdo',
+      equipment: { kind: 'truck', id: 'truck-1' },
+    })
+    tripsApi.readTripsInPeriod.mockResolvedValue({
+      items: [
+        trip(),
+        trip({
+          id: 'trip-2',
+          truckId: 'truck-2',
+          truckName: 'Unidad 15',
+          origin: 'León',
+          destination: 'Managua',
+        }),
+      ],
+      truncated: false,
+    })
+  })
+
+  test('in the list it says "Relleno"', async () => {
+    expensesApi.readExpensesInPeriod.mockResolvedValue({
+      items: [refuelExpense],
+      truncated: false,
+    })
+    renderAt('/gastos')
+    const card = await screen.findByRole('button', {
+      name: 'Relleno de Combustible, C$4,500.00 NIO',
+    })
+    expect(card).toHaveTextContent('Relleno')
+  })
+
+  test('only its link and description change, to a trip of its truck', async () => {
+    renderAt('/gastos/r1')
+
+    expect(
+      await screen.findByText(
+        'Este gasto es de un relleno de Tanque izquierdo. El monto, la fecha y la categoría se cambian en el relleno, en Historial.'
+      )
+    ).toBeInTheDocument()
+    // Shown, not edited; and it is not deleted here
+    expect(screen.getByText('C$4,500.00 NIO')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Monto')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Borrar' })).toBeNull()
+
+    await choose('Corresponde a', 'Viaje')
+    const field = screen.getByRole('combobox', { name: 'Viaje' })
+    fireEvent.mouseDown(field)
+    // The trip of another truck is not offered
+    expect(
+      (await screen.findAllByRole('option')).map(option => option.textContent)
+    ).toEqual(['mar 6 oct · Managua → San José · Transportes Pérez'])
+    fireEvent.click(
+      screen.getByRole('option', {
+        name: 'mar 6 oct · Managua → San José · Transportes Pérez',
+      })
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(expensesApi.updateRefuelExpense).toHaveBeenCalledWith('r1', {
+        kind: 'trip',
+        tripId: 'trip-1',
+        tripRoute: 'Managua → San José',
+        truckId: 'truck-1',
+        truckName: 'Unidad 12',
+        trailerId: 'trailer-1',
+        trailerName: 'Caja 7',
+        description: 'Relleno de Tanque izquierdo',
+      })
+    })
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Gasto guardado' })
+  })
+
+  test('back from a trip to its truck', async () => {
+    expensesApi.readExpense.mockResolvedValue({
+      ...refuelExpense,
+      kind: 'trip',
+      tripId: 'trip-1',
+      tripRoute: 'Managua → San José',
+    })
+    renderAt('/gastos/r1')
+    await screen.findByText(/Este gasto es de un relleno/)
+    await choose('Corresponde a', 'Camión')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+    )
+    await waitFor(() => {
+      expect(expensesApi.updateRefuelExpense).toHaveBeenCalledWith(
+        'r1',
+        expect.objectContaining({
+          kind: 'truck',
+          tripId: null,
+          truckId: 'truck-1',
+          truckName: 'Unidad 12',
+          trailerId: null,
+        })
+      )
     })
   })
 })

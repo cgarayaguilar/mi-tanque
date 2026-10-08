@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation, useParams } from 'wouter'
 import { sileo } from 'sileo'
-import { addDays, format, subDays } from 'date-fns'
-import { es } from 'date-fns/locale'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
@@ -41,7 +39,6 @@ import {
   type Expense,
   type ExpenseFormValues,
 } from 'schemas/expenses'
-import { routeName } from 'schemas/rates'
 import type { Trip } from 'schemas/trips'
 import {
   createExpense,
@@ -51,7 +48,6 @@ import {
   uploadReceipt,
 } from 'services/expenses'
 import { photoUrl } from 'services/fleet'
-import { readTripsInPeriod } from 'services/trips'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import {
@@ -63,6 +59,8 @@ import { currencySymbol } from 'utils/formatMoney'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
+import RefuelExpenseForm from './RefuelExpenseForm'
+import { tripOption, useTripChoices } from './useTripChoices'
 
 const FORM_ID = 'expense-form'
 
@@ -73,39 +71,6 @@ const KIND_OPTIONS = EXPENSE_KINDS.map(kind => ({
   value: kind,
   label: EXPENSE_KIND_LABELS[kind],
 }))
-
-// The trips offered: those started up to 30 days around the expense (RF-10)
-const NEAR_DAYS = 30
-
-/** The trips around a day, read when the day changes. */
-const useTripsNear = (orgId: string, day: string | null) => {
-  const [trips, setTrips] = useState<{ day: string; items: Trip[] } | null>(
-    null
-  )
-  useEffect(() => {
-    if (!day || !orgId) return
-    let current = true
-    const date = new Date(`${day}T12:00`)
-    readTripsInPeriod(orgId, subDays(date, NEAR_DAYS), addDays(date, NEAR_DAYS))
-      .then(page => {
-        if (current) setTrips({ day, items: page.items })
-      })
-      .catch((error: unknown) => {
-        reportError(error, { operation: 'readTripsNear' })
-        if (current) setTrips({ day, items: [] })
-      })
-    return () => {
-      current = false
-    }
-  }, [orgId, day])
-  return trips?.day === day ? trips.items : null
-}
-
-/** "lun 6 oct · Managua → San José · Transportes Pérez" */
-const tripOption = (trip: Trip) => ({
-  value: trip.id,
-  label: `${format(trip.startAt, 'EEE d MMM', { locale: es })} · ${routeName(trip.origin, trip.destination)} · ${trip.clientName}`,
-})
 
 interface ExpenseFormProps {
   expense: Expense | null
@@ -153,21 +118,13 @@ function ExpenseForm({
   const values = useWatch({ control })
   const details = useMoreDetails<ExpenseFormValues>(DETAILS, setFocus)
   const day = values.takenAt?.slice(0, 10) ?? null
-  const nearTrips = useTripsNear(orgId, values.kind === 'trip' ? day : null)
   const [ownTrip] = useTrip(expense?.tripId ?? null)
-
   // The trips near its date, and the one it has or comes from
-  const tripChoices = useMemo(() => {
-    const extra = [
-      presetTrip,
-      ownTrip.status === 'ready' ? ownTrip.trip : null,
-    ].filter((trip): trip is Trip => trip !== null)
-    const all = new Map<string, Trip>()
-    for (const trip of [...(nearTrips ?? []), ...extra]) all.set(trip.id, trip)
-    return [...all.values()].sort(
-      (a, b) => b.startAt.getTime() - a.startAt.getTime()
-    )
-  }, [nearTrips, presetTrip, ownTrip])
+  const { choices: tripChoices, loading: tripsLoading } = useTripChoices(
+    orgId,
+    values.kind === 'trip' ? day : null,
+    [presetTrip, ownTrip.status === 'ready' ? ownTrip.trip : null]
+  )
 
   const active = <T extends { id: string; archived: boolean }>(
     items: readonly T[],
@@ -194,6 +151,7 @@ function ExpenseForm({
       orgId,
       ...fields,
       receiptPhotoPath: receiptPath,
+      refuelId: null,
       createdAt: expense?.createdAt ?? null,
       createdBy: expense?.createdBy ?? uid,
     }
@@ -283,9 +241,7 @@ function ExpenseForm({
               id="expenseTrip"
               label="Viaje"
               options={tripChoices.map(tripOption)}
-              placeholder={
-                nearTrips === null ? 'Buscando viajes…' : 'Busca el viaje'
-              }
+              placeholder={tripsLoading ? 'Buscando viajes…' : 'Busca el viaje'}
               hint="Los que empezaron hasta 30 días antes o después de la fecha."
               error={errors.tripId?.message}
               control={control}
@@ -481,6 +437,17 @@ function ExpenseScreen() {
         <Box aria-busy="true" aria-label="Cargando">
           <Skeleton variant="rounded" height={320} />
         </Box>
+      )
+    }
+    // A refuel's has its own form (specs/0027 RF-9)
+    if (loaded.status === 'ready' && !isNew && loaded.expense.refuelId) {
+      return (
+        <RefuelExpenseForm
+          key={id}
+          expense={{ ...loaded.expense, refuelId: loaded.expense.refuelId }}
+          orgId={orgId}
+          canWrite={canWrite}
+        />
       )
     }
     return (

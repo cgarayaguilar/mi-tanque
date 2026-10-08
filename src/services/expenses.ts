@@ -28,6 +28,8 @@ import {
   EXPENSE_KINDS,
   type Expense,
   type ExpenseFields,
+  type RefuelExpenseChanges,
+  type RefuelOfExpense,
 } from 'schemas/expenses'
 import { loadFirebase, loadStorage } from 'services/firebase'
 import { compressImage } from 'utils/compressImage'
@@ -161,6 +163,8 @@ const expenseSchema = z.object({
   driverId: nullableString,
   driverName: nullableString,
   receiptPhotoPath: nullableString,
+  // Written before specs/0027 without it
+  refuelId: z._default(nullableString, null),
   createdBy: z.string(),
 })
 
@@ -255,6 +259,8 @@ export const newExpenseData = (
   ...fields,
   takenAt: Timestamp.fromDate(fields.takenAt),
   orgId,
+  // Only the backend writes a refuel's (specs/0027 RF-6)
+  refuelId: null,
   createdAt: serverTimestamp(),
   createdBy: uid,
   updatedAt: serverTimestamp(),
@@ -282,6 +288,41 @@ export const createExpense = async (
 export const updateExpense = async (id: string, fields: ExpenseFields) => {
   const [{ db }, uid] = await Promise.all([loadFirebase(), currentUid()])
   await updateDoc(doc(db, 'expenses', id), expenseChanges(uid, fields))
+}
+
+/** A refuel's expense: only its link and description (specs/0027 RF-6). */
+export const updateRefuelExpense = async (
+  id: string,
+  changes: RefuelExpenseChanges
+) => {
+  const [{ db }, uid] = await Promise.all([loadFirebase(), currentUid()])
+  await updateDoc(doc(db, 'expenses', id), {
+    ...changes,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  })
+}
+
+const refuelSchema = z.object({
+  tankName: z.string(),
+  equipment: z.object({
+    kind: z.enum(['truck', 'trailer', 'none']),
+    id: nullableString,
+  }),
+})
+
+/** The refuel behind an expense (specs/0027 RF-9), or null if it is gone. */
+export const readRefuelOfExpense = async (
+  refuelId: string
+): Promise<RefuelOfExpense | null> => {
+  const { db } = await loadFirebase()
+  const snapshot = await withTimeout(
+    getDoc(doc(db, 'refuels', refuelId)),
+    'readRefuelOfExpense'
+  )
+  const parsed = refuelSchema.safeParse(snapshot.data())
+  if (!snapshot.exists() || !parsed.success) return null
+  return parsed.data
 }
 
 export const deleteExpense = async (id: string) => {

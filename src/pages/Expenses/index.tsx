@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import ButtonBase from '@mui/material/ButtonBase'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
@@ -87,7 +88,7 @@ function ExpenseCard({
   return (
     <ButtonBase
       onClick={onClick}
-      aria-label={`Gasto de ${category}, ${amount}`}
+      aria-label={`${expense.refuelId ? 'Relleno' : 'Gasto'} de ${category}, ${amount}`}
       sx={{
         width: '100%',
         display: 'block',
@@ -102,13 +103,22 @@ function ExpenseCard({
         '&:hover': { boxShadow: softShadow },
       }}
     >
-      <Typography
+      <Box
         component="span"
-        variant="subtitle1"
-        sx={{ display: 'block', overflowWrap: 'anywhere' }}
+        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
       >
-        {category}
-      </Typography>
+        <Typography
+          component="span"
+          variant="subtitle1"
+          sx={{ flexGrow: 1, minWidth: 0, overflowWrap: 'anywhere' }}
+        >
+          {category}
+        </Typography>
+        {/* Made by a refuel (specs/0027 RF-10) */}
+        {expense.refuelId && (
+          <Chip label="Relleno" size="small" variant="outlined" />
+        )}
+      </Box>
       <Typography
         component="span"
         noWrap
