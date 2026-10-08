@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale'
 import { routeName } from 'schemas/rates'
 import type { Trip } from 'schemas/trips'
 import { readTripsInPeriod } from 'services/trips'
+import { useTripsStore } from 'store/trips'
 import { reportError } from 'utils/reportError'
 
 // The trips offered: those started up to 30 days around the expense
@@ -21,6 +22,9 @@ const useTripsNear = (orgId: string, day: string | null) => {
     const date = new Date(`${day}T12:00`)
     readTripsInPeriod(orgId, subDays(date, NEAR_DAYS), addDays(date, NEAR_DAYS))
       .then(page => {
+        // Known by id: the one chosen is found again if the day moves
+        const { remember } = useTripsStore.getState()
+        for (const trip of page.items) remember(trip)
         if (current) setTrips({ day, items: page.items })
       })
       .catch((error: unknown) => {
@@ -44,16 +48,17 @@ export const useTripChoices = (
   extra: readonly (Trip | null)[]
 ) => {
   const near = useTripsNear(orgId, day)
-  const [first, second] = extra
+  const [first, second, third] = extra
   const choices = useMemo(() => {
     const all = new Map<string, Trip>()
-    for (const trip of [...(near ?? []), first, second]) {
+    // The ones just read win over a copy kept from before (audit 0027)
+    for (const trip of [first, second, third, ...(near ?? [])]) {
       if (trip) all.set(trip.id, trip)
     }
     return [...all.values()].sort(
       (a, b) => b.startAt.getTime() - a.startAt.getTime()
     )
-  }, [near, first, second])
+  }, [near, first, second, third])
   return { choices, loading: near === null }
 }
 

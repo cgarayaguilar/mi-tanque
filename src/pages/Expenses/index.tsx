@@ -60,6 +60,7 @@ const useCurrentNames = () => {
     const trailer = byId(trailers)
     return {
       category: (id: string) => category.get(id) ?? null,
+      truck: (id: string) => truck.get(id) ?? null,
       link: (expense: Expense) =>
         expenseLinkText({
           ...expense,
@@ -183,7 +184,13 @@ function ExpensesScreen() {
       trucks: optionsOf(
         expenses.items.flatMap(expense =>
           expense.truckId && expense.truckName
-            ? [[expense.truckId, expense.truckName] as [string, string]]
+            ? [
+                [
+                  expense.truckId,
+                  // The current name, as the card shows it (audit 0027)
+                  names.truck(expense.truckId) ?? expense.truckName,
+                ] as [string, string],
+              ]
             : []
         )
       ),
@@ -346,7 +353,7 @@ function ExpensesScreen() {
         {/* One row of chips (specs/0017), with what the period has */}
         <Box sx={{ mb: 3 }}>
           <FilterBar>
-            {options.categories.length > 1 && (
+            {(options.categories.length > 1 || categoryId !== null) && (
               <FilterChip
                 label="Categoría"
                 allLabel="Todas"
@@ -362,7 +369,7 @@ function ExpensesScreen() {
               value={kind}
               onChange={setKind}
             />
-            {options.trucks.length > 1 && (
+            {(options.trucks.length > 1 || truckId !== null) && (
               <FilterChip
                 label="Camión"
                 allLabel="Todos"

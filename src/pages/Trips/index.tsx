@@ -140,25 +140,42 @@ function TripsScreen() {
   const period = tripsPeriodOf(trips)
   const periodText = formatPeriod(period)
 
-  const options = useMemo(
-    () => ({
+  const { clients, trucks, drivers } = useFleetStore()
+  // The current names, as the cards show them; the saved one if gone
+  // (audit 0027)
+  const options = useMemo(() => {
+    const named =
+      (items: readonly { id: string; name: string }[]) =>
+      ([id, saved]: [string, string]): [string, string] => [
+        id,
+        items.find(item => item.id === id)?.name ?? saved,
+      ]
+    return {
       clients: optionsOf(
-        trips.items.map(trip => [trip.clientId, trip.clientName])
+        trips.items.map(trip =>
+          named(clients)([trip.clientId, trip.clientName])
+        )
       ),
       trucks: optionsOf(
-        trips.items.map(trip => [trip.truckId, trip.truckName])
+        trips.items.map(trip => named(trucks)([trip.truckId, trip.truckName]))
       ),
       drivers: optionsOf(
-        trips.items.flatMap(trip => [
-          [trip.driverId, trip.driverName] as [string, string],
-          ...(trip.secondDriverId && trip.secondDriverName
-            ? [[trip.secondDriverId, trip.secondDriverName] as [string, string]]
-            : []),
-        ])
+        trips.items
+          .flatMap(trip => [
+            [trip.driverId, trip.driverName] as [string, string],
+            ...(trip.secondDriverId && trip.secondDriverName
+              ? [
+                  [trip.secondDriverId, trip.secondDriverName] as [
+                    string,
+                    string,
+                  ],
+                ]
+              : []),
+          ])
+          .map(named(drivers))
       ),
-    }),
-    [trips.items]
-  )
+    }
+  }, [trips.items, clients, trucks, drivers])
 
   const shown = trips.items.filter(
     trip =>
@@ -327,7 +344,7 @@ function TripsScreen() {
               value={status}
               onChange={setStatus}
             />
-            {options.clients.length > 1 && (
+            {(options.clients.length > 1 || clientId !== null) && (
               <FilterChip
                 label="Cliente"
                 allLabel="Todos"
@@ -336,7 +353,7 @@ function TripsScreen() {
                 onChange={setClientId}
               />
             )}
-            {options.trucks.length > 1 && (
+            {(options.trucks.length > 1 || truckId !== null) && (
               <FilterChip
                 label="Camión"
                 allLabel="Todos"
@@ -345,7 +362,7 @@ function TripsScreen() {
                 onChange={setTruckId}
               />
             )}
-            {options.drivers.length > 1 && (
+            {(options.drivers.length > 1 || driverId !== null) && (
               <FilterChip
                 label="Conductor"
                 allLabel="Todos"

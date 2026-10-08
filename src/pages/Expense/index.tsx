@@ -36,6 +36,8 @@ import {
   expenseFormSchema,
   expenseFromForm,
   expenseToForm,
+  TRIP_NOT_AT_HAND,
+  tripIsAtHand,
   type Expense,
   type ExpenseFormValues,
 } from 'schemas/expenses'
@@ -50,6 +52,7 @@ import {
 import { photoUrl } from 'services/fleet'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
+import { useTripsStore } from 'store/trips'
 import {
   recoverFromLostPermission,
   selectActiveRole,
@@ -80,6 +83,8 @@ interface ExpenseFormProps {
   canWrite: boolean
   /** The trip it comes from ("Agregar gasto" on a trip). */
   presetTrip: Trip | null
+  /** Where it goes after saving or deleting. */
+  backTo: string
 }
 
 function ExpenseForm({
@@ -89,10 +94,12 @@ function ExpenseForm({
   currency,
   canWrite,
   presetTrip,
+  backTo,
 }: ExpenseFormProps) {
   const [, navigate] = useLocation()
   const { trucks, trailers, drivers } = useFleetStore()
   const categories = useExpensesStore(state => state.categories)
+  const tripsKnown = useTripsStore(state => state.known)
   const save = useExpensesStore(state => state.save)
   const remove = useExpensesStore(state => state.remove)
   const remember = useExpensesStore(state => state.remember)
@@ -107,6 +114,7 @@ function ExpenseForm({
     handleSubmit,
     control,
     setFocus,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -123,7 +131,12 @@ function ExpenseForm({
   const { choices: tripChoices, loading: tripsLoading } = useTripChoices(
     orgId,
     values.kind === 'trip' ? day : null,
-    [presetTrip, ownTrip.status === 'ready' ? ownTrip.trip : null]
+    [
+      presetTrip,
+      ownTrip.status === 'ready' ? ownTrip.trip : null,
+      // The one chosen stays offered when the date moves away (audit 0027)
+      values.tripId ? (tripsKnown[values.tripId] ?? null) : null,
+    ]
   )
 
   const active = <T extends { id: string; archived: boolean }>(
@@ -140,6 +153,10 @@ function ExpenseForm({
       values.kind === 'trip'
         ? (tripChoices.find(item => item.id === values.tripId) ?? null)
         : null
+    if (!tripIsAtHand(values, trip, expense)) {
+      setError('tripId', { message: TRIP_NOT_AT_HAND }, { shouldFocus: true })
+      return
+    }
     const fields = expenseFromForm(
       values,
       { currency, categories, trucks, trailers, drivers },
@@ -173,7 +190,7 @@ function ExpenseForm({
         description: 'Se subirá cuando tengas señal.',
       }),
     })
-    navigate(presetTrip ? `/viajes/${presetTrip.id}` : '/gastos')
+    navigate(backTo)
   }
 
   const confirmDelete = () => {
@@ -187,7 +204,7 @@ function ExpenseForm({
       })
     })
     sileo.success({ title: 'Gasto borrado' })
-    navigate('/gastos')
+    navigate(backTo)
   }
 
   return (
@@ -377,9 +394,10 @@ function ExpenseScreen() {
   // The new expense's id exists from the moment the form opens (ADR 0003)
   const [newId] = useState(newExpenseId)
   const id = isNew ? newId : (params.id ?? newId)
-  const tripIdParam = isNew
-    ? new URLSearchParams(window.location.search).get('viaje')
-    : null
+  // Opened from a trip: it goes back there (audit 0027); a new one also
+  // comes with that trip chosen
+  const fromTrip = new URLSearchParams(window.location.search).get('viaje')
+  const tripIdParam = isNew ? fromTrip : null
   const orgId = useSessionStore(state => state.organization?.id ?? '')
   const currency = useSessionStore(
     state => state.organization?.defaultCurrency ?? 'USD'
@@ -399,7 +417,7 @@ function ExpenseScreen() {
     void loadCategories(orgId)
   }, [orgId, loadFleet, loadCategories])
 
-  const back = tripIdParam ? `/viajes/${tripIdParam}` : '/gastos'
+  const back = fromTrip ? `/viajes/${fromTrip}` : '/gastos'
   const notFound = (
     <EmptyState
       icon={<SearchOffIcon />}
@@ -415,15 +433,41 @@ function ExpenseScreen() {
   )
 
   const body = () => {
-    if (isNew && !canWrite) return notFound
+    if (isNew && !canWrite) {
+      return (
+        <EmptyState
+          icon={<SearchOffIcon />}
+          title="No puedes agregar gastos"
+          description="Tu rol en la organización es de solo lectura."
+          action={{
+            label: 'Ver gastos',
+            onClick: () => {
+              navigate('/gastos')
+            },
+          }}
+        />
+      )
+    }
     if (!isNew && loaded.status === 'missing') return notFound
-    if (!isNew && loaded.status === 'error') {
+    if (
+      (!isNew && loaded.status === 'error') ||
+      fleetStatus === 'error' ||
+      categoriesStatus === 'error'
+    ) {
       return (
         <EmptyState
           icon={<CloudOffIcon />}
           title="No pudimos cargar el gasto"
           description={RETRY_HINT}
-          action={{ label: 'Reintentar', onClick: retry }}
+          action={{
+            label: 'Reintentar',
+            onClick: () => {
+              if (loaded.status === 'error') retry()
+              // Without them the form never shows (audit 0027)
+              if (fleetStatus === 'error') void loadFleet(orgId)
+              if (categoriesStatus === 'error') void loadCategories(orgId)
+            },
+          }}
         />
       )
     }
@@ -447,6 +491,7 @@ function ExpenseScreen() {
           expense={{ ...loaded.expense, refuelId: loaded.expense.refuelId }}
           orgId={orgId}
           canWrite={canWrite}
+          backTo={back}
         />
       )
     }
@@ -459,6 +504,7 @@ function ExpenseScreen() {
         currency={currency}
         canWrite={canWrite}
         presetTrip={presetTrip.status === 'ready' ? presetTrip.trip : null}
+        backTo={back}
       />
     )
   }
@@ -472,7 +518,7 @@ function ExpenseScreen() {
         }}
         sx={{ ml: -2, mb: 2 }}
       >
-        {tripIdParam ? 'Viaje' : 'Gastos'}
+        {fromTrip ? 'Viaje' : 'Gastos'}
       </Button>
       <Typography variant="h3" component="h1" sx={{ mb: 6 }}>
         {isNew ? 'Nuevo gasto' : 'Gasto'}

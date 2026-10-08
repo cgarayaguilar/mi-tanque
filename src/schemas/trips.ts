@@ -9,6 +9,7 @@ import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
 import { formatEditable } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { tripPeriod, type TripPeriod } from 'utils/tripPeriod'
+import { squeezeSpaces } from 'utils/foldText'
 
 /** Mirrors the rules of `trips` (backend specs/0025 RF-1). */
 export const TRIP_LIMITS = {
@@ -90,14 +91,31 @@ export const tripIncome = (trip: Pick<Trip, 'price' | 'extras'>) =>
 /** Stored with 2 decimals, like every amount (specs/0012). */
 export const toCents = (value: number) => Math.round(value * 100) / 100
 
+/** The rules take dates from 2020 on (backend specs/0025, 0026). */
+export const EARLIEST_DATE = new Date(2020, 0, 1)
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** The rules take a trip's start up to 366 days ahead (specs/0025 RF-2). */
+export const tripStartIssue = (
+  start: Date,
+  now = new Date()
+): string | null => {
+  if (start < EARLIEST_DATE) return 'Escribe una fecha desde 2020'
+  if (start.getTime() > now.getTime() + 365 * DAY_MS)
+    return 'El inicio no puede ser dentro de más de un año'
+  return null
+}
+
 /** The rules take an expense up to a day ahead (backend specs/0026 RF-2). */
 export const isTooLate = (date: Date, now = new Date()) =>
-  date.getTime() > now.getTime() + 24 * 60 * 60 * 1000
+  date.getTime() > now.getTime() + DAY_MS
 
 /** What is wrong with an expense's typed date, or null (specs/0026). */
 export const expenseDateIssue = (value: string): string | null => {
   const date = fromDateTimeValue(value)
   if (!date) return 'Escribe la fecha y hora'
+  if (date < EARLIEST_DATE) return 'Escribe una fecha desde 2020'
   if (isTooLate(date)) return 'La fecha no puede ser futura'
   return null
 }
@@ -196,6 +214,8 @@ export const tripFormSchema = z
         issue(['secondDriverId'], 'Elige otro conductor')
       const start = fromDateTimeValue(values.startAt)
       if (!start) issue(['startAt'], 'Escribe la fecha y hora de inicio')
+      const startIssue = start ? tripStartIssue(start) : null
+      if (startIssue) issue(['startAt'], startIssue)
       const end = values.endAt ? fromDateTimeValue(values.endAt) : null
       if (values.endAt && !end)
         issue(['endAt'], 'Escribe una fecha y hora válidas')
@@ -258,8 +278,8 @@ export const tripFromForm = (
     ...tripPeriod(startAt),
     mode: rate ? ('rate' as const) : ('manual' as const),
     rateId: rate?.id ?? null,
-    origin: rate?.origin ?? values.origin.trim(),
-    destination: rate?.destination ?? values.destination.trim(),
+    origin: rate?.origin ?? squeezeSpaces(values.origin),
+    destination: rate?.destination ?? squeezeSpaces(values.destination),
     price: rate?.price ?? toCents(parseDecimal(values.price)),
     extras: values.extras.map(extra => ({
       description: extra.description.trim(),

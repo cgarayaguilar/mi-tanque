@@ -158,6 +158,33 @@ export const tripLink = (trip: Trip) => ({
   trailerName: trip.trailerName,
 })
 
+/** The link an expense has now. */
+const linkOf = (expense: Expense) => ({
+  kind: expense.kind,
+  tripId: expense.tripId,
+  tripRoute: expense.tripRoute,
+  truckId: expense.truckId,
+  truckName: expense.truckName,
+  trailerId: expense.trailerId,
+  trailerName: expense.trailerName,
+})
+
+/**
+ * Whether a trip's expense can be saved: its trip is at hand, or it is the
+ * one it already had (audit 0027).
+ */
+export const tripIsAtHand = (
+  values: Pick<ExpenseFormValues, 'kind' | 'tripId'>,
+  trip: Trip | null,
+  previous: Pick<Expense, 'kind' | 'tripId'> | null
+) =>
+  values.kind !== 'trip' ||
+  trip !== null ||
+  (previous?.kind === 'trip' && previous.tripId === values.tripId)
+
+export const TRIP_NOT_AT_HAND =
+  'Espera a que carguen los viajes y vuelve a elegirlo'
+
 const NO_LINK = {
   tripId: null,
   tripRoute: null,
@@ -178,29 +205,38 @@ export const expenseFromForm = (
   trip: Trip | null,
   previous: Expense | null = null
 ) => {
+  // A trip's expense whose trip is not at hand (still reading, offline)
+  // keeps the link it has: it never falls into another kind (audit 0027)
+  const keptTrip =
+    values.kind === 'trip' &&
+    !trip &&
+    previous?.kind === 'trip' &&
+    previous.tripId === values.tripId
   const link =
     values.kind === 'trip' && trip
       ? tripLink(trip)
-      : values.kind === 'truck'
-        ? {
-            ...NO_LINK,
-            kind: 'truck' as const,
-            truckId: values.truckId,
-            truckName: nameOf(context.trucks, values.truckId) ?? '',
-            ...(previous?.kind === 'truck' &&
-              previous.truckId === values.truckId && {
-                trailerId: previous.trailerId,
-                trailerName: previous.trailerName,
-              }),
-          }
-        : values.kind === 'trailer'
+      : keptTrip
+        ? linkOf(previous)
+        : values.kind === 'truck'
           ? {
               ...NO_LINK,
-              kind: 'trailer' as const,
-              trailerId: values.trailerId,
-              trailerName: nameOf(context.trailers, values.trailerId) ?? '',
+              kind: 'truck' as const,
+              truckId: values.truckId,
+              truckName: nameOf(context.trucks, values.truckId) ?? '',
+              ...(previous?.kind === 'truck' &&
+                previous.truckId === values.truckId && {
+                  trailerId: previous.trailerId,
+                  trailerName: previous.trailerName,
+                }),
             }
-          : { ...NO_LINK, kind: 'general' as const }
+          : values.kind === 'trailer'
+            ? {
+                ...NO_LINK,
+                kind: 'trailer' as const,
+                trailerId: values.trailerId,
+                trailerName: nameOf(context.trailers, values.trailerId) ?? '',
+              }
+            : { ...NO_LINK, kind: 'general' as const }
   const driverId = values.driverId || null
   return {
     takenAt: fromDateTimeValue(values.takenAt) ?? new Date(),
@@ -236,14 +272,33 @@ export const expenseToRow = (expense: Expense): TripExpenseRow => ({
   description: expense.description ?? '',
 })
 
+// What follows the trip: the backend moves it when the trip changes
+const LINK_KEYS = new Set<string>([
+  'kind',
+  'tripId',
+  'tripRoute',
+  'truckId',
+  'truckName',
+  'trailerId',
+  'trailerName',
+])
+
+/**
+ * Whether a row is as it was. Its link does not count: when the trip
+ * changes truck or route the backend moves its expenses, so the batch
+ * carries only the rows the user changed and stays within the rules' 20
+ * reads (audit 0027).
+ */
 const sameFields = (expense: Expense, fields: ExpenseFields) =>
-  (Object.keys(fields) as (keyof ExpenseFields)[]).every(key => {
-    const before = expense[key]
-    const after = fields[key]
-    return before instanceof Date && after instanceof Date
-      ? before.getTime() === after.getTime()
-      : before === after
-  })
+  (Object.keys(fields) as (keyof ExpenseFields)[])
+    .filter(key => !LINK_KEYS.has(key))
+    .every(key => {
+      const before = expense[key]
+      const after = fields[key]
+      return before instanceof Date && after instanceof Date
+        ? before.getTime() === after.getTime()
+        : before === after
+    })
 
 /**
  * What saving a trip writes of its expenses (RF-12): the new rows, the
@@ -399,27 +454,32 @@ export const refuelExpenseChanges = (
   values: RefuelExpenseFormValues,
   refuel: RefuelOfExpense,
   trip: Trip | null,
-  equipmentName: string | null
+  equipmentName: string | null,
+  previous: Expense | null = null
 ) => {
   const { kind, id } = refuel.equipment
   const link =
     values.kind === 'trip' && trip
       ? tripLink(trip)
-      : kind === 'truck' && id
-        ? {
-            ...NO_LINK,
-            kind: 'truck' as const,
-            truckId: id,
-            truckName: equipmentName ?? 'Camión',
-          }
-        : kind === 'trailer' && id
+      : values.kind === 'trip' &&
+          previous?.kind === 'trip' &&
+          previous.tripId === values.tripId
+        ? linkOf(previous)
+        : kind === 'truck' && id
           ? {
               ...NO_LINK,
-              kind: 'trailer' as const,
-              trailerId: id,
-              trailerName: equipmentName ?? 'Remolque',
+              kind: 'truck' as const,
+              truckId: id,
+              truckName: equipmentName ?? 'Camión',
             }
-          : { ...NO_LINK, kind: 'general' as const }
+          : kind === 'trailer' && id
+            ? {
+                ...NO_LINK,
+                kind: 'trailer' as const,
+                trailerId: id,
+                trailerName: equipmentName ?? 'Remolque',
+              }
+            : { ...NO_LINK, kind: 'general' as const }
   return { ...link, description: values.description.trim() || null }
 }
 

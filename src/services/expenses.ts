@@ -62,6 +62,9 @@ const categorySchema = z.object({
   archived: z.boolean(),
 })
 
+/** The error of `readCategories` offline with nothing in the cache. */
+export const CATEGORIES_NOT_READ = 'expense-categories-not-read'
+
 export const readCategories = async (
   orgId: string
 ): Promise<ExpenseCategory[]> => {
@@ -76,6 +79,11 @@ export const readCategories = async (
     ),
     'readExpenseCategories'
   )
+  // Offline and never read: none in the cache is not none on the server,
+  // and seeding then would overwrite them (audit 0027)
+  if (snapshot.empty && snapshot.metadata.fromCache) {
+    throw new Error(CATEGORIES_NOT_READ)
+  }
   return snapshot.docs.flatMap(document => {
     const parsed = categorySchema.safeParse(document.data())
     if (!parsed.success) {

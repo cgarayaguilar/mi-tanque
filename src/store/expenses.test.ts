@@ -83,3 +83,30 @@ test("a trip's saved and removed expenses update the period and what is known", 
   expect(state.items.map(item => item.id).sort()).toEqual(['b', 'c'])
   expect(Object.keys(state.known).sort()).toEqual(['b', 'c'])
 })
+
+// Audit 0027: offline with nothing cached, nothing is seeded
+test('offline the first time: an error to retry, not a seed', async () => {
+  api.readCategories.mockRejectedValue(new Error('expense-categories-not-read'))
+  await useExpensesStore.getState().loadCategories(ORG_ID)
+
+  expect(api.seedCategories).not.toHaveBeenCalled()
+  expect(useExpensesStore.getState().categoriesStatus).toBe('error')
+})
+
+// Audit 0027: a trip's expense moved or deleted elsewhere leaves it here too
+test("a trip's expenses as read replace the ones known of that trip", async () => {
+  api.readExpensesInPeriod.mockResolvedValue({
+    items: [expense({ id: 'a' }), expense({ id: 'b' })],
+    truncated: false,
+  })
+  await useExpensesStore.getState().load(ORG_ID)
+
+  useExpensesStore
+    .getState()
+    .replaceTripExpenses('trip-1', [expense({ id: 'b', amount: 99 })])
+
+  const state = useExpensesStore.getState()
+  expect(Object.keys(state.known)).toEqual(['b'])
+  expect(state.known.b?.amount).toBe(99)
+  expect(state.items.map(item => item.id)).toEqual(['b'])
+})

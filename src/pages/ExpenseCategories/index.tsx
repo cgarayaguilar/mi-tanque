@@ -38,6 +38,7 @@ import { radius } from 'theme/tokens'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
+import { squeezeSpaces } from 'utils/foldText'
 
 const failed = (operation: string, title: string) => (error: unknown) => {
   reportError(error, { operation })
@@ -80,7 +81,7 @@ function CategoryDialog({
       )
       return
     }
-    const trimmed = name.trim()
+    const trimmed = squeezeSpaces(name)
     saveCategory(
       category
         ? { ...category, name: trimmed }

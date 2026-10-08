@@ -17,7 +17,9 @@ export const useTripExpenses = (
   tripId: string | null
 ): [TripExpensesStatus, Expense[], () => void] => {
   const known = useExpensesStore(state => state.known)
-  const remember = useExpensesStore(state => state.remember)
+  const replaceTripExpenses = useExpensesStore(
+    state => state.replaceTripExpenses
+  )
   const [attempt, setAttempt] = useState(0)
   const [read, setRead] = useState<{
     tripId: string
@@ -30,7 +32,7 @@ export const useTripExpenses = (
     readTripExpenses(orgId, tripId)
       .then(expenses => {
         if (!current) return
-        remember(expenses)
+        replaceTripExpenses(tripId, expenses)
         setRead({ tripId, status: 'ready' })
       })
       .catch((error: unknown) => {
@@ -40,7 +42,7 @@ export const useTripExpenses = (
     return () => {
       current = false
     }
-  }, [orgId, tripId, remember, attempt])
+  }, [orgId, tripId, replaceTripExpenses, attempt])
 
   const expenses = useMemo(
     () =>

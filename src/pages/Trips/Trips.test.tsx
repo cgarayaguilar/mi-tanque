@@ -554,6 +554,53 @@ describe('its expenses in the form', () => {
     })
   })
 
+  // Audit 0027 (0025 RF-9): Manual keeps the chosen rate's values
+  test('Manual takes the values of the rate chosen last', async () => {
+    renderAt('/viajes/nuevo')
+    await choose('Cliente', 'Transportes Pérez')
+    await choose('Tarifa', 'Managua - San José - C$25,000.00')
+    await choose('¿Cómo se calcula el precio?', 'Manual')
+    expect(screen.getByLabelText('Origen')).toHaveValue('Managua')
+    await choose('¿Cómo se calcula el precio?', 'Desde una tarifa')
+    await choose('Tarifa', 'León - Managua - C$9,000.00 · Fletes Ríos')
+    await choose('¿Cómo se calcula el precio?', 'Manual')
+    expect(screen.getByLabelText('Origen')).toHaveValue('León')
+    expect(screen.getByLabelText('Precio')).toHaveValue('9,000')
+  })
+
+  // Audit 0027: "Sin remolque" chosen is not replaced by the truck's
+  test('a trailer left out stays out when the truck is chosen', async () => {
+    renderAt('/viajes/nuevo')
+    // Chosen and taken back out: a choice, unlike the field never touched
+    await choose('Remolque (opcional)', 'Caja 7')
+    await choose('Remolque (opcional)', 'Sin remolque')
+    await choose('Camión', 'Unidad 12')
+    // The truck's hitched trailer is Caja 7: it is not put back
+    expect(
+      screen.getByRole('combobox', { name: 'Remolque (opcional)' })
+    ).not.toHaveValue('Caja 7')
+  })
+
+  // Audit 0027: an edited trip with its rate shows the copy it saves
+  test("editing with the same rate shows the trip's copy, not the rate's new price", async () => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    fleetApi.readFleet.mockResolvedValue({
+      clients: [client()],
+      trucks: [truck()],
+      trailers: [trailer()],
+      tanks: [],
+      drivers: [driver()],
+      rates: [
+        rate({ price: 30000, label: 'Managua - San José - C$30,000.00' }),
+      ],
+    })
+    renderAt('/viajes/trip-1/editar')
+    expect(
+      await screen.findByText('Managua → San José · C$25,000.00 NIO')
+    ).toBeInTheDocument()
+    expect(screen.getByText('Ingresos: C$27,500.00 NIO')).toBeInTheDocument()
+  })
+
   test('a row needs its category and amount', async () => {
     renderAt('/viajes/nuevo')
     fireEvent.click(

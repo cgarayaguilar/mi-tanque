@@ -52,6 +52,7 @@ import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { useTripsStore } from 'store/trips'
 import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
 import { currencySymbol, moneyTotal } from 'utils/formatMoney'
+import { formatEditable } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
 
@@ -132,6 +133,9 @@ export default function TripForm({
     Boolean(trip?.secondDriverId)
   )
   const [newClient, setNewClient] = useState(false)
+  // "Sin remolque" chosen is a choice too: the truck does not replace it
+  // (audit 0027); an edited trip already has its own
+  const [trailerChosen, setTrailerChosen] = useState(trip !== null)
   // Said when a rate moves the trip to its client (RF-9)
   const [clientNotice, setClientNotice] = useState<string | null>(null)
 
@@ -153,9 +157,25 @@ export default function TripForm({
         ? 1
         : 2
   const usableRates = active(rates, [trip?.rateId])
-    .filter(rate => rate.currency === currency || rate.id === trip?.rateId)
+    // In the trip's currency: an old trip keeps its own (audit 0027)
+    .filter(
+      rate =>
+        rate.currency === (trip?.currency ?? currency) ||
+        rate.id === trip?.rateId
+    )
     .sort((a, b) => rateRank(a.clientId) - rateRank(b.clientId))
-  const chosenRate = rates.find(rate => rate.id === values.rateId) ?? null
+  const currentRate = rates.find(rate => rate.id === values.rateId) ?? null
+  // Kept rate: the trip shows and saves the copy it has, even if the rate
+  // changed since (0025 RF-1; audit 0027)
+  const chosenRate =
+    trip?.mode === 'rate' && trip.rateId === values.rateId
+      ? {
+          origin: trip.origin,
+          destination: trip.destination,
+          price: trip.price,
+          currency: trip.currency,
+        }
+      : currentRate
   const places = knownPlaces([...rates, ...Object.values(tripsSeen)])
 
   const price =
@@ -205,12 +225,12 @@ export default function TripForm({
   }
 
   const chooseMode = (mode: string) => {
-    // From a rate to manual, its values stay to be edited (RF-9)
+    // From a rate to manual, the chosen rate's values stay to be edited
+    // (RF-9): always its own, not those of an earlier one (audit 0027)
     if (mode !== 'manual' || !chosenRate) return
-    if (!getValues('origin')) setValue('origin', chosenRate.origin)
-    if (!getValues('destination'))
-      setValue('destination', chosenRate.destination)
-    if (!getValues('price')) setValue('price', String(chosenRate.price))
+    setValue('origin', chosenRate.origin)
+    setValue('destination', chosenRate.destination)
+    setValue('price', formatEditable(chosenRate.price))
   }
 
   // The truck brings its hitched trailer and the driver linked to its
@@ -218,7 +238,7 @@ export default function TripForm({
   const chooseTruck = (truckId: string) => {
     const truck = trucks.find(item => item.id === truckId)
     if (!truck) return
-    if (!getValues('trailerId')) {
+    if (!trailerChosen && !getValues('trailerId')) {
       const trailer = trailers.find(
         item => !item.archived && item.hitchedTruckId === truck.id
       )
@@ -261,7 +281,14 @@ export default function TripForm({
       values.expenses,
       saved,
       tripExpenses,
-      { currency, categories, trucks, trailers, drivers },
+      // New rows in the trip's currency, which its total adds up (RF-3)
+      {
+        currency: trip?.currency ?? currency,
+        categories,
+        trucks,
+        trailers,
+        drivers,
+      },
       uid
     )
     applyTripExpenses(expenses.saved, expenses.remove)
@@ -515,6 +542,9 @@ export default function TripForm({
           options={trailerOptions}
           control={control}
           name="trailerId"
+          onChange={() => {
+            setTrailerChosen(true)
+          }}
         />
         <AutocompleteField
           id="tripDriver"
@@ -639,8 +669,9 @@ export default function TripForm({
                     component="p"
                     sx={{ color: 'text.secondary' }}
                   >
-                    {expense.description ?? 'De un relleno'} · se cambia en el
-                    relleno
+                    {expense.description
+                      ? `De un relleno: ${expense.description}. Se cambia en el relleno.`
+                      : 'De un relleno. Se cambia en el relleno.'}
                   </Typography>
                 </Box>
               ))}

@@ -10,8 +10,10 @@ import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import CloudOffIcon from '@mui/icons-material/CloudOff'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons from 'components/ChoiceButtons'
+import EmptyState from 'components/EmptyState'
 import PhotoField from 'components/PhotoField'
 import TextField from 'components/TextField'
 import { useTrip } from 'hooks/useTrip'
@@ -22,6 +24,8 @@ import {
   refuelExpenseChanges,
   refuelExpenseFormSchema,
   tripCarriesRefuel,
+  TRIP_NOT_AT_HAND,
+  tripIsAtHand,
   type Expense,
   type RefuelExpenseFormValues,
   type RefuelOfExpense,
@@ -34,6 +38,7 @@ import { recoverFromLostPermission } from 'store/session'
 import { formatMeasurementDate } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
 import { reportError } from 'utils/reportError'
+import { RETRY_HINT } from 'utils/withTimeout'
 import { tripOption, useTripChoices } from './useTripChoices'
 
 const FORM_ID = 'refuel-expense-form'
@@ -44,9 +49,11 @@ type RefuelState =
   | { status: 'error' }
 
 /** The refuel behind the expense, read once. */
-const useRefuelOfExpense = (refuelId: string): RefuelState => {
+const useRefuelOfExpense = (refuelId: string): [RefuelState, () => void] => {
+  const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<{
     refuelId: string
+    attempt: number
     value: RefuelState
   } | null>(null)
   useEffect(() => {
@@ -56,18 +63,26 @@ const useRefuelOfExpense = (refuelId: string): RefuelState => {
         if (!current) return
         setState({
           refuelId,
+          attempt,
           value: refuel ? { status: 'ready', refuel } : { status: 'error' },
         })
       })
       .catch((error: unknown) => {
         reportError(error, { operation: 'readRefuelOfExpense' })
-        if (current) setState({ refuelId, value: { status: 'error' } })
+        if (current) setState({ refuelId, attempt, value: { status: 'error' } })
       })
     return () => {
       current = false
     }
-  }, [refuelId])
-  return state?.refuelId === refuelId ? state.value : { status: 'loading' }
+  }, [refuelId, attempt])
+  return [
+    state?.refuelId === refuelId && state.attempt === attempt
+      ? state.value
+      : { status: 'loading' },
+    () => {
+      setAttempt(value => value + 1)
+    },
+  ]
 }
 
 function Line({ label, children }: { label: string; children: ReactNode }) {
@@ -91,6 +106,8 @@ interface RefuelExpenseFormProps {
   expense: Expense & { refuelId: string }
   orgId: string
   canWrite: boolean
+  /** Where it goes after saving. */
+  backTo: string
 }
 
 /**
@@ -102,17 +119,19 @@ export default function RefuelExpenseForm({
   expense,
   orgId,
   canWrite,
+  backTo,
 }: RefuelExpenseFormProps) {
   const [, navigate] = useLocation()
   const { trucks, trailers } = useFleetStore()
   const categories = useExpensesStore(state => state.categories)
   const save = useExpensesStore(state => state.save)
-  const loaded = useRefuelOfExpense(expense.refuelId)
+  const [loaded, retryRefuel] = useRefuelOfExpense(expense.refuelId)
   const refuel = loaded.status === 'ready' ? loaded.refuel : null
   const {
     register,
     handleSubmit,
     control,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<RefuelExpenseFormValues>({
     resolver: zodResolver(refuelExpenseFormSchema),
@@ -139,7 +158,19 @@ export default function RefuelExpenseForm({
     )
   }
 
-  const equipment = refuel?.equipment ?? { kind: 'none' as const, id: null }
+  // Without its refuel it is not known what it can belong to (audit 0027)
+  if (loaded.status === 'error' || !refuel) {
+    return (
+      <EmptyState
+        icon={<CloudOffIcon />}
+        title="No pudimos cargar el relleno de este gasto"
+        description={RETRY_HINT}
+        action={{ label: 'Reintentar', onClick: retryRefuel }}
+      />
+    )
+  }
+
+  const equipment = refuel.equipment
   const baseKind = refuelBaseKind(equipment)
   // Only the trips that carry its truck or trailer (RF-6)
   const trips = choices.filter(trip => tripCarriesRefuel(trip, equipment))
@@ -153,12 +184,21 @@ export default function RefuelExpenseForm({
     expense.categoryName
 
   const onSubmit = (values: RefuelExpenseFormValues) => {
-    if (!refuel) return
     const trip =
       values.kind === 'trip'
         ? (trips.find(item => item.id === values.tripId) ?? null)
         : null
-    const changes = refuelExpenseChanges(values, refuel, trip, equipmentName)
+    if (!tripIsAtHand(values, trip, expense)) {
+      setError('tripId', { message: TRIP_NOT_AT_HAND }, { shouldFocus: true })
+      return
+    }
+    const changes = refuelExpenseChanges(
+      values,
+      refuel,
+      trip,
+      equipmentName,
+      expense
+    )
     save({ ...expense, ...changes }, () =>
       updateRefuelExpense(expense.id, changes)
     ).catch((error: unknown) => {
@@ -175,15 +215,14 @@ export default function RefuelExpenseForm({
         description: 'Se subirá cuando tengas señal.',
       }),
     })
-    navigate('/gastos')
+    navigate(backTo)
   }
 
   return (
     <>
       <Alert severity="info" sx={{ mb: 6 }}>
-        Este gasto es de un relleno
-        {refuel ? ` de ${refuel.tankName}` : ''}. El monto, la fecha y la
-        categoría se cambian en el relleno, en Historial.
+        Este gasto es de un relleno de {refuel.tankName}. El monto, la fecha y
+        la categoría se cambian en el relleno, en Historial.
       </Alert>
       <Stack spacing={4} sx={{ mb: 6 }}>
         <Line label="Fecha y hora">
@@ -205,7 +244,7 @@ export default function RefuelExpenseForm({
       >
         <Stack spacing={5}>
           {/* A tank without equipment: its refuel stays general */}
-          {baseKind === 'general' || !refuel ? (
+          {baseKind === 'general' ? (
             <Line label="Corresponde a">{EXPENSE_KIND_LABELS.general}</Line>
           ) : (
             <ChoiceButtons
@@ -241,7 +280,7 @@ export default function RefuelExpenseForm({
             error={errors.description?.message}
             registration={register('description')}
           />
-          {canWrite && refuel && (
+          {canWrite && (
             <Button
               type="submit"
               variant="contained"

@@ -13,6 +13,7 @@ import {
   refuelBaseKind,
   refuelExpenseChanges,
   tripCarriesRefuel,
+  tripIsAtHand,
   totalsByCategory,
   totalsByCurrency,
   tripExpenseChanges,
@@ -203,7 +204,8 @@ describe("a trip's rows", () => {
   test('new rows are created, changed ones updated, missing ones removed', () => {
     const moved = trip({ truckId: 'truck-2', truckName: 'Unidad 15' })
     const rows = [
-      // Unchanged, but its trip changed truck: it follows the trip
+      // Unchanged, but its trip changed truck: the backend moves it, the
+      // batch does not carry it (audit 0027)
       expenseToRow(first),
       { ...expenseToRow(second), amount: '1,500' },
       {
@@ -231,11 +233,10 @@ describe("a trip's rows", () => {
         },
       },
     ])
-    expect(changes.update.map(item => item.id)).toEqual([
-      'expense-1',
-      'expense-2',
-    ])
-    expect(changes.update[1]?.fields).toMatchObject({
+    expect(changes.update.map(item => item.id)).toEqual(['expense-2'])
+    // A row the user changed goes with the trip as it will be
+    expect(changes.update[0]?.fields).toMatchObject({ truckId: 'truck-2' })
+    expect(changes.update[0]?.fields).toMatchObject({
       amount: 1500,
       driverId: 'driver-1',
       driverName: 'Pedro Ruiz',
@@ -350,5 +351,55 @@ describe("a refuel's expense", () => {
       trailerName: 'Caja 7',
       description: null,
     })
+  })
+})
+
+// Audit 0027: a trip's expense never falls into another kind
+describe('a trip not at hand', () => {
+  const ofTrip = expense()
+  const values = { ...expenseToForm(ofTrip), amount: '2,000' }
+
+  test('the expense keeps the trip it has', () => {
+    expect(tripIsAtHand(values, null, ofTrip)).toBe(true)
+    expect(expenseFromForm(values, context, null, ofTrip)).toMatchObject({
+      kind: 'trip',
+      tripId: 'trip-1',
+      tripRoute: 'Managua → San José',
+      truckId: 'truck-1',
+      amount: 2000,
+    })
+  })
+
+  test('another trip, or a new expense, waits for it', () => {
+    expect(tripIsAtHand({ ...values, tripId: 'trip-9' }, null, ofTrip)).toBe(
+      false
+    )
+    expect(tripIsAtHand(values, null, null)).toBe(false)
+    expect(tripIsAtHand({ ...values, kind: 'truck' }, null, null)).toBe(true)
+  })
+
+  test("a refuel's keeps its trip too", () => {
+    expect(
+      refuelExpenseChanges(
+        { kind: 'trip', tripId: 'trip-1', description: 'Diésel' },
+        {
+          tankName: 'Tanque',
+          equipment: { kind: 'truck', id: 'truck-1' },
+        },
+        null,
+        'Unidad 12',
+        expense({ refuelId: 'r1' })
+      )
+    ).toMatchObject({ kind: 'trip', tripId: 'trip-1', description: 'Diésel' })
+  })
+})
+
+// Audit 0027: the rules take expenses from 2020 on
+test('a date before 2020 is refused before saving', () => {
+  expect(issues({ ...valid, takenAt: '2019-12-31T10:00' })).toEqual({
+    takenAt: 'Escribe una fecha desde 2020',
+  })
+  expect(issues({ ...valid, takenAt: '0026-10-08T10:00' })).toEqual({
+    takenAt: 'Escribe una fecha desde 2020',
   })
 })

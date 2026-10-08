@@ -37,6 +37,11 @@ interface ExpensesState {
   load: (orgId: string) => Promise<void>
   choosePeriod: (period: Period) => Promise<void>
   remember: (expenses: Expense[]) => void
+  /**
+   * A trip's expenses as just read: the ones that left it (moved or deleted
+   * elsewhere, or by the backend) go too (audit 0027).
+   */
+  replaceTripExpenses: (tripId: string, expenses: Expense[]) => void
   /** Shows a saved expense at once; the write is the caller's (ADR 0003). */
   save: (expense: Expense, write: () => Promise<void>) => Promise<void>
   remove: (id: string, write: () => Promise<void>) => Promise<void>
@@ -126,7 +131,13 @@ export const useExpensesStore = create<ExpensesState>()((set, get) => {
       })
     } catch (error) {
       if (request !== latestCategories) return
-      reportError(error, { operation: 'loadExpenseCategories' })
+      // Offline the first time: not a fault, the retry hint covers it
+      if (
+        !(error instanceof Error) ||
+        error.message !== 'expense-categories-not-read'
+      ) {
+        reportError(error, { operation: 'loadExpenseCategories' })
+      }
       set({ categoriesStatus: 'error' })
     }
   }
@@ -156,6 +167,21 @@ export const useExpensesStore = create<ExpensesState>()((set, get) => {
         status: 'idle',
       })
       await fetchPeriod()
+    },
+
+    replaceTripExpenses: (tripId, expenses) => {
+      const read = new Set(expenses.map(item => item.id))
+      const gone = (item: Expense) =>
+        item.tripId === tripId && !read.has(item.id)
+      set(state => ({
+        items: state.items.filter(item => !gone(item)),
+        known: {
+          ...Object.fromEntries(
+            Object.entries(state.known).filter(([, item]) => !gone(item))
+          ),
+          ...Object.fromEntries(expenses.map(item => [item.id, item])),
+        },
+      }))
     },
 
     remember: expenses => {

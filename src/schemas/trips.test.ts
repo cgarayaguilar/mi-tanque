@@ -3,6 +3,7 @@ import {
   tripFormSchema,
   tripFromForm,
   tripIncome,
+  tripStartIssue,
   tripToForm,
   type TripContext,
   type TripFormValues,
@@ -188,4 +189,37 @@ describe('the fields written', () => {
     expect(tripIncome(trip())).toBe(27500)
     expect(tripIncome(trip({ extras: [] }))).toBe(25000)
   })
+})
+
+// Audit 0027: the rules take a start from 2020 to a year ahead
+test("a trip's start within the rules' bounds", () => {
+  const now = new Date(2026, 9, 8, 12)
+  expect(tripStartIssue(new Date(2019, 11, 31), now)).toBe(
+    'Escribe una fecha desde 2020'
+  )
+  expect(tripStartIssue(new Date(2027, 9, 9), now)).toBe(
+    'El inicio no puede ser dentro de más de un año'
+  )
+  expect(tripStartIssue(new Date(2027, 9, 1), now)).toBeNull()
+  expect(
+    tripFormSchema.safeParse({ ...fromRate, startAt: '0026-10-08T10:00' })
+      .success
+  ).toBe(false)
+})
+
+// Audit 0027: doubled spaces are not saved
+test('places are saved without doubled spaces', () => {
+  expect(
+    tripFromForm(
+      {
+        ...fromRate,
+        mode: 'manual',
+        rateId: '',
+        origin: '  León   Viejo ',
+        destination: 'Managua',
+        price: '9000',
+      },
+      context
+    )
+  ).toMatchObject({ origin: 'León Viejo' })
 })

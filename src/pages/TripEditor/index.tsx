@@ -83,7 +83,8 @@ function TripEditorScreen() {
     if (
       (!isNew && loaded.status === 'error') ||
       expensesStatus === 'error' ||
-      categoriesStatus === 'error'
+      categoriesStatus === 'error' ||
+      fleetStatus === 'error'
     ) {
       return (
         <EmptyState
@@ -96,6 +97,8 @@ function TripEditorScreen() {
               if (loaded.status === 'error') retry()
               if (expensesStatus === 'error') retryExpenses()
               if (categoriesStatus === 'error') void loadCategories(orgId)
+              // Without it the form never shows (audit 0027)
+              if (fleetStatus === 'error') void loadFleet(orgId)
             },
           }}
         />

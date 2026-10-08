@@ -195,13 +195,17 @@ function TripDetails({ trip }: { trip: Trip }) {
       })
     })
     // Its expenses stay with its truck (RF-6): the backend moves them
+    // A refuel's goes back to its own truck, trailer or general: the
+    // backend knows which (specs/0027 RF-5)
     applyTripExpenses(
-      expenses.map(expense => ({
-        ...expense,
-        kind: 'truck',
-        tripId: null,
-        tripRoute: null,
-      })),
+      expenses
+        .filter(expense => expense.refuelId === null)
+        .map(expense => ({
+          ...expense,
+          kind: 'truck',
+          tripId: null,
+          tripRoute: null,
+        })),
       []
     )
     sileo.success({ title: 'Viaje borrado' })
@@ -344,7 +348,7 @@ function TripDetails({ trip }: { trip: Trip }) {
                           expense.categoryName
                         }
                         onClick={() => {
-                          navigate(`/gastos/${expense.id}`)
+                          navigate(`/gastos/${expense.id}?viaje=${trip.id}`)
                         }}
                       />
                     </li>
@@ -446,13 +450,16 @@ function TripDetails({ trip }: { trip: Trip }) {
         open={confirming}
         title={`¿Borrar el viaje ${route}?`}
         description={
-          expenses.length === 0
-            ? 'No se puede deshacer.'
-            : `${
-                expenses.length === 1
-                  ? 'Su gasto quedará como gasto'
-                  : `Sus ${String(expenses.length)} gastos quedarán como gastos`
-              } del camión ${truckName}. No se puede deshacer.`
+          // Not read yet, but it has some (its total): still said
+          expensesStatus !== 'ready' && trip.expensesTotal > 0
+            ? `Sus gastos quedarán como gastos del camión ${truckName}. No se puede deshacer.`
+            : expenses.length === 0
+              ? 'No se puede deshacer.'
+              : `${
+                  expenses.length === 1
+                    ? 'Su gasto quedará como gasto'
+                    : `Sus ${String(expenses.length)} gastos quedarán como gastos`
+                } del camión ${truckName}. No se puede deshacer.`
         }
         confirmLabel="Borrar"
         onConfirm={confirmDelete}
