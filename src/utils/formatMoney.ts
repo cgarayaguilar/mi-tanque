@@ -8,9 +8,9 @@ import { formatNumber } from 'utils/formatNumber'
 export const currencySymbol = (currency: Currency) =>
   CURRENCY_DETAILS[currency].symbol
 
-/** A total: "C$9,274.26 NIO". */
+/** A total: "C$9,274.26 NIO"; below zero, "-C$300.00 NIO" (a loss). */
 export const moneyTotal = (currency: Currency, amount: number) =>
-  `${currencySymbol(currency)}${formatNumber(amount, 2)} ${currency}`
+  `${amount < 0 ? '-' : ''}${currencySymbol(currency)}${formatNumber(Math.abs(amount), 2)} ${currency}`
 
 /** A price per unit, without the code: "C$185.49/gal", "C$49.00/litro". */
 export const unitPrice = (
