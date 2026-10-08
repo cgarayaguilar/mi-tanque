@@ -121,7 +121,7 @@ tarjetas.
   claro en oscuro); el ícono de la app lo lleva en blanco sobre `primary`.
 - Rejilla de tanques: columnas automáticas de mínimo 150px (dos por fila en un teléfono).
 - Medidor de **200px**: Medición entera cabe en una pantalla de teléfono (812px).
-- Barra de navegación **fija abajo** en Medición, Historial y Flota (esta última solo con sesión, con seis pestañas: Camiones, Remolques, Tanques, Clientes, Conductores y Tarifas).
+- Barra de navegación **fija abajo** en Medición, Historial, Flota y Viajes (las dos últimas solo con sesión; Flota con seis pestañas: Camiones, Remolques, Tanques, Clientes, Conductores y Tarifas). Con cuatro o más botones, cada uno lleva el icono arriba y el nombre abajo en `caption` (specs/0025).
 
 ## Números, dinero y unidades
 

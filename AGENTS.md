@@ -177,6 +177,18 @@ en cada push y PR.
   después) se guardan. Origen y destino sugieren los lugares ya usados (`knownPlaces`) y se guardan
   con la forma ya usada (`knownSpelling`). Los textos de Flota concuerdan en género con
   `sectionWords` (`feminine` en `utils/fleetSections`).
+- **Viajes (specs/0025):** botón **Viajes** en la barra (con cuatro o más botones, icono arriba y
+  texto abajo). Páginas lazy `Trips` (lista), `Trip` (detalle) y `TripEditor` (`/viajes/nuevo` y
+  `/viajes/:id/editar`; una sola ruta `/viajes/:id` elige editor o detalle, porque sin `Switch`
+  coincidirían las dos). `services/trips` (estático solo en esas páginas y en `hooks/useTrip`) y
+  `store/trips` (con `import()`, lee todo el periodo hasta 1000 y recuerda los viajes por id en
+  `known`). El formulario es `pages/TripEditor/TripForm`; la conversión, `tripFromForm` en
+  `schemas/trips` (copia la tarifa; al editar con la misma tarifa conserva su copia y su moneda).
+  Semana y mes: `utils/tripPeriod` (lunes a domingo, hora del teléfono). Fecha y hora:
+  `components/DateTimeField` y `utils/dateTimeValue`. **Las reglas no revisan cada extra** (Firestore
+  evalúa como máximo 1000 expresiones por regla): la app los valida al escribir y al leer
+  (`toExtras` en `services/trips`). El test "ten extras, two drivers…" de `tripRules` es la guardia
+  de ese límite: cualquier campo nuevo del viaje tiene que mantenerlo en verde.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
