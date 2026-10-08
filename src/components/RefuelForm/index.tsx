@@ -15,7 +15,11 @@ import MoreDetails, {
 } from 'components/MoreDetails'
 import Stat from 'components/Stat'
 import TextField from 'components/TextField'
-import { CURRENCY_OPTIONS, type Currency } from 'schemas/account'
+import {
+  CURRENCY_DETAILS,
+  CURRENCY_OPTIONS,
+  type Currency,
+} from 'schemas/account'
 import { KM_PER_MILE } from 'schemas/fleet'
 import {
   optionalNumber,
@@ -278,15 +282,30 @@ export default function RefuelForm({
           compact
         />
       </Box>
-      <AutocompleteField
-        id="refuelCurrency"
-        label="Moneda"
-        placeholder="Elige la moneda"
-        options={CURRENCY_OPTIONS}
-        error={errors.currency?.message}
-        control={control}
-        name="currency"
-      />
+      {/* With an account, the organization's currency (backend specs/0027
+          RF-7); one edited keeps the one it was saved in */}
+      {defaultCurrency && currency ? (
+        <Typography
+          variant="caption"
+          component="p"
+          sx={{ color: 'text.secondary', mt: -3 }}
+        >
+          En {CURRENCY_DETAILS[currency].name.toLowerCase()},{' '}
+          {currency === defaultCurrency
+            ? 'la moneda de tu organización.'
+            : 'la moneda en que se registró.'}
+        </Typography>
+      ) : (
+        <AutocompleteField
+          id="refuelCurrency"
+          label="Moneda"
+          placeholder="Elige la moneda"
+          options={CURRENCY_OPTIONS}
+          error={errors.currency?.message}
+          control={control}
+          name="currency"
+        />
+      )}
 
       <Box
         aria-live="polite"
