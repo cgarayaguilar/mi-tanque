@@ -171,10 +171,15 @@ function TripDetails({ trip }: { trip: Trip }) {
   const categoryName = (id: string) =>
     categories.find(category => category.id === id)?.name ?? null
 
-  // What it read, or what the backend added up (RF-3) while it reads
+  // What it read, or what the backend added up (RF-3) while it reads; as
+  // the backend, only those in the trip's currency
   const spent =
     expensesStatus === 'ready'
-      ? toCents(expenses.reduce((sum, expense) => sum + expense.amount, 0))
+      ? toCents(
+          expenses
+            .filter(expense => expense.currency === trip.currency)
+            .reduce((sum, expense) => sum + expense.amount, 0)
+        )
       : trip.expensesTotal
   const profit = toCents(tripIncome(trip) - spent)
   const byCategory = totalsByCategory(expenses, categoryName)

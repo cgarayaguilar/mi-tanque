@@ -575,6 +575,20 @@ describe('its expenses on its screen', () => {
     expect(window.location.search).toBe('?viaje=trip-1')
   })
 
+  // As the backend's expensesTotal (RF-3): only the trip's currency adds up
+  test('an expense in another currency is listed apart, not in the total', async () => {
+    expensesApi.readTripExpenses.mockResolvedValue([
+      expense(),
+      expense({ id: 'expense-usd', currency: 'USD', amount: 100 }),
+    ])
+    renderAt('/viajes/trip-1')
+
+    const section = await screen.findByRole('region', { name: 'Gastos' })
+    await within(section).findAllByText('Peajes')
+    expect(section).toHaveTextContent('Peajes$100.00 USD')
+    expect(section).toHaveTextContent('Total de gastosC$1,850.00 NIO')
+  })
+
   // CA-5
   test('deleting says its expenses stay with the truck', async () => {
     renderAt('/viajes/trip-1')
