@@ -235,6 +235,12 @@ en cada push y PR.
   salen de `fields` del arreglo, no de `useWatch` (sin campos registrados, `useWatch` no ve un
   `append`). El renglón de gasto ganó `driverId`. Al fallar el guardado, `onInvalid` lleva a la
   primera sección con error. `TripSummaryBar` es `sticky` al pie, dentro del formulario.
+- **Filtrar, agrupar y ordenar viajes (specs/0030):** la lógica es pura, en `utils/tripGroups`
+  (`filterTrips`, `sortTrips`, `groupTrips`, `groupSummary`, `destinationOptions`), con sus tests;
+  la página solo la usa. Destino se compara con `destinationKey` (sin tildes, mayúsculas ni
+  espacios de más). Filtros, agrupado y orden viven en `view` de `store/trips` (se conservan al
+  volver de un viaje y se reinician con la organización). "Agrupar" y "Ordenar" son `FilterChip`
+  con `named` ("Agrupar: Camión"); el orden por defecto es el "Todas" del chip.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
