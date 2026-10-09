@@ -39,6 +39,7 @@ import { moneyTotal } from 'utils/formatMoney'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
+import { thirdParty, tripOwnership } from 'utils/ownership'
 
 // The backend's moves take a second or two; after this, a reload shows them
 const REFRESH_MS = 2500
@@ -190,6 +191,7 @@ function TripDetails({ trip }: { trip: Trip }) {
   const author = members.find(member => member.uid === trip.createdBy)
   const truckName =
     nameOf(trucks, trip.truckId, trip.truckName) ?? trip.truckName
+  const owned = tripOwnership(trip, { trucks, trailers })
   const categoryName = (id: string) =>
     categories.find(category => category.id === id)?.name ?? null
 
@@ -265,9 +267,18 @@ function TripDetails({ trip }: { trip: Trip }) {
         <Row label="Cliente">
           {nameOf(clients, trip.clientId, trip.clientName)}
         </Row>
-        <Row label="Camión">{nameOf(trucks, trip.truckId, trip.truckName)}</Row>
+        {/* "(de un tercero)" by the equipment that was (specs/0035 RF-7) */}
+        <Row label="Camión">
+          {thirdParty(
+            nameOf(trucks, trip.truckId, trip.truckName),
+            owned.truck
+          )}
+        </Row>
         <Row label="Remolque">
-          {nameOf(trailers, trip.trailerId, trip.trailerName) ?? 'Sin remolque'}
+          {thirdParty(
+            nameOf(trailers, trip.trailerId, trip.trailerName),
+            owned.trailer
+          ) ?? 'Sin remolque'}
         </Row>
         <Row label={driverNames.length > 1 ? 'Conductores' : 'Conductor'}>
           {driverNames.join(' y ')}

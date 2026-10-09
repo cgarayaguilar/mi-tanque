@@ -361,6 +361,47 @@ describe('filter, group and sort', () => {
   })
 })
 
+// backend specs/0035 CA-4: trips by whose their truck and trailer were
+test("the trips of a third party's truck, marked on their card", async () => {
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [
+      trip(),
+      trip({
+        id: 'trip-2',
+        origin: 'León',
+        truckOwnership: 'third_party',
+      }),
+      // From before: read as its trailer is now
+      trip({ id: 'trip-3', origin: 'Rivas', trailerOwnership: null }),
+    ],
+    truncated: false,
+  })
+  fleetApi.readFleet.mockResolvedValue({
+    clients: [client()],
+    trucks: [truck()],
+    trailers: [trailer({ ownership: 'third_party' })],
+    tanks: [],
+    drivers: [driver()],
+    rates: [],
+  })
+  renderAt('/viajes')
+  await screen.findByRole('list', { name: 'Viajes' })
+
+  await filterBy('Dueño del camión', 'De un tercero')
+  const list = screen.getByRole('list', { name: 'Viajes' })
+  const cards = within(list).getAllByRole('button')
+  expect(cards).toHaveLength(1)
+  expect(cards[0]).toHaveTextContent('Unidad 12 (de un tercero)')
+
+  await filterBy('Dueño del camión', 'Todos')
+  await filterBy('Dueño del remolque', 'De un tercero')
+  expect(
+    within(screen.getByRole('list', { name: 'Viajes' }))
+      .getAllByRole('button')
+      .map(card => card.getAttribute('aria-label'))
+  ).toEqual(['Viaje Rivas → San José, Programado'])
+})
+
 // RF-9, RF-10
 describe('the form', () => {
   // CA-1

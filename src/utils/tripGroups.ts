@@ -5,6 +5,7 @@ import {
   type Trip,
   type TripStatus,
 } from 'schemas/trips'
+import type { Ownership } from 'schemas/fleet'
 import { routeName } from 'schemas/rates'
 import { foldText, squeezeSpaces } from 'utils/foldText'
 import { tripTotals } from 'utils/tripTotals'
@@ -60,6 +61,9 @@ export interface TripFilters {
   driverId: string | null
   /** A route of a client (`routeKey`): "Destino" (specs/0033 RF-1). */
   destination: string | null
+  /** "Dueño del camión" and "Dueño del remolque" (specs/0035 RF-6). */
+  truckOwnership: Ownership | null
+  trailerOwnership: Ownership | null
 }
 
 export const NO_TRIP_FILTERS: TripFilters = {
@@ -68,6 +72,8 @@ export const NO_TRIP_FILTERS: TripFilters = {
   truckId: null,
   driverId: null,
   destination: null,
+  truckOwnership: null,
+  trailerOwnership: null,
 }
 
 /** "San José", "san jose" and "San  José" are one place (0030 RF-1). */
@@ -105,9 +111,30 @@ export interface TripNames {
   driver: NameOf
 }
 
-export const filterTrips = (trips: readonly Trip[], filters: TripFilters) =>
+/** Whose a trip's truck and trailer were (specs/0035 RF-2). */
+export type TripOwnershipOf = (trip: Trip) => {
+  truck: Ownership
+  trailer: Ownership | null
+}
+
+// Without the fleet at hand: as the trip saved it, own if it did not
+const savedOwnership: TripOwnershipOf = trip => ({
+  truck: trip.truckOwnership ?? 'own',
+  trailer: trip.trailerId === null ? null : (trip.trailerOwnership ?? 'own'),
+})
+
+export const filterTrips = (
+  trips: readonly Trip[],
+  filters: TripFilters,
+  ownershipOf: TripOwnershipOf = savedOwnership
+) =>
   trips.filter(
     trip =>
+      // Without a trailer, a trailer's owner chosen leaves it out (RF-6)
+      (filters.truckOwnership === null ||
+        ownershipOf(trip).truck === filters.truckOwnership) &&
+      (filters.trailerOwnership === null ||
+        ownershipOf(trip).trailer === filters.trailerOwnership) &&
       (filters.status === null || trip.status === filters.status) &&
       (filters.clientId === null || trip.clientId === filters.clientId) &&
       (filters.truckId === null || trip.truckId === filters.truckId) &&

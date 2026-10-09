@@ -47,6 +47,7 @@ import {
   type TripGroup,
   type TripNames,
 } from 'utils/tripGroups'
+import { OWNERSHIP_OPTIONS, thirdParty, tripOwnership } from 'utils/ownership'
 import { tripTotals } from 'utils/tripTotals'
 import { RETRY_HINT } from 'utils/withTimeout'
 
@@ -74,7 +75,9 @@ const optionsOf = (pairs: [string, string][]) =>
     .sort((a, b) => a.label.localeCompare(b.label, 'es'))
 
 function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
-  const { clients, trucks, drivers } = useFleetStore()
+  const { clients, trucks, trailers, drivers } = useFleetStore()
+  // "(de un tercero)" by the equipment that was (specs/0035 RF-7)
+  const owned = tripOwnership(trip, { trucks, trailers })
   const nameOf = (
     items: readonly { id: string; name: string }[],
     id: string | null,
@@ -124,7 +127,15 @@ function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
       {[
         formatMeasurementDate(trip.startAt),
         nameOf(clients, trip.clientId, trip.clientName),
-        [nameOf(trucks, trip.truckId, trip.truckName), driverNames.join(' y ')]
+        [
+          thirdParty(nameOf(trucks, trip.truckId, trip.truckName), owned.truck),
+          owned.trailer === 'third_party' &&
+            thirdParty(
+              nameOf(trailers, trip.trailerId, trip.trailerName),
+              owned.trailer
+            ),
+          driverNames.join(' y '),
+        ]
           .filter(Boolean)
           .join(' · '),
       ].map(line => (
@@ -292,7 +303,12 @@ function TripsScreen() {
       setFilters(Object.fromEntries(gone.map(([key]) => [key, null])))
   }, [trips.status, options, destinations, filters, setFilters])
 
-  const shown = sortTrips(filterTrips(trips.items, filters), order)
+  const shown = sortTrips(
+    filterTrips(trips.items, filters, trip =>
+      tripOwnership(trip, { trucks, trailers })
+    ),
+    order
+  )
   const groups = grouping && groupTrips(shown, grouping, order, names)
   const totals = tripTotals(shown)
   const filtered = Object.values(filters).some(value => value !== null)
@@ -509,6 +525,27 @@ function TripsScreen() {
                 onChange={destination => {
                   setFilters({ destination })
                 }}
+              />
+              {/* Own or of a third party (specs/0035 RF-6) */}
+              <FilterChip
+                label="Dueño del camión"
+                allLabel="Todos"
+                options={OWNERSHIP_OPTIONS}
+                value={filters.truckOwnership}
+                onChange={truckOwnership => {
+                  setFilters({ truckOwnership })
+                }}
+                named
+              />
+              <FilterChip
+                label="Dueño del remolque"
+                allLabel="Todos"
+                options={OWNERSHIP_OPTIONS}
+                value={filters.trailerOwnership}
+                onChange={trailerOwnership => {
+                  setFilters({ trailerOwnership })
+                }}
+                named
               />
               <FilterChip
                 label="Agrupar"

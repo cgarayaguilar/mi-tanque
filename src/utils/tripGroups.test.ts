@@ -117,6 +117,37 @@ describe('filters', () => {
   })
 })
 
+// backend specs/0035 RF-6, CA-4: whose the truck and trailer were
+test('the truck and trailer owners filter, a trailer one leaves out those without', () => {
+  const trips = [
+    trip({ id: 'own' }),
+    trip({ id: 'truck', truckOwnership: 'third_party' }),
+    trip({ id: 'trailer', trailerOwnership: 'third_party' }),
+    trip({
+      id: 'none',
+      trailerId: null,
+      trailerName: null,
+      trailerOwnership: null,
+    }),
+  ]
+  expect(
+    ids(
+      filterTrips(trips, { ...NO_TRIP_FILTERS, truckOwnership: 'third_party' })
+    )
+  ).toEqual(['truck'])
+  expect(
+    ids(
+      filterTrips(trips, {
+        ...NO_TRIP_FILTERS,
+        trailerOwnership: 'third_party',
+      })
+    )
+  ).toEqual(['trailer'])
+  expect(
+    ids(filterTrips(trips, { ...NO_TRIP_FILTERS, trailerOwnership: 'own' }))
+  ).toEqual(['own', 'truck'])
+})
+
 // RF-7, CA-5
 describe('order', () => {
   const trips = [
