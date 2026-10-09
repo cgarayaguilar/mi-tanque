@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { useFieldArray, useForm, useWatch } from 'react-hook-form'
+import {
+  useFieldArray,
+  useForm,
+  useWatch,
+  type FieldErrors,
+} from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import { sileo } from 'sileo'
@@ -13,6 +18,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons from 'components/ChoiceButtons'
 import DateTimeField from 'components/DateTimeField'
+import FormSection from 'components/FormSection'
 import MoreDetails, {
   countFilled,
   useMoreDetails,
@@ -40,6 +46,8 @@ import {
   isTooLate,
   toCents,
   tripToForm,
+  type ExpenseRowValues,
+  type ExtraValues,
   type Trip,
   type TripFormValues,
 } from 'schemas/trips'
@@ -54,11 +62,16 @@ import { currencySymbol, moneyTotal } from 'utils/formatMoney'
 import { formatEditable } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { reportError } from 'utils/reportError'
+import ExpenseCard from './ExpenseCard'
+import ExpenseRowDialog from './ExpenseRowDialog'
+import ExtraDialog from './ExtraDialog'
+import IncomeCard, { PriceCard } from './IncomeCard'
+import TripSummaryBar from './TripSummaryBar'
 
 interface TripFormProps {
   /** The trip being edited, or null for a new one. */
   trip: Trip | null
-  /** Its expenses, as read: rows of "Gastos (opcional)" (specs/0026). */
+  /** Its expenses, as read: the cards of "Gastos" (specs/0026, 0029). */
   expenses: readonly Expense[]
   /** The id the new trip will have (made when the form opened). */
   id: string
@@ -72,6 +85,24 @@ const PLACES_ID = 'trip-places'
 // Behind "Ver más detalles" (specs/0025 RF-9)
 const DETAILS = ['tripNumber', 'description', 'notes'] as const
 
+// The form's sections and their fields, in order (specs/0029 RF-1, RF-2)
+const SECTIONS = [
+  {
+    id: 'trip-section-price',
+    fields: ['clientId', 'rateId', 'origin', 'destination', 'price'],
+  },
+  {
+    id: 'trip-section-truck',
+    fields: ['truckId', 'trailerId', 'driverId', 'secondDriverId'],
+  },
+  { id: 'trip-section-dates', fields: ['startAt', 'endAt', 'status'] },
+  { id: 'trip-section-income', fields: ['extras'] },
+  { id: 'trip-section-expenses', fields: ['expenses'] },
+] as const satisfies readonly {
+  id: string
+  fields: readonly (keyof TripFormValues)[]
+}[]
+
 const MODE_OPTIONS = [
   { value: 'rate', label: 'Desde una tarifa' },
   { value: 'manual', label: 'Manual' },
@@ -82,22 +113,28 @@ const STATUS_OPTIONS = TRIP_STATUSES.map(status => ({
   label: TRIP_STATUS_LABELS[status],
 }))
 
-/** A trip's form, to create or edit it (backend specs/0025 RF-9, RF-10). */
+/** A field's errors: one per field, one per income or expense with any. */
+const issuesIn = (error: unknown) =>
+  Array.isArray(error) ? error.filter(Boolean).length : error ? 1 : 0
+
+/** A trip's form, to create or edit it (backend specs/0025 RF-9, 0029). */
 export default function TripForm({
   trip,
   expenses: allTripExpenses,
   id,
   orgId,
-  currency,
+  currency: organizationCurrency,
 }: TripFormProps) {
   const [, navigate] = useLocation()
+  // An old trip keeps its own currency (0025): everything here is in it
+  const currency = trip?.currency ?? organizationCurrency
   // A refuel's expense follows its refuel (specs/0027 RF-10): shown, not a row
   const refuelExpenses = allTripExpenses.filter(isRefuelExpense)
   const tripExpenses = allTripExpenses.filter(
     expense => !isRefuelExpense(expense)
   )
   const refuelsTotal = refuelExpenses
-    .filter(expense => expense.currency === (trip?.currency ?? currency))
+    .filter(expense => expense.currency === currency)
     .reduce((sum, expense) => sum + expense.amount, 0)
   const { clients, trucks, trailers, drivers, rates } = useFleetStore()
   const tripsSeen = useTripsStore(state => state.known)
@@ -138,6 +175,14 @@ export default function TripForm({
   const [trailerChosen, setTrailerChosen] = useState(trip !== null)
   // Said when a rate moves the trip to its client (RF-9)
   const [clientNotice, setClientNotice] = useState<string | null>(null)
+  // The income or expense open in its dialog; index null is a new one (0029)
+  const [extraOpen, setExtraOpen] = useState<{ index: number | null } | null>(
+    null
+  )
+  const [expenseOpen, setExpenseOpen] = useState<{
+    index: number | null
+    row: ExpenseRowValues
+  } | null>(null)
 
   // Archived items are not offered, unless this trip already has them
   const active = <T extends { id: string; archived: boolean }>(
@@ -158,11 +203,7 @@ export default function TripForm({
         : 2
   const usableRates = active(rates, [trip?.rateId])
     // In the trip's currency: an old trip keeps its own (audit 0027)
-    .filter(
-      rate =>
-        rate.currency === (trip?.currency ?? currency) ||
-        rate.id === trip?.rateId
-    )
+    .filter(rate => rate.currency === currency || rate.id === trip?.rateId)
     .sort((a, b) => rateRank(a.clientId) - rateRank(b.clientId))
   const currentRate = rates.find(rate => rate.id === values.rateId) ?? null
   // Kept rate: the trip shows and saves the copy it has, even if the rate
@@ -178,14 +219,26 @@ export default function TripForm({
       : currentRate
   const places = knownPlaces([...rates, ...Object.values(tripsSeen)])
 
+  const typedPrice = parseDecimal(values.price ?? '')
+  // null until there is one: the price card says how to give it (0029 RF-3)
   const price =
     values.mode === 'rate'
-      ? (chosenRate?.price ?? 0)
-      : parseDecimal(values.price ?? '')
+      ? (chosenRate?.price ?? null)
+      : Number.isNaN(typedPrice)
+        ? null
+        : typedPrice
+  const route =
+    values.mode === 'rate'
+      ? chosenRate && `${chosenRate.origin} → ${chosenRate.destination}`
+      : [values.origin?.trim(), values.destination?.trim()].every(Boolean)
+        ? `${values.origin?.trim() ?? ''} → ${values.destination?.trim() ?? ''}`
+        : null
+  // The income and the expenses have no field in the form, only their
+  // dialogs: their rows are what the field arrays hold (specs/0029)
   const income = tripIncome({
-    price: Number.isNaN(price) ? 0 : price,
-    extras: (values.extras ?? []).map(extra => {
-      const amount = parseDecimal(extra.amount ?? '')
+    price: price ?? 0,
+    extras: extras.fields.map(extra => {
+      const amount = parseDecimal(extra.amount)
       return {
         description: '',
         amount: Number.isNaN(amount) ? 0 : amount,
@@ -194,22 +247,24 @@ export default function TripForm({
   })
 
   const expensesTotal = toCents(
-    (values.expenses ?? []).reduce((sum, row) => {
-      const amount = parseDecimal(row.amount ?? '')
+    expenseRows.fields.reduce((sum, row) => {
+      const amount = parseDecimal(row.amount)
       return sum + (Number.isNaN(amount) ? 0 : amount)
     }, refuelsTotal)
   )
 
-  // A new row's date is the trip's start, or now if it starts later (RF-12)
-  const addExpenseRow = () => {
+  // A new expense's date is the trip's start, or now if it starts later
+  // (0026 RF-12)
+  const newExpenseRow = (): ExpenseRowValues => {
     const start = fromDateTimeValue(getValues('startAt'))
-    expenseRows.append({
+    return {
       id: newExpenseId(),
       categoryId: '',
       amount: '',
       takenAt: toDateTimeValue(start && !isTooLate(start) ? start : new Date()),
       description: '',
-    })
+      driverId: '',
+    }
   }
 
   // The store as it is now, not this render's lists: a rate or a truck just
@@ -229,10 +284,10 @@ export default function TripForm({
   // A rate just created: chosen if it can price this trip, in its currency
   const chooseCreatedRate = (rateId: string) => {
     const rate = useFleetStore.getState().rates.find(item => item.id === rateId)
-    if (rate && rate.currency !== (trip?.currency ?? currency)) {
+    if (rate && rate.currency !== currency) {
       sileo.warning({
         title: 'Guardamos la tarifa, pero este viaje no puede usarla',
-        description: `La tarifa está en ${rate.currency} y este viaje en ${trip?.currency ?? currency}.`,
+        description: `La tarifa está en ${rate.currency} y este viaje en ${currency}.`,
       })
       return
     }
@@ -299,13 +354,7 @@ export default function TripForm({
       saved,
       tripExpenses,
       // New rows in the trip's currency, which its total adds up (RF-3)
-      {
-        currency: trip?.currency ?? currency,
-        categories,
-        trucks,
-        trailers,
-        drivers,
-      },
+      { currency, categories, trucks, trailers, drivers },
       uid
     )
     applyTripExpenses(expenses.saved, expenses.remove)
@@ -327,6 +376,26 @@ export default function TripForm({
     })
     navigate(`/viajes/${id}`)
   }
+
+  // A failed save goes to the first section with something to fix (0029
+  // RF-2). A field there takes the focus itself; an income or an expense
+  // has no field in the form, so its section is brought into view.
+  const onInvalid = (failed: FieldErrors<TripFormValues>) => {
+    details.onInvalid(failed)
+    const first = SECTIONS.find(section =>
+      section.fields.some(field => field in failed)
+    )
+    if (first?.fields.some(field => field === 'extras' || field === 'expenses'))
+      document
+        .getElementById(first.id)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const sectionIssues = (index: number) =>
+    (SECTIONS[index]?.fields ?? []).reduce<number>(
+      (sum, field) => sum + issuesIn(errors[field]),
+      0
+    )
 
   const option = (item: { id: string; name: string }) => ({
     value: item.id,
@@ -356,6 +425,36 @@ export default function TripForm({
     }
   })
 
+  const categoryName = (categoryId: string, expenseId: string) =>
+    categories.find(item => item.id === categoryId)?.name ??
+    allTripExpenses.find(expense => expense.id === expenseId)?.categoryName ??
+    'Gasto'
+  const driverName = (driverId: string, expenseId: string) =>
+    drivers.find(item => item.id === driverId)?.name ??
+    allTripExpenses.find(expense => expense.id === expenseId)?.driverName ??
+    null
+
+  const extraFields = extras.fields.map(({ id: key, ...extra }, index) => ({
+    key,
+    index,
+    extra,
+  }))
+  const rowFields = expenseRows.fields.map(({ key, ...row }, index) => ({
+    key,
+    index,
+    row,
+  }))
+  const openRow = expenseOpen?.row ?? null
+  const openRowOld = openRow
+    ? tripExpenses.find(expense => expense.id === openRow.id)
+    : undefined
+
+  const addButton = (label: string, onClick: () => void) => (
+    <Button startIcon={<AddIcon />} onClick={onClick} aria-label={label}>
+      Agregar
+    </Button>
+  )
+
   return (
     <Box
       component="form"
@@ -363,493 +462,399 @@ export default function TripForm({
       noValidate
       aria-label="Datos del viaje"
       onSubmit={event => {
-        void handleSubmit(onSubmit, details.onInvalid)(event)
+        void handleSubmit(onSubmit, onInvalid)(event)
       }}
     >
-      <Stack spacing={5}>
-        {/* 1. The client, or a new one from the list (specs/0028) */}
-        <AutocompleteField
-          id="tripClient"
-          label="Cliente"
-          options={clientOptions}
-          placeholder="Elige el cliente"
-          error={errors.clientId?.message}
-          {...(clientNotice !== null && { hint: clientNotice })}
-          control={control}
-          name="clientId"
-          onChange={() => {
-            setClientNotice(null)
-          }}
-          create={{
-            label: 'Crear cliente',
-            onCreate: text => {
-              create('client', text, id => {
-                setClientNotice(null)
-                setValue('clientId', id, { shouldValidate: true })
-              })
-            },
-          }}
-        />
-
-        {/* 2. From a rate or by hand */}
-        <ChoiceButtons
-          id="tripMode"
-          label="¿Cómo se calcula el precio?"
-          options={MODE_OPTIONS}
-          control={control}
-          name="mode"
-          onChange={chooseMode}
-        />
-        {values.mode === 'rate' ? (
-          <Box>
-            <AutocompleteField
-              id="tripRate"
-              label="Tarifa"
-              options={rateOptions}
-              placeholder="Busca origen, destino o cliente"
-              error={errors.rateId?.message}
-              control={control}
-              name="rateId"
-              onChange={chooseRate}
-              create={{
-                label: 'Crear tarifa',
-                // Empty, by the owner's choice (specs/0028)
-                withText: false,
-                onCreate: () => {
-                  create('rate', '', chooseCreatedRate)
-                },
-              }}
-            />
-            {chosenRate && (
-              <Typography
-                variant="body2"
-                sx={{ mt: 1, color: 'text.secondary' }}
-              >
-                {chosenRate.origin} → {chosenRate.destination} ·{' '}
-                {moneyTotal(chosenRate.currency, chosenRate.price)}
-              </Typography>
-            )}
-          </Box>
-        ) : (
-          <>
-            {/* Origin and destination on one row, as in a rate (0024) */}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: 2,
-              }}
-            >
-              <TextField
-                id="tripOrigin"
-                dense
-                label="Origen"
-                placeholder="Managua"
-                maxLength={TRIP_LIMITS.place}
-                list={PLACES_ID}
-                error={errors.origin?.message}
-                registration={register('origin')}
+      <Stack spacing={4}>
+        {/* 1. For whom, and for how much */}
+        <FormSection
+          number={1}
+          id={SECTIONS[0].id}
+          title="Cliente y precio"
+          hint="¿Para quién es y cuánto cobras?"
+          issues={sectionIssues(0)}
+        >
+          <AutocompleteField
+            id="tripClient"
+            label="Cliente"
+            options={clientOptions}
+            placeholder="Elige el cliente"
+            error={errors.clientId?.message}
+            {...(clientNotice !== null && { hint: clientNotice })}
+            control={control}
+            name="clientId"
+            onChange={() => {
+              setClientNotice(null)
+            }}
+            create={{
+              label: 'Crear cliente',
+              onCreate: text => {
+                create('client', text, id => {
+                  setClientNotice(null)
+                  setValue('clientId', id, { shouldValidate: true })
+                })
+              },
+            }}
+          />
+          <ChoiceButtons
+            id="tripMode"
+            label="¿Cómo se calcula el precio?"
+            options={MODE_OPTIONS}
+            control={control}
+            name="mode"
+            onChange={chooseMode}
+          />
+          {values.mode === 'rate' ? (
+            <Box>
+              <AutocompleteField
+                id="tripRate"
+                label="Tarifa"
+                options={rateOptions}
+                placeholder="Busca origen, destino o cliente"
+                error={errors.rateId?.message}
+                control={control}
+                name="rateId"
+                onChange={chooseRate}
+                create={{
+                  label: 'Crear tarifa',
+                  // Empty, by the owner's choice (specs/0028)
+                  withText: false,
+                  onCreate: () => {
+                    create('rate', '', chooseCreatedRate)
+                  },
+                }}
               />
-              <TextField
-                id="tripDestination"
-                dense
-                label="Destino"
-                placeholder="San José"
-                maxLength={TRIP_LIMITS.place}
-                list={PLACES_ID}
-                error={errors.destination?.message}
-                registration={register('destination')}
-              />
+              {chosenRate && (
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1, color: 'text.secondary' }}
+                >
+                  {chosenRate.origin} → {chosenRate.destination} ·{' '}
+                  {moneyTotal(chosenRate.currency, chosenRate.price)}
+                </Typography>
+              )}
             </Box>
-            <datalist id={PLACES_ID}>
-              {places.map(place => (
-                <option key={place} value={place} />
-              ))}
-            </datalist>
-            <NumberField
-              id="tripPrice"
-              label="Precio"
-              prefix={currencySymbol(currency)}
-              placeholder="25,000"
-              error={errors.price?.message}
-              registration={register('price')}
-            />
-          </>
-        )}
-
-        {/* 3. Extras the client asks for: stops and the like */}
-        <Box role="group" aria-labelledby="trip-extras-title">
-          <Typography
-            id="trip-extras-title"
-            variant="overline"
-            component="p"
-            sx={{ color: 'text.secondary' }}
-          >
-            Ingresos adicionales (opcional)
-          </Typography>
-          <Stack spacing={3}>
-            {extras.fields.map((field, index) => (
+          ) : (
+            <>
+              {/* Origin and destination on one row, as in a rate (0024) */}
               <Box
-                key={field.id}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr) auto',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                   gap: 2,
-                  alignItems: 'start',
                 }}
               >
                 <TextField
-                  id={`tripExtra${String(index)}Description`}
+                  id="tripOrigin"
                   dense
-                  label="Descripción"
-                  placeholder="Parada en León"
-                  maxLength={TRIP_LIMITS.extraDescription}
-                  error={errors.extras?.[index]?.description?.message}
-                  registration={register(
-                    `extras.${String(index)}.description` as `extras.${number}.description`
-                  )}
+                  label="Origen"
+                  placeholder="Managua"
+                  maxLength={TRIP_LIMITS.place}
+                  list={PLACES_ID}
+                  error={errors.origin?.message}
+                  registration={register('origin')}
                 />
-                <NumberField
-                  id={`tripExtra${String(index)}Amount`}
+                <TextField
+                  id="tripDestination"
                   dense
-                  label="Monto"
-                  prefix={currencySymbol(currency)}
-                  placeholder="2,500"
-                  error={errors.extras?.[index]?.amount?.message}
-                  registration={register(
-                    `extras.${String(index)}.amount` as `extras.${number}.amount`
-                  )}
+                  label="Destino"
+                  placeholder="San José"
+                  maxLength={TRIP_LIMITS.place}
+                  list={PLACES_ID}
+                  error={errors.destination?.message}
+                  registration={register('destination')}
                 />
-                <IconButton
-                  aria-label={`Quitar el ingreso ${String(index + 1)}`}
-                  onClick={() => {
-                    extras.remove(index)
-                  }}
-                  sx={{ mt: 7 }}
-                >
-                  <CloseIcon />
-                </IconButton>
               </Box>
+              <datalist id={PLACES_ID}>
+                {places.map(place => (
+                  <option key={place} value={place} />
+                ))}
+              </datalist>
+              <NumberField
+                id="tripPrice"
+                label="Precio"
+                prefix={currencySymbol(currency)}
+                placeholder="25,000"
+                error={errors.price?.message}
+                registration={register('price')}
+              />
+            </>
+          )}
+        </FormSection>
+
+        {/* 2. Truck, trailer and drivers */}
+        <FormSection
+          number={2}
+          id={SECTIONS[1].id}
+          title="Camión y conductores"
+          hint="¿Con qué y con quién?"
+          issues={sectionIssues(1)}
+        >
+          <AutocompleteField
+            id="tripTruck"
+            label="Camión"
+            options={truckOptions}
+            placeholder="Elige el camión"
+            error={errors.truckId?.message}
+            control={control}
+            name="truckId"
+            onChange={chooseTruck}
+            create={{
+              label: 'Crear camión',
+              onCreate: text => {
+                create('truck', text, id => {
+                  setValue('truckId', id, { shouldValidate: true })
+                  chooseTruck(id)
+                })
+              },
+            }}
+          />
+          <AutocompleteField
+            id="tripTrailer"
+            label="Remolque (opcional)"
+            options={trailerOptions}
+            control={control}
+            name="trailerId"
+            onChange={() => {
+              setTrailerChosen(true)
+            }}
+            create={{
+              label: 'Crear remolque',
+              onCreate: text => {
+                create('trailer', text, id => {
+                  setTrailerChosen(true)
+                  setValue('trailerId', id)
+                })
+              },
+            }}
+          />
+          <AutocompleteField
+            id="tripDriver"
+            label="Conductor"
+            options={driverOptions}
+            placeholder="Elige el conductor"
+            error={errors.driverId?.message}
+            control={control}
+            name="driverId"
+            create={{
+              label: 'Crear conductor',
+              onCreate: text => {
+                create('driver', text, id => {
+                  setValue('driverId', id, { shouldValidate: true })
+                })
+              },
+            }}
+          />
+          {secondDriver ? (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gap: 2,
+                alignItems: 'start',
+              }}
+            >
+              <AutocompleteField
+                id="tripSecondDriver"
+                label="Segundo conductor"
+                options={driverOptions.filter(
+                  driver => driver.value !== values.driverId
+                )}
+                placeholder="Elige el conductor"
+                error={errors.secondDriverId?.message}
+                control={control}
+                name="secondDriverId"
+                create={{
+                  label: 'Crear conductor',
+                  onCreate: text => {
+                    create('driver', text, id => {
+                      setValue('secondDriverId', id, { shouldValidate: true })
+                    })
+                  },
+                }}
+              />
+              <IconButton
+                aria-label="Quitar el segundo conductor"
+                onClick={() => {
+                  setValue('secondDriverId', '')
+                  setSecondDriver(false)
+                }}
+                sx={{ mt: 7 }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          ) : (
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setSecondDriver(true)
+              }}
+              sx={{ alignSelf: 'flex-start', ml: -2, mt: -3 }}
+            >
+              Agregar segundo conductor
+            </Button>
+          )}
+        </FormSection>
+
+        {/* 3. When, and how it goes */}
+        <FormSection
+          number={3}
+          id={SECTIONS[2].id}
+          title="Fechas y estado"
+          hint="¿Cuándo?"
+          issues={sectionIssues(2)}
+        >
+          <DateTimeField
+            id="tripStartAt"
+            label="Inicio"
+            control={control}
+            name="startAt"
+            error={errors.startAt?.message}
+          />
+          <DateTimeField
+            id="tripEndAt"
+            label="Fin (opcional)"
+            hint="Para marcarlo Terminado."
+            control={control}
+            name="endAt"
+            error={errors.endAt?.message}
+            clearable
+          />
+          <SelectField
+            id="tripStatus"
+            label="Estado"
+            options={STATUS_OPTIONS}
+            control={control}
+            name="status"
+          />
+        </FormSection>
+
+        {/* 4. The price and the extras the client pays: stops and the like */}
+        <FormSection
+          number={4}
+          id={SECTIONS[3].id}
+          title="Ingresos"
+          hint="El precio y lo que se cobra aparte."
+          issues={sectionIssues(3)}
+          {...(extras.fields.length < TRIP_LIMITS.extras && {
+            action: addButton('Agregar ingreso', () => {
+              setExtraOpen({ index: null })
+            }),
+          })}
+        >
+          <Stack
+            component="ul"
+            aria-label="Ingresos del viaje"
+            spacing={2}
+            sx={{ listStyle: 'none', m: 0, p: 0 }}
+          >
+            <PriceCard price={price} route={route} currency={currency} />
+            {extraFields.map(({ key, index, extra }) => (
+              <IncomeCard
+                key={key}
+                extra={extra}
+                currency={currency}
+                issue={errors.extras?.[index] ? 'Revisa este ingreso' : null}
+                onEdit={() => {
+                  setExtraOpen({ index })
+                }}
+                onRemove={() => {
+                  extras.remove(index)
+                }}
+              />
             ))}
           </Stack>
-          {extras.fields.length < TRIP_LIMITS.extras && (
-            <Button
-              startIcon={<AddIcon />}
-              onClick={() => {
-                extras.append({ description: '', amount: '' })
-              }}
-              sx={{ mt: 1, ml: -2 }}
-            >
-              Agregar ingreso
-            </Button>
-          )}
-          <Typography variant="subtitle2" component="p" sx={{ mt: 2 }}>
+          <Typography variant="subtitle2" component="p">
             Ingresos: {moneyTotal(currency, income)}
           </Typography>
-        </Box>
+        </FormSection>
 
-        {/* 4–6. Truck, trailer and drivers */}
-        <AutocompleteField
-          id="tripTruck"
-          label="Camión"
-          options={truckOptions}
-          placeholder="Elige el camión"
-          error={errors.truckId?.message}
-          control={control}
-          name="truckId"
-          onChange={chooseTruck}
-          create={{
-            label: 'Crear camión',
-            onCreate: text => {
-              create('truck', text, id => {
-                setValue('truckId', id, { shouldValidate: true })
-                chooseTruck(id)
-              })
-            },
-          }}
-        />
-        <AutocompleteField
-          id="tripTrailer"
-          label="Remolque (opcional)"
-          options={trailerOptions}
-          control={control}
-          name="trailerId"
-          onChange={() => {
-            setTrailerChosen(true)
-          }}
-          create={{
-            label: 'Crear remolque',
-            onCreate: text => {
-              create('trailer', text, id => {
-                setTrailerChosen(true)
-                setValue('trailerId', id)
-              })
-            },
-          }}
-        />
-        <AutocompleteField
-          id="tripDriver"
-          label="Conductor"
-          options={driverOptions}
-          placeholder="Elige el conductor"
-          error={errors.driverId?.message}
-          control={control}
-          name="driverId"
-          create={{
-            label: 'Crear conductor',
-            onCreate: text => {
-              create('driver', text, id => {
-                setValue('driverId', id, { shouldValidate: true })
-              })
-            },
-          }}
-        />
-        {secondDriver ? (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) auto',
-              gap: 2,
-              alignItems: 'start',
-            }}
-          >
-            <AutocompleteField
-              id="tripSecondDriver"
-              label="Segundo conductor"
-              options={driverOptions.filter(
-                driver => driver.value !== values.driverId
-              )}
-              placeholder="Elige el conductor"
-              error={errors.secondDriverId?.message}
-              control={control}
-              name="secondDriverId"
-              create={{
-                label: 'Crear conductor',
-                onCreate: text => {
-                  create('driver', text, id => {
-                    setValue('secondDriverId', id, { shouldValidate: true })
-                  })
-                },
-              }}
-            />
-            <IconButton
-              aria-label="Quitar el segundo conductor"
-              onClick={() => {
-                setValue('secondDriverId', '')
-                setSecondDriver(false)
-              }}
-              sx={{ mt: 7 }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        ) : (
-          <Button
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setSecondDriver(true)
-            }}
-            sx={{ alignSelf: 'flex-start', ml: -2, mt: -3 }}
-          >
-            Agregar segundo conductor
-          </Button>
-        )}
-
-        {/* 7–8. When, and how it goes */}
-        <DateTimeField
-          id="tripStartAt"
-          label="Inicio"
-          control={control}
-          name="startAt"
-          error={errors.startAt?.message}
-        />
-        <DateTimeField
-          id="tripEndAt"
-          label="Fin (opcional)"
-          hint="Para marcarlo Terminado."
-          control={control}
-          name="endAt"
-          error={errors.endAt?.message}
-          clearable
-        />
-        <SelectField
-          id="tripStatus"
-          label="Estado"
-          options={STATUS_OPTIONS}
-          control={control}
-          name="status"
-        />
-
-        {/* 9. Its expenses, saved with it (specs/0026 RF-12) */}
-        <Box role="group" aria-labelledby="trip-expenses-title">
-          <Typography
-            id="trip-expenses-title"
-            variant="overline"
-            component="p"
-            sx={{ color: 'text.secondary' }}
-          >
-            Gastos (opcional)
-          </Typography>
-          {refuelExpenses.length > 0 && (
-            <Box
+        {/* 5. Its expenses, saved with it (specs/0026 RF-12) */}
+        <FormSection
+          number={5}
+          id={SECTIONS[4].id}
+          title="Gastos"
+          hint="Lo que costó el viaje."
+          issues={sectionIssues(4)}
+          {...(expenseRows.fields.length < TRIP_LIMITS.expenses && {
+            action: addButton('Agregar gasto', () => {
+              setExpenseOpen({ index: null, row: newExpenseRow() })
+            }),
+          })}
+        >
+          {refuelExpenses.length + rowFields.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Aún no hay gastos en este viaje.
+            </Typography>
+          ) : (
+            <Stack
               component="ul"
-              aria-label="Gastos de rellenos"
-              sx={{ listStyle: 'none', m: 0, mb: 3, p: 0 }}
+              aria-label="Gastos del viaje"
+              spacing={2}
+              sx={{ listStyle: 'none', m: 0, p: 0 }}
             >
               {refuelExpenses.map(expense => (
-                <Box
-                  component="li"
+                <ExpenseCard
                   key={expense.id}
-                  sx={{
-                    py: 2,
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 2,
-                    }}
-                  >
-                    <Typography variant="body2">
-                      {categories.find(item => item.id === expense.categoryId)
-                        ?.name ?? expense.categoryName}
-                    </Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                      {moneyTotal(expense.currency, expense.amount)}
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    component="p"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    {expense.description
-                      ? `De un relleno: ${expense.description}. Se cambia en el relleno.`
-                      : 'De un relleno. Se cambia en el relleno.'}
-                  </Typography>
-                </Box>
+                  refuel
+                  category={categoryName(expense.categoryId, expense.id)}
+                  amount={expense.amount}
+                  currency={expense.currency}
+                  takenAt={expense.takenAt}
+                  description={expense.description}
+                  driverName={expense.driverName}
+                  hasReceipt={Boolean(expense.receiptPhotoPath)}
+                />
               ))}
-            </Box>
-          )}
-          <Stack spacing={3}>
-            {expenseRows.fields.map((field, index) => {
-              const row = `expenses.${String(index)}` as `expenses.${number}`
-              const rowErrors = errors.expenses?.[index]
-              const categoryOptions = categories
-                .filter(
-                  category =>
-                    !category.archived ||
-                    category.id ===
-                      tripExpenses.find(e => e.id === field.id)?.categoryId
-                )
-                .map(option)
-              return (
-                <Box
-                  key={field.key}
-                  role="group"
-                  aria-label={`Gasto ${String(index + 1)}`}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto',
-                    gap: 2,
-                    alignItems: 'start',
-                    pb: 3,
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Box sx={{ gridColumn: '1 / 3' }}>
-                    <AutocompleteField
-                      id={`tripExpense${String(index)}Category`}
-                      label="Categoría"
-                      options={categoryOptions}
-                      placeholder="Elige la categoría"
-                      error={rowErrors?.categoryId?.message}
-                      control={control}
-                      name={`${row}.categoryId`}
-                      create={{
-                        label: 'Crear categoría',
-                        onCreate: text => {
-                          create('category', text, id => {
-                            setValue(`${row}.categoryId`, id, {
-                              shouldValidate: true,
-                            })
-                          })
-                        },
-                      }}
-                    />
-                  </Box>
-                  <IconButton
-                    aria-label={`Quitar el gasto ${String(index + 1)}`}
-                    onClick={() => {
+              {rowFields.map(({ key, index, row }) => {
+                const old = tripExpenses.find(expense => expense.id === row.id)
+                const amount = parseDecimal(row.amount)
+                return (
+                  <ExpenseCard
+                    key={key}
+                    category={categoryName(row.categoryId, row.id)}
+                    amount={Number.isNaN(amount) ? 0 : amount}
+                    currency={currency}
+                    takenAt={fromDateTimeValue(row.takenAt)}
+                    description={row.description.trim() || null}
+                    driverName={
+                      row.driverId ? driverName(row.driverId, row.id) : null
+                    }
+                    hasReceipt={Boolean(old?.receiptPhotoPath)}
+                    isNew={!old}
+                    issue={
+                      errors.expenses?.[index] ? 'Revisa este gasto' : null
+                    }
+                    onEdit={() => {
+                      setExpenseOpen({ index, row })
+                    }}
+                    onRemove={() => {
                       expenseRows.remove(index)
                     }}
-                    sx={{ mt: 7 }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                  <Box sx={{ gridColumn: '1 / 3' }}>
-                    <NumberField
-                      id={`tripExpense${String(index)}Amount`}
-                      dense
-                      label="Monto"
-                      prefix={currencySymbol(currency)}
-                      placeholder="1,850"
-                      error={rowErrors?.amount?.message}
-                      registration={register(`${row}.amount`)}
-                    />
-                  </Box>
-                  <Box sx={{ gridColumn: '1 / 4' }}>
-                    <TextField
-                      id={`tripExpense${String(index)}Description`}
-                      dense
-                      label="Descripción (opcional)"
-                      placeholder="Peaje de Tipitapa"
-                      maxLength={TRIP_LIMITS.expenseDescription}
-                      error={rowErrors?.description?.message}
-                      registration={register(`${row}.description`)}
-                    />
-                  </Box>
-                  <Box sx={{ gridColumn: '1 / 4' }}>
-                    <DateTimeField
-                      id={`tripExpense${String(index)}TakenAt`}
-                      label="Fecha y hora"
-                      control={control}
-                      name={`${row}.takenAt`}
-                      error={rowErrors?.takenAt?.message}
-                    />
-                  </Box>
-                </Box>
-              )
-            })}
-          </Stack>
-          {expenseRows.fields.length < TRIP_LIMITS.expenses && (
-            <Button
-              startIcon={<AddIcon />}
-              onClick={addExpenseRow}
-              sx={{ mt: 1, ml: -2 }}
-            >
-              Agregar gasto
-            </Button>
+                  />
+                )
+              })}
+            </Stack>
           )}
-          <Typography variant="subtitle2" component="p" sx={{ mt: 2 }}>
-            Gastos: {moneyTotal(trip?.currency ?? currency, expensesTotal)}
-          </Typography>
-          {expenseRows.fields.length > 0 && (
-            <Typography
-              variant="caption"
-              component="p"
-              sx={{ color: 'text.secondary' }}
-            >
-              La foto del comprobante se agrega desde cada gasto.
+          <Box>
+            <Typography variant="subtitle2" component="p">
+              Gastos: {moneyTotal(currency, expensesTotal)}
             </Typography>
-          )}
-        </Box>
+            {rowFields.length > 0 && (
+              <Typography
+                variant="caption"
+                component="p"
+                sx={{ color: 'text.secondary' }}
+              >
+                La foto del comprobante se agrega desde cada gasto, después de
+                guardar el viaje.
+              </Typography>
+            )}
+          </Box>
+        </FormSection>
 
-        {/* 10. The rest */}
+        {/* The rest */}
         <MoreDetails
           open={details.open}
           onToggle={details.toggle}
@@ -885,18 +890,55 @@ export default function TripForm({
           />
         </MoreDetails>
 
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          fullWidth
-          loading={isSubmitting}
-          loadingPosition="start"
-        >
-          {trip ? 'Guardar cambios' : 'Guardar viaje'}
-        </Button>
+        <TripSummaryBar
+          income={income}
+          expenses={expensesTotal}
+          currency={currency}
+          formId={FORM_ID}
+          saveLabel={trip ? 'Guardar cambios' : 'Guardar viaje'}
+          saving={isSubmitting}
+        />
       </Stack>
 
+      {extraOpen && (
+        <ExtraDialog
+          extra={
+            extraOpen.index === null
+              ? null
+              : (extraFields[extraOpen.index]?.extra ?? null)
+          }
+          currency={currency}
+          onSave={(extra: ExtraValues) => {
+            if (extraOpen.index === null) extras.append(extra)
+            else extras.update(extraOpen.index, extra)
+          }}
+          onClose={() => {
+            setExtraOpen(null)
+          }}
+        />
+      )}
+      {expenseOpen && openRow && (
+        <ExpenseRowDialog
+          row={openRow}
+          isNew={expenseOpen.index === null}
+          currency={currency}
+          categoryOptions={categories
+            .filter(
+              category =>
+                !category.archived || category.id === openRowOld?.categoryId
+            )
+            .map(option)}
+          driverOptions={active(drivers, [openRowOld?.driverId]).map(option)}
+          create={create}
+          onSave={row => {
+            if (expenseOpen.index === null) expenseRows.append(row)
+            else expenseRows.update(expenseOpen.index, row)
+          }}
+          onClose={() => {
+            setExpenseOpen(null)
+          }}
+        />
+      )}
       {dialog}
     </Box>
   )

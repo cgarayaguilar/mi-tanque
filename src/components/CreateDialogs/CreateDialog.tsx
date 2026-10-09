@@ -18,8 +18,9 @@ interface CreateDialogProps {
 }
 
 /**
- * The frame of a "+ Crear …" dialog (backend specs/0028 RF-2): its own form
- * inside the trip's or the expense's, which is not submitted with it.
+ * The frame of a dialog with its own form inside another one: "+ Crear …"
+ * (backend specs/0028 RF-2) and the trip's income and expenses (specs/0029).
+ * The form behind is not submitted with it.
  */
 export default function CreateDialog({
   title,

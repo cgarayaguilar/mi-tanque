@@ -80,8 +80,35 @@ const createFrom = async (label: string, text: string) => {
   fireEvent.click(await screen.findByRole('option', { name: /^\+ Crear/ }))
 }
 
-const type = (label: string, value: string) => {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } })
+const type = (
+  label: string,
+  value: string,
+  scope: HTMLElement = document.body
+) => {
+  fireEvent.change(within(scope).getByLabelText(label), { target: { value } })
+}
+
+/** The income's or the expense's dialog, open (specs/0029). */
+const openDialog = async (button: string, title: string) => {
+  fireEvent.click(await screen.findByRole('button', { name: button }))
+  return screen.getByRole('dialog', { name: title })
+}
+
+/** Its "Guardar", which closes it once its values are valid. */
+const saveDialog = async (dialog: HTMLElement) => {
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+  await waitFor(() => {
+    expect(dialog).not.toBeInTheDocument()
+  })
+}
+
+/** "Quitar" in a card's ⋮ menu, confirmed (specs/0029 RF-5). */
+const removeFromMenu = (menu: string) => {
+  fireEvent.click(screen.getByRole('button', { name: menu }))
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Quitar' }))
+  fireEvent.click(
+    within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar' })
+  )
 }
 
 beforeEach(() => {
@@ -241,9 +268,15 @@ describe('the form', () => {
     expect(
       screen.getByText('Managua → San José · C$25,000.00 NIO')
     ).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Agregar ingreso' }))
-    type('Descripción', 'Parada en León')
-    type('Monto', '2500')
+    const income = await openDialog('Agregar ingreso', 'Nuevo ingreso')
+    type('Descripción', 'Parada en León', income)
+    type('Monto', '2500', income)
+    await saveDialog(income)
+    expect(
+      screen.getByRole('button', {
+        name: 'Ingreso de Parada en León, C$2,500.00 NIO',
+      })
+    ).toBeInTheDocument()
     expect(screen.getByText('Ingresos: C$27,500.00 NIO')).toBeInTheDocument()
     await choose('Camión', 'Unidad 12')
     fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
@@ -558,16 +591,31 @@ describe('its expenses in the form', () => {
     await choose('Cliente', 'Transportes Pérez')
     await choose('Tarifa', 'Managua - San José - C$25,000.00')
     await choose('Camión', 'Unidad 12')
-    fireEvent.click(screen.getByRole('button', { name: 'Agregar gasto' }))
-    const row = screen.getByRole('group', { name: 'Gasto 1' })
-    await choose('Categoría', 'Peajes', row)
-    fireEvent.change(within(row).getByLabelText('Monto'), {
-      target: { value: '1850' },
-    })
-    fireEvent.change(within(row).getByLabelText('Descripción (opcional)'), {
-      target: { value: 'Peaje de Tipitapa' },
-    })
-    expect(screen.getByText('Gastos: C$1,850.00 NIO')).toBeInTheDocument()
+    expect(
+      screen.getByText('Aún no hay gastos en este viaje.')
+    ).toBeInTheDocument()
+    const first = await openDialog('Agregar gasto', 'Nuevo gasto')
+    await choose('Categoría', 'Peajes', first)
+    type('Monto', '1850', first)
+    fireEvent.click(
+      within(first).getByRole('button', { name: 'Ver más detalles' })
+    )
+    type('Descripción (opcional)', 'Peaje de Tipitapa', first)
+    await choose('Conductor (opcional)', 'Marta Gómez', first)
+    await saveDialog(first)
+    const second = await openDialog('Agregar gasto', 'Nuevo gasto')
+    await choose('Categoría', 'Viáticos', second)
+    type('Monto', '600', second)
+    await saveDialog(second)
+    expect(
+      screen.getByRole('button', { name: 'Gasto de Peajes, C$1,850.00 NIO' })
+    ).toHaveTextContent('Conductor: Marta Gómez')
+    expect(screen.getByText('Gastos: C$2,450.00 NIO')).toBeInTheDocument()
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Resumen del viaje' })
+      ).getByText('C$22,550.00 NIO')
+    ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
 
     await waitFor(() => {
@@ -592,7 +640,13 @@ describe('its expenses in the form', () => {
                 categoryId: 'org-a_tolls',
                 categoryName: 'Peajes',
                 description: 'Peaje de Tipitapa',
+                // Chosen in its dialog (specs/0029 RF-4)
+                driverId: 'driver-2',
+                driverName: 'Marta Gómez',
               },
+            },
+            {
+              fields: { categoryName: 'Viáticos', amount: 600, driverId: null },
             },
           ],
           update: [],
@@ -619,16 +673,24 @@ describe('its expenses in the form', () => {
     ])
     renderAt('/viajes/trip-1/editar')
 
-    const first = await screen.findByRole('group', { name: 'Gasto 1' })
-    expect(within(first).getByLabelText('Monto')).toHaveValue('1,850')
+    const second = await screen.findByRole('button', {
+      name: 'Gasto de Viáticos, C$1,350.00 NIO',
+    })
+    expect(
+      within(second).getByTitle('Con foto del comprobante')
+    ).toBeInTheDocument()
     expect(screen.getByText('Gastos: C$3,200.00 NIO')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar el gasto 1' }))
-    fireEvent.change(
-      within(screen.getByRole('group', { name: 'Gasto 1' })).getByLabelText(
-        'Monto'
-      ),
-      { target: { value: '1500' } }
-    )
+    removeFromMenu('Opciones del gasto de Peajes')
+    expect(
+      screen.queryByRole('button', { name: /^Gasto de Peajes/ })
+    ).toBeNull()
+    expect(screen.getByText('Gastos: C$1,350.00 NIO')).toBeInTheDocument()
+    fireEvent.click(second)
+    const dialog = screen.getByRole('dialog', { name: 'Editar gasto' })
+    expect(within(dialog).getByLabelText('Monto')).toHaveValue('1,350')
+    type('Monto', '1500', dialog)
+    await saveDialog(dialog)
+    expect(screen.getByText('Gastos: C$1,500.00 NIO')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
     await waitFor(() => {
@@ -672,15 +734,26 @@ describe('its expenses in the form', () => {
     ])
     renderAt('/viajes/trip-1/editar')
 
-    const refuels = await screen.findByRole('list', {
-      name: 'Gastos de rellenos',
+    const refuel = await screen.findByRole('button', {
+      name: 'Relleno de Combustible, C$4,500.00 NIO',
     })
-    expect(refuels).toHaveTextContent('CombustibleC$4,500.00 NIO')
-    expect(refuels).toHaveTextContent('Relleno de Tanque izquierdo')
-    expect(screen.queryByRole('group', { name: 'Gasto 2' })).toBeNull()
+    expect(refuel).toHaveTextContent('Relleno de Tanque izquierdo')
+    // CA-4: no menu, and tapping it says where it changes
+    expect(
+      screen.queryByRole('button', {
+        name: 'Opciones del gasto de Combustible',
+      })
+    ).toBeNull()
+    fireEvent.click(refuel)
+    expect(sileo.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Se cambia en el relleno, en Historial.',
+      })
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByText('Gastos: C$6,350.00 NIO')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar el gasto 1' }))
+    removeFromMenu('Opciones del gasto de Peajes')
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => {
       expect(tripsApi.saveTripWithExpenses.mock.lastCall).toMatchObject([
@@ -740,17 +813,81 @@ describe('its expenses in the form', () => {
     expect(screen.getByText('Ingresos: C$27,500.00 NIO')).toBeInTheDocument()
   })
 
-  test('a row needs its category and amount', async () => {
+  test('an expense needs its category and amount; cancelling adds none', async () => {
     renderAt('/viajes/nuevo')
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Agregar gasto' })
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
-    const row = screen.getByRole('group', { name: 'Gasto 1' })
+    const dialog = await openDialog('Agregar gasto', 'Nuevo gasto')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
     expect(
-      await within(row).findByText('Elige la categoría')
+      await within(dialog).findByText('Elige la categoría')
     ).toBeInTheDocument()
-    expect(within(row).getByText('Escribe el monto')).toBeInTheDocument()
+    expect(within(dialog).getByText('Escribe el monto')).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(
+      screen.getByText('Aún no hay gastos en este viaje.')
+    ).toBeInTheDocument()
+    expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
+  })
+
+  // specs/0029 CA-2: an income is edited by tapping it, removed from its menu
+  test('an income is edited from its card and removed after asking', async () => {
+    renderAt('/viajes/nuevo')
+    await screen.findByRole('group', { name: '¿Cómo se calcula el precio?' })
+    await choose('¿Cómo se calcula el precio?', 'Manual')
+    type('Precio', '7000')
+    const dialog = await openDialog('Agregar ingreso', 'Nuevo ingreso')
+    type('Descripción', 'Parada en León', dialog)
+    type('Monto', '1000', dialog)
+    await saveDialog(dialog)
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ingreso de Parada en León, C$1,000.00 NIO',
+      })
+    )
+    const editing = screen.getByRole('dialog', { name: 'Editar ingreso' })
+    type('Monto', '1200', editing)
+    await saveDialog(editing)
+    expect(screen.getByText('Ingresos: C$8,200.00 NIO')).toBeInTheDocument()
+
+    removeFromMenu('Opciones del ingreso de Parada en León')
+    expect(screen.getByText('Ingresos: C$7,000.00 NIO')).toBeInTheDocument()
+  })
+
+  // specs/0029 CA-5, CA-6
+  test('each section says what to fix; a loss is said in the bar', async () => {
+    renderAt('/viajes/nuevo')
+    await screen.findByRole('group', { name: '¿Cómo se calcula el precio?' })
+    await choose('¿Cómo se calcula el precio?', 'Manual')
+    type('Origen', 'Managua')
+    type('Destino', 'León')
+    type('Precio', '1000')
+    const dialog = await openDialog('Agregar gasto', 'Nuevo gasto')
+    await choose('Categoría', 'Peajes', dialog)
+    type('Monto', '1500', dialog)
+    await saveDialog(dialog)
+    const summary = screen.getByRole('region', { name: 'Resumen del viaje' })
+    expect(within(summary).getByText('-C$500.00 NIO')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
+    expect(
+      await within(
+        screen.getByRole('region', { name: 'Cliente y precio' })
+      ).findByText('1 dato por revisar')
+    ).toBeInTheDocument()
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Camión y conductores' })
+      ).getByText('2 datos por revisar')
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Gastos' })).queryByText(
+        /por revisar/
+      )
+    ).toBeNull()
     expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
   })
 })
