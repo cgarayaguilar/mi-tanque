@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -18,16 +12,9 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import EmptyState from 'components/EmptyState'
 import { FilterBar, FilterToggle } from 'components/FilterChip'
 import SessionGate from 'components/SessionGate'
-import TextField from 'components/TextField'
-import {
-  CATEGORY_NAME_MAX,
-  categoryFormSchema,
-  categoryWithName,
-  duplicateCategoryMessage,
-  type CategoryFormValues,
-  type ExpenseCategory,
-} from 'schemas/expenseCategories'
-import { createCategory, newExpenseId, updateCategory } from 'services/expenses'
+import CategoryDialog from 'components/CreateDialogs/CategoryDialog'
+import type { ExpenseCategory } from 'schemas/expenseCategories'
+import { updateCategory } from 'services/expenses'
 import { useExpensesStore } from 'store/expenses'
 import {
   recoverFromLostPermission,
@@ -38,101 +25,11 @@ import { radius } from 'theme/tokens'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
-import { squeezeSpaces } from 'utils/foldText'
 
 const failed = (operation: string, title: string) => (error: unknown) => {
   reportError(error, { operation })
   if (recoverFromLostPermission(error)) return
   sileo.error({ title, description: 'Vuelve a intentarlo.' })
-}
-
-/** "Agregar categoría" and "Renombrar" (RF-11), in a dialog. */
-function CategoryDialog({
-  category,
-  orgId,
-  onClose,
-}: {
-  /** null: a new one. */
-  category: ExpenseCategory | null
-  orgId: string
-  onClose: () => void
-}) {
-  const categories = useExpensesStore(state => state.categories)
-  const saveCategory = useExpensesStore(state => state.saveCategory)
-  // Its id exists from the moment the dialog opens (ADR 0003)
-  const [id] = useState(() => category?.id ?? newExpenseId())
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors },
-  } = useForm<CategoryFormValues>({
-    resolver: zodResolver(categoryFormSchema),
-    defaultValues: { name: category?.name ?? '' },
-  })
-
-  const onSubmit = ({ name }: CategoryFormValues) => {
-    const other = categoryWithName(name, categories, id)
-    if (other) {
-      setError(
-        'name',
-        { message: duplicateCategoryMessage(other) },
-        { shouldFocus: true }
-      )
-      return
-    }
-    const trimmed = squeezeSpaces(name)
-    saveCategory(
-      category
-        ? { ...category, name: trimmed }
-        : { id, orgId, name: trimmed, system: null, archived: false },
-      () =>
-        category
-          ? updateCategory(id, { name: trimmed })
-          : createCategory(id, orgId, trimmed)
-    ).catch(failed('saveExpenseCategory', 'No pudimos guardar la categoría'))
-    sileo.success({
-      title: 'Categoría guardada',
-      ...(!navigator.onLine && {
-        description: 'Se subirá cuando tengas señal.',
-      }),
-    })
-    onClose()
-  }
-
-  return (
-    <Dialog open onClose={onClose} aria-labelledby="category-title" fullWidth>
-      <DialogTitle id="category-title">
-        {category ? 'Renombrar categoría' : 'Nueva categoría'}
-      </DialogTitle>
-      <DialogContent>
-        <Box
-          component="form"
-          id="category-form"
-          noValidate
-          onSubmit={event => {
-            void handleSubmit(onSubmit)(event)
-          }}
-          sx={{ pt: 2 }}
-        >
-          <TextField
-            id="categoryName"
-            label="Nombre"
-            placeholder="Lavado"
-            maxLength={CATEGORY_NAME_MAX}
-            error={errors.name?.message}
-            registration={register('name')}
-          />
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button type="submit" form="category-form" variant="contained">
-          Guardar
-        </Button>
-      </DialogActions>
-    </Dialog>
-  )
 }
 
 function CategoryRow({

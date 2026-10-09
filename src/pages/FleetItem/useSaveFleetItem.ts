@@ -1,55 +1,14 @@
 import { useLocation } from 'wouter'
-import { sileo } from 'sileo'
-import {
-  createFleetItem,
-  updateFleetItem,
-  type FleetCollection,
-} from 'services/fleet'
-import type { Client } from 'schemas/clients'
-import type { Driver } from 'schemas/drivers'
-import type { Rate } from 'schemas/rates'
-import type { FleetTank, Trailer, Truck } from 'schemas/fleet'
-import { useFleetStore } from 'store/fleet'
-import { recoverFromLostPermission } from 'store/session'
-import { sectionWords, type FleetSection } from 'utils/fleetSections'
-import { reportError } from 'utils/reportError'
+import { useCreateFleetItem } from 'hooks/useCreateFleetItem'
+import type { FleetSection } from 'utils/fleetSections'
 
-const capitalize = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1)
-
-/**
- * Saves a fleet item the offline way (ADR 0003): it shows at once, the toast
- * says if it waits for signal, and a later rejection by the rules is reported.
- */
+/** Saves a fleet item from its screen, then goes back to its list. */
 export const useSaveFleetItem = (section: FleetSection) => {
-  const save = useFleetStore(state => state.save)
+  const saveItem = useCreateFleetItem(section)
   const [, navigate] = useLocation()
 
-  return (
-    item: Truck | Trailer | FleetTank | Client | Driver | Rate,
-    fields: object,
-    isNew: boolean
-  ): void => {
-    const collection: FleetCollection = section.collection
-    const write = () =>
-      isNew
-        ? createFleetItem(collection, item.id, item.orgId, fields)
-        : updateFleetItem(collection, item.id, fields)
-
-    save(collection, item, write).catch((error: unknown) => {
-      reportError(error, { operation: 'saveFleetItem', collection })
-      if (recoverFromLostPermission(error)) return
-      sileo.error({
-        title: `No pudimos guardar ${sectionWords(section).the} ${section.one} ${item.name}`,
-        description: 'Revisa los datos y vuelve a intentarlo.',
-      })
-    })
-    sileo.success({
-      title: `${capitalize(section.one)} guardad${sectionWords(section).it}`,
-      ...(!navigator.onLine && {
-        description: 'Se subirá cuando tengas señal.',
-      }),
-    })
+  return (...args: Parameters<typeof saveItem>): void => {
+    saveItem(...args)
     navigate(`/flota/${section.slug}`)
   }
 }
