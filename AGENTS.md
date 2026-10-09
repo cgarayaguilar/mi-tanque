@@ -212,7 +212,7 @@ en cada push y PR.
   `refuelId: null` en todo gasto suyo, nunca crea ni borra el de un relleno, y solo le cambia a qué
   corresponde y la descripción: `pages/Expense/RefuelExpenseForm` (`refuelExpenseChanges`,
   `tripCarriesRefuel`, `updateRefuelExpense`; el relleno se lee con `readRefuelOfExpense`). En
-  el formulario del viaje no es un renglón: se muestra aparte y nunca se quita. Con cuenta, el
+  el formulario del viaje es una tarjeta con "Relleno", sin menú, que nunca se quita. Con cuenta, el
   relleno va en la moneda de la organización y `RefuelForm` no muestra selector (los importados
   del teléfono conservan la suya).
 - **Crear desde la lista (specs/0028):** `AutocompleteField` acepta `create` ("+ Crear conductor",
@@ -227,6 +227,14 @@ en cada push y PR.
   `submit` para que no llegue al del viaje (los eventos de React cruzan el portal). Al crear un
   camión o una tarifa se llama a `chooseTruck`/`chooseRate`, que leen el store como está ahora
   (`useFleetStore.getState()`), porque lo recién creado no está en las listas de ese render.
+- **Formulario del viaje por secciones (specs/0029):** cinco `FormSection` (tarjeta numerada con
+  título, ayuda, acción y "N datos por revisar") y "Ver más detalles". Ingresos y gastos no tienen
+  campos en el formulario: son tarjetas (`RowCard`, con `IncomeCard`/`PriceCard` y `ExpenseCard`)
+  que abren su modal (`ExtraDialog`, `ExpenseRowDialog`, validados con `extraSchema` y
+  `expenseRowSchema` de `schemas/trips`), y el modal cambia el `useFieldArray`. Por eso los totales
+  salen de `fields` del arreglo, no de `useWatch` (sin campos registrados, `useWatch` no ve un
+  `append`). El renglón de gasto ganó `driverId`. Al fallar el guardado, `onInvalid` lleva a la
+  primera sección con error. `TripSummaryBar` es `sticky` al pie, dentro del formulario.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
