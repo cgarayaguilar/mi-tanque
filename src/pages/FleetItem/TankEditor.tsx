@@ -31,6 +31,7 @@ import { formatNumber } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { catalogFilterFor } from 'data/truckModels'
 import { templateById } from 'utils/tankTemplates'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
 
@@ -45,6 +46,12 @@ interface Props {
 const FORM_ID = 'tank-form'
 
 type Describe = 'template' | 'measures'
+
+/** `/flota/tanques/nuevo?equipo=truck:{id}`: the equipment to choose. */
+const equipmentInAddress = () => {
+  const value = new URLSearchParams(window.location.search).get('equipo')
+  return value && /^(truck|trailer):[\w-]+$/.test(value) ? value : null
+}
 
 /** The model these values still are, if any. */
 const templateOf = (values: TankFormValues) => {
@@ -98,9 +105,14 @@ export default function TankEditor({
     formState: { errors, isSubmitting },
   } = useForm<TankFormValues>({
     resolver: zodResolver(tankFormSchema),
-    defaultValues: tankToForm(tank),
+    defaultValues: tank
+      ? tankToForm(tank)
+      : // "Agregar tanque" of an equipment brings it chosen (specs/0031 RF-4)
+        { ...tankToForm(null), equipment: equipmentInAddress() ?? 'none' },
     disabled: !canWrite,
   })
+  // "+ Crear camión" and "+ Crear remolque" in "Pertenece a" (specs/0031)
+  const { create, dialog } = useCreateDialogs(orgId)
   const values = useWatch({ control }) as TankFormValues
   // How the tank is described (RF-9): a new one starts from a model; an
   // existing one opens the way it is
@@ -238,6 +250,24 @@ export default function TankEditor({
             control={control}
             name="equipment"
             disabled={!canWrite}
+            create={[
+              {
+                label: 'Crear camión',
+                onCreate: text => {
+                  create('truck', text, truckId => {
+                    setValue('equipment', `truck:${truckId}`)
+                  })
+                },
+              },
+              {
+                label: 'Crear remolque',
+                onCreate: text => {
+                  create('trailer', text, trailerId => {
+                    setValue('equipment', `trailer:${trailerId}`)
+                  })
+                },
+              },
+            ]}
           />
           <ChoiceButtonsBase
             id="describe"
@@ -317,6 +347,7 @@ export default function TankEditor({
           </MoreDetails>
         </Stack>
       </Box>
+      {dialog}
     </EditorLayout>
   )
 }

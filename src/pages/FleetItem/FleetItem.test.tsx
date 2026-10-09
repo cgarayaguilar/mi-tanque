@@ -1303,3 +1303,123 @@ describe('rates', () => {
     })
   })
 })
+
+// backend specs/0031: "+ Crear …" in the lists of Flota's forms
+describe('creating from the lists', () => {
+  const escape = (text: string) => text.replace(/[()]/g, '\\$&')
+  const createFrom = async (
+    label: string,
+    text: string,
+    option: RegExp = /^\+ Crear/
+  ) => {
+    const field = await screen.findByRole('combobox', {
+      name: new RegExp(`^${escape(label)}`),
+    })
+    field.focus()
+    fireEvent.change(field, { target: { value: text } })
+    fireEvent.click(await screen.findByRole('option', { name: option }))
+  }
+
+  // CA-1
+  test('a rate creates its client and keeps it chosen', async () => {
+    renderAt('/flota/tarifas/nuevo')
+    await screen.findByRole('heading', { name: 'Nueva tarifa' })
+    type('Origen', 'Rivas')
+    type('Destino', 'Managua')
+    type('Precio', '7000')
+    await createFrom('Cliente (opcional)', 'Fletes Ríos')
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo cliente' })
+    expect(within(dialog).getByLabelText('Nombre del cliente')).toHaveValue(
+      'Fletes Ríos'
+    )
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar cliente' })
+    )
+    await waitFor(() => {
+      expect(
+        screen.getByRole('combobox', { name: 'Cliente (opcional)' })
+      ).toHaveValue('Fletes Ríos')
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tarifa' }))
+
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'rates',
+        'new-id',
+        ORG_ID,
+        expect.objectContaining({ clientName: 'Fletes Ríos' })
+      )
+    })
+    expect(api.createFleetItem).toHaveBeenCalledWith(
+      'clients',
+      'new-id',
+      ORG_ID,
+      expect.objectContaining({ name: 'Fletes Ríos' })
+    )
+  })
+
+  // CA-2
+  test('a trailer creates the truck it is hitched to', async () => {
+    renderAt('/flota/remolques/nuevo')
+    await screen.findByLabelText('Nombre o número de unidad')
+    await createFrom('Enganchado a (opcional)', 'Unidad 31')
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo camión' })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar camión' })
+    )
+    await waitFor(() => {
+      expect(chosen('Enganchado a (opcional)')).toBe('Unidad 31')
+    })
+  })
+
+  // CA-3: two options, a truck's and a trailer's
+  test("a tank's equipment is created from its list", async () => {
+    renderAt('/flota/tanques/nuevo')
+    const field = await screen.findByRole('combobox', { name: /^Pertenece a/ })
+    fireEvent.mouseDown(field)
+    const names = (await screen.findAllByRole('option')).map(
+      item => item.textContent
+    )
+    expect(names.slice(0, 2)).toEqual(['+ Crear camión', '+ Crear remolque'])
+    fireEvent.keyDown(field, { key: 'Escape' })
+
+    await createFrom('Pertenece a', 'Caja 10', /^\+ Crear remolque/)
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Nuevo remolque',
+    })
+    expect(
+      within(dialog).getByLabelText('Nombre o número de unidad')
+    ).toHaveValue('Caja 10')
+    await choose('Tipo de remolque', 'Seco (caja cerrada)', dialog)
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar remolque' })
+    )
+    await waitFor(() => {
+      expect(chosen('Pertenece a')).toBe('Remolque · Caja 10')
+    })
+  })
+
+  // CA-6: "Agregar tanque" of an equipment brings it chosen
+  test('a new tank takes the equipment in its address', async () => {
+    renderAt('/flota/tanques/nuevo?equipo=truck:truck-1')
+    await screen.findByRole('combobox', { name: /^Pertenece a/ })
+    expect(chosen('Pertenece a')).toBe('Camión · Unidad 12')
+  })
+
+  // CA-7
+  test('a viewer sees no create option', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [rate()],
+      drivers: [],
+      clients: [client()],
+      trucks: [],
+      trailers: [],
+      tanks: [],
+    })
+    signIn('viewer')
+    renderAt('/flota/tarifas/rate-1')
+    expect(
+      await screen.findByRole('combobox', { name: /^Cliente/ })
+    ).toBeDisabled()
+  })
+})

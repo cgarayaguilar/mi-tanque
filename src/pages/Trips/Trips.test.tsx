@@ -627,6 +627,48 @@ describe('creating from the lists', () => {
     expect(screen.getByText('Ingresos: C$7,000.00 NIO')).toBeInTheDocument()
   })
 
+  // specs/0031 RF-2, CA-1: a dialog over a dialog
+  test("a rate's client is created from the rate's dialog", async () => {
+    renderAt('/viajes/nuevo')
+    await createFrom('Tarifa', 'Rivas')
+    const dialog = await screen.findByRole('dialog', { name: 'Nueva tarifa' })
+    fireEvent.change(within(dialog).getByLabelText('Origen'), {
+      target: { value: 'Rivas' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Destino'), {
+      target: { value: 'Managua' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Precio'), {
+      target: { value: '7000' },
+    })
+    await createFrom('Cliente (opcional)', 'Acarreos del Norte')
+    const clientDialog = await screen.findByRole('dialog', {
+      name: 'Nuevo cliente',
+    })
+    fireEvent.click(
+      within(clientDialog).getByRole('button', { name: 'Guardar cliente' })
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Nuevo cliente' })).toBeNull()
+    })
+    // Back on the rate, as it was, with its client
+    expect(within(dialog).getByLabelText('Origen')).toHaveValue('Rivas')
+    expect(
+      within(dialog).getByRole('combobox', { name: 'Cliente (opcional)' })
+    ).toHaveValue('Acarreos del Norte')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar tarifa' })
+    )
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Cliente' })).toHaveValue(
+        'Acarreos del Norte'
+      )
+    })
+    expect(screen.getByRole('combobox', { name: 'Tarifa' })).toHaveValue(
+      'Rivas - Managua - C$7,000.00'
+    )
+  })
+
   test('cancelling changes nothing', async () => {
     renderAt('/viajes/nuevo')
     await createFrom('Remolque (opcional)', 'Caja 9')

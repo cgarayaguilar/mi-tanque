@@ -14,6 +14,7 @@ import { newFleetId } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
 import { sectionBySlug } from 'utils/fleetSections'
 import CreateDialog from './CreateDialog'
+import TruckDialog from './TruckDialog'
 import type { CreateDialogProps } from './types'
 
 const SECTION = sectionBySlug('remolques')
@@ -33,6 +34,7 @@ export default function TrailerDialog({
     handleSubmit,
     control,
     setFocus,
+    setValue,
     formState: { errors },
   } = useForm<TrailerFormValues>({
     resolver: zodResolver(trailerFormSchema),
@@ -40,6 +42,8 @@ export default function TrailerDialog({
   })
   const values = useWatch({ control })
   const details = useMoreDetails<TrailerFormValues>(TRAILER_DETAILS, setFocus)
+  // The truck it is hitched to, created on top of it (specs/0031 RF-2)
+  const [newTruck, setNewTruck] = useState<string | null>(null)
 
   const onSubmit = (values: TrailerFormValues) => {
     const fields = trailerFromForm(values)
@@ -77,7 +81,20 @@ export default function TrailerDialog({
         details={details}
         truckOptions={truckOptions}
         idPrefix="create-trailer-"
+        createTruck={{ label: 'Crear camión', onCreate: setNewTruck }}
       />
+      {newTruck !== null && (
+        <TruckDialog
+          orgId={orgId}
+          initialName={newTruck}
+          onCreated={truckId => {
+            setValue('hitchedTruckId', truckId)
+          }}
+          onClose={() => {
+            setNewTruck(null)
+          }}
+        />
+      )}
     </CreateDialog>
   )
 }

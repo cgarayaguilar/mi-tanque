@@ -13,6 +13,7 @@ import {
 } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
 import type { FleetSection } from 'utils/fleetSections'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
 import InsuranceChip from 'components/InsuranceChip'
@@ -42,6 +43,7 @@ export default function TrailerEditor({
     handleSubmit,
     control,
     setFocus,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TrailerFormValues>({
     resolver: zodResolver(trailerFormSchema),
@@ -54,6 +56,8 @@ export default function TrailerEditor({
     ? insuranceNotice(trailer.insuranceExpiresOn, new Date(), trailer.archived)
     : null
   const details = useMoreDetails<TrailerFormValues>(TRAILER_DETAILS, setFocus)
+  // "+ Crear camión" in "Enganchado a" (specs/0031 RF-2)
+  const { create, dialog } = useCreateDialogs(orgId)
 
   const onSubmit = (values: TrailerFormValues) => {
     const fields = trailerFromForm(values)
@@ -106,9 +110,18 @@ export default function TrailerEditor({
             details={details}
             truckOptions={truckOptions}
             disabled={!canWrite}
+            createTruck={{
+              label: 'Crear camión',
+              onCreate: text => {
+                create('truck', text, truckId => {
+                  setValue('hitchedTruckId', truckId)
+                })
+              },
+            }}
           />
         </Stack>
       </Box>
+      {dialog}
     </EditorLayout>
   )
 }

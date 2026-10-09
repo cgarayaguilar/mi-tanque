@@ -18,6 +18,7 @@ import { newFleetId } from 'services/fleet'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { sectionBySlug } from 'utils/fleetSections'
+import ClientDialog from './ClientDialog'
 import CreateDialog from './CreateDialog'
 import type { CreateDialogProps } from './types'
 
@@ -44,6 +45,7 @@ export default function RateDialog({
     handleSubmit,
     control,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<RateFormValues>({
     resolver: zodResolver(rateFormSchema),
@@ -51,6 +53,8 @@ export default function RateDialog({
   })
   const values = useWatch({ control })
   const places = knownPlaces(rates)
+  // Its client, created on top of it (specs/0031 RF-2)
+  const [newClient, setNewClient] = useState<string | null>(null)
 
   const onSubmit = (values: RateFormValues) => {
     const fields = rateFromForm(
@@ -112,7 +116,23 @@ export default function RateDialog({
         places={places}
         clientOptions={clientOptions}
         disabled={false}
+        createClient={{
+          label: 'Crear cliente',
+          onCreate: setNewClient,
+        }}
       />
+      {newClient !== null && (
+        <ClientDialog
+          orgId={orgId}
+          initialName={newClient}
+          onCreated={clientId => {
+            setValue('clientId', clientId)
+          }}
+          onClose={() => {
+            setNewClient(null)
+          }}
+        />
+      )}
     </CreateDialog>
   )
 }

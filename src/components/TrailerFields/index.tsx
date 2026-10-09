@@ -1,6 +1,8 @@
 import Stack from '@mui/material/Stack'
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form'
-import AutocompleteField from 'components/AutocompleteField'
+import AutocompleteField, {
+  type CreateOption,
+} from 'components/AutocompleteField'
 import ColorField from 'components/ColorField'
 import DateField from 'components/DateField'
 import MoreDetails, { countFilled } from 'components/MoreDetails'
@@ -31,6 +33,8 @@ interface TrailerFieldsProps {
   disabled?: boolean
   /** Before each id: two forms on one page (a trip and its dialog). */
   idPrefix?: string
+  /** "+ Crear camión" in "Enganchado a" (backend specs/0031). */
+  createTruck?: CreateOption | undefined
 }
 
 /**
@@ -46,6 +50,7 @@ export default function TrailerFields({
   truckOptions,
   disabled = false,
   idPrefix = '',
+  createTruck,
 }: TrailerFieldsProps) {
   return (
     <Stack spacing={5}>
@@ -85,6 +90,7 @@ export default function TrailerFields({
         control={control}
         name="hitchedTruckId"
         disabled={disabled}
+        create={createTruck}
       />
       <NumberField
         id={`${idPrefix}lengthFt`}

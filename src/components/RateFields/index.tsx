@@ -2,7 +2,9 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form'
-import AutocompleteField from 'components/AutocompleteField'
+import AutocompleteField, {
+  type CreateOption,
+} from 'components/AutocompleteField'
 import NumberField from 'components/NumberField'
 import type { SelectOption } from 'components/SelectField'
 import TextField from 'components/TextField'
@@ -24,6 +26,8 @@ interface RateFieldsProps {
   /** "General (sin cliente)" and the active clients. */
   clientOptions: SelectOption[]
   disabled: boolean
+  /** "+ Crear cliente" in Cliente (backend specs/0031). */
+  createClient?: CreateOption | undefined
 }
 
 /** A rate's fields (backend specs/0024 RF-6). */
@@ -36,6 +40,7 @@ export default function RateFields({
   places,
   clientOptions,
   disabled,
+  createClient,
 }: RateFieldsProps) {
   const price = parseDecimal(values.price ?? '')
   const origin = values.origin?.trim() ?? ''
@@ -99,6 +104,7 @@ export default function RateFields({
         control={control}
         name="clientId"
         disabled={disabled}
+        create={createClient}
       />
       <TextField
         id="rateDescription"

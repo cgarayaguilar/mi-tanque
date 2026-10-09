@@ -17,6 +17,7 @@ import {
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import type { FleetSection } from 'utils/fleetSections'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
 
@@ -51,6 +52,7 @@ export default function RateEditor({
     handleSubmit,
     control,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RateFormValues>({
     resolver: zodResolver(rateFormSchema),
@@ -58,6 +60,8 @@ export default function RateEditor({
     disabled: !canWrite,
   })
   const values = useWatch({ control })
+  // "+ Crear cliente" (specs/0031 RF-2)
+  const { create, dialog } = useCreateDialogs(orgId)
 
   // Without this rate's own places: editing it can change their spelling
   const places = knownPlaces(rates.filter(item => item.id !== id))
@@ -130,8 +134,17 @@ export default function RateEditor({
           places={places}
           clientOptions={clientOptions}
           disabled={!canWrite}
+          createClient={{
+            label: 'Crear cliente',
+            onCreate: text => {
+              create('client', text, clientId => {
+                setValue('clientId', clientId)
+              })
+            },
+          }}
         />
       </Box>
+      {dialog}
     </EditorLayout>
   )
 }
