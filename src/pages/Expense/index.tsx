@@ -64,6 +64,7 @@ import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 import RefuelExpenseForm from './RefuelExpenseForm'
+import TripDialog from 'pages/TripEditor/TripDialog'
 import { tripOption, useTripChoices } from './useTripChoices'
 
 const FORM_ID = 'expense-form'
@@ -108,6 +109,8 @@ function ExpenseForm({
   const [now] = useState(() => new Date())
   // "+ Crear …" in each list (backend specs/0028)
   const { create, dialog } = useCreateDialogs(orgId)
+  // "+ Crear viaje": its whole form, full screen (specs/0031 RF-3)
+  const [newTrip, setNewTrip] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [receiptPath, setReceiptPath] = useState(
     expense?.receiptPhotoPath ?? null
@@ -276,6 +279,13 @@ function ExpenseForm({
               control={control}
               name="tripId"
               disabled={!canWrite}
+              create={{
+                label: 'Crear viaje',
+                withText: false,
+                onCreate: () => {
+                  setNewTrip(true)
+                },
+              }}
             />
           )}
           {values.kind === 'truck' && (
@@ -410,6 +420,18 @@ function ExpenseForm({
         </Button>
       )}
       {dialog}
+      {newTrip && (
+        <TripDialog
+          orgId={orgId}
+          currency={currency}
+          onSaved={trip => {
+            setValue('tripId', trip.id, { shouldValidate: true })
+          }}
+          onClose={() => {
+            setNewTrip(false)
+          }}
+        />
+      )}
       <ConfirmDialog
         open={confirming}
         title="¿Borrar este gasto?"

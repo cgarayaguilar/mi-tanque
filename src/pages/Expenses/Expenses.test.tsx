@@ -14,6 +14,7 @@ import { useTripsStore } from 'store/trips'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
+  client,
   driver,
   expense,
   presetCategories,
@@ -36,6 +37,9 @@ vi.mock('services/fleet', () => fleetApi)
 const tripsApi = vi.hoisted(() => ({
   readTripsInPeriod: vi.fn(),
   readTrip: vi.fn(),
+  // "+ Crear viaje" (specs/0031 RF-3)
+  newTripId: vi.fn(() => 'new-trip'),
+  saveTripWithExpenses: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/trips', () => tripsApi)
 
@@ -531,7 +535,11 @@ describe("a refuel's expense", () => {
     // The trip of another truck is not offered
     expect(
       (await screen.findAllByRole('option')).map(option => option.textContent)
-    ).toEqual(['mar 6 oct · Managua → San José · Transportes Pérez'])
+    ).toEqual([
+      // specs/0031 RF-3
+      '+ Crear viaje',
+      'mar 6 oct · Managua → San José · Transportes Pérez',
+    ])
     fireEvent.click(
       screen.getByRole('option', {
         name: 'mar 6 oct · Managua → San José · Transportes Pérez',
@@ -631,5 +639,136 @@ describe('creating from the lists', () => {
       'org-a',
       expect.objectContaining({ name: 'Unidad 30' })
     )
+  })
+})
+
+// backend specs/0031 RF-3: a trip created from the expense, full screen
+describe('creating its trip', () => {
+  beforeEach(() => {
+    fleetApi.readFleet.mockResolvedValue({
+      clients: [client()],
+      trucks: [truck(), truck({ id: 'truck-2', name: 'Unidad 15' })],
+      trailers: [trailer()],
+      tanks: [],
+      drivers: [driver()],
+      rates: [],
+    })
+  })
+
+  const openTripDialog = async () => {
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Viaje' }))
+    fireEvent.click(
+      await screen.findByRole('option', { name: '+ Crear viaje' })
+    )
+    return screen.findByRole('dialog', { name: 'Nuevo viaje' })
+  }
+
+  const fillTrip = async (dialog: HTMLElement) => {
+    await choose('Cliente', 'Transportes Pérez', dialog)
+    await choose('¿Cómo se calcula el precio?', 'Manual', dialog)
+    for (const [label, value] of [
+      ['Origen', 'Managua'],
+      ['Destino', 'León'],
+      ['Precio', '9000'],
+    ] as const) {
+      fireEvent.change(within(dialog).getByLabelText(label), {
+        target: { value },
+      })
+    }
+    await choose('Conductor', 'Pedro Ruiz', dialog)
+  }
+
+  // CA-4
+  test('saved, it is chosen and the expense keeps what was written', async () => {
+    renderAt('/gastos/nuevo')
+    await choose('Categoría', 'Peajes')
+    type('Monto', '350')
+    await choose('Corresponde a', 'Viaje')
+    const dialog = await openTripDialog()
+    await fillTrip(dialog)
+    await choose('Camión', 'Unidad 12', dialog)
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar viaje' })
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(tripsApi.saveTripWithExpenses).toHaveBeenCalledWith(
+      'new-trip',
+      'org-a',
+      expect.objectContaining({ origin: 'Managua', destination: 'León' }),
+      true,
+      expect.anything()
+    )
+    expect(
+      screen.getByRole<HTMLInputElement>('combobox', { name: 'Viaje' }).value
+    ).toContain('Managua → León')
+    // Still on the expense, as it was
+    expect(window.location.pathname).toBe('/gastos/nuevo')
+    expect(screen.getByLabelText('Monto')).toHaveValue('350')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar gasto' }))
+    await waitFor(() => {
+      expect(expensesApi.createExpense).toHaveBeenCalledWith(
+        'new-expense',
+        'org-a',
+        expect.objectContaining({ kind: 'trip', tripId: 'new-trip' })
+      )
+    })
+  })
+
+  test('closing with something written asks first', async () => {
+    renderAt('/gastos/nuevo')
+    await choose('Corresponde a', 'Viaje')
+    const dialog = await openTripDialog()
+    await choose('Cliente', 'Transportes Pérez', dialog)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cerrar' }))
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: '¿Descartar el viaje?' })
+      ).getByRole('button', { name: 'Descartar' })
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
+  })
+
+  // CA-5
+  test("a refuel's trip opens with its truck and is chosen", async () => {
+    expensesApi.readExpense.mockResolvedValue(
+      expense({
+        id: 'r1',
+        refuelId: 'r1',
+        kind: 'truck',
+        tripId: null,
+        tripRoute: null,
+        categoryId: 'org-a_fuel',
+        categoryName: 'Combustible',
+        amount: 4500,
+        takenAt: new Date(2026, 9, 6, 12),
+      })
+    )
+    expensesApi.readRefuelOfExpense.mockResolvedValue({
+      tankName: 'Tanque izquierdo',
+      equipment: { kind: 'truck', id: 'truck-2' },
+    })
+    renderAt('/gastos/r1')
+    await screen.findByRole('group', { name: 'Corresponde a' })
+    await choose('Corresponde a', 'Viaje')
+    const dialog = await openTripDialog()
+    expect(
+      within(dialog).getByRole('combobox', { name: 'Camión' })
+    ).toHaveValue('Unidad 15')
+    await fillTrip(dialog)
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar viaje' })
+    )
+    await waitFor(() => {
+      expect(
+        screen.getByRole<HTMLInputElement>('combobox', { name: 'Viaje' }).value
+      ).toContain('Managua → León')
+    })
   })
 })

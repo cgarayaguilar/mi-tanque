@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   useFieldArray,
   useForm,
@@ -77,6 +77,12 @@ interface TripFormProps {
   id: string
   orgId: string
   currency: Currency
+  /** A new trip's first values: the truck of a refuel (specs/0031 RF-3). */
+  preset?: Partial<Pick<TripFormValues, 'truckId' | 'trailerId'>>
+  /** In a dialog: saved, it tells who opened it instead of going to it. */
+  onSaved?: (trip: Trip) => void
+  /** In a dialog: whether something was written, to ask before closing. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 const FORM_ID = 'trip-form'
@@ -124,6 +130,9 @@ export default function TripForm({
   id,
   orgId,
   currency: organizationCurrency,
+  preset,
+  onSaved,
+  onDirtyChange,
 }: TripFormProps) {
   const [, navigate] = useLocation()
   // An old trip keeps its own currency (0025): everything here is in it
@@ -150,13 +159,16 @@ export default function TripForm({
     setFocus,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
     defaultValues: trip
       ? { ...tripToForm(trip), expenses: tripExpenses.map(expenseToRow) }
-      : EMPTY_TRIP_FORM(now),
+      : { ...EMPTY_TRIP_FORM(now), ...preset },
   })
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
   const extras = useFieldArray({ control, name: 'extras' })
   const expenseRows = useFieldArray({
     control,
@@ -172,7 +184,9 @@ export default function TripForm({
   const { create, dialog } = useCreateDialogs(orgId)
   // "Sin remolque" chosen is a choice too: the truck does not replace it
   // (audit 0027); an edited trip already has its own
-  const [trailerChosen, setTrailerChosen] = useState(trip !== null)
+  const [trailerChosen, setTrailerChosen] = useState(
+    trip !== null || Boolean(preset?.trailerId)
+  )
   // Said when a rate moves the trip to its client (RF-9)
   const [clientNotice, setClientNotice] = useState<string | null>(null)
   // The income or expense open in its dialog; index null is a new one (0029)
@@ -366,7 +380,8 @@ export default function TripForm({
         description: 'Se subirá cuando tengas señal.',
       }),
     })
-    navigate(`/viajes/${id}`)
+    if (onSaved) onSaved(saved)
+    else navigate(`/viajes/${id}`)
   }
 
   // A failed save goes to the first section with something to fix (0029
