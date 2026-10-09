@@ -246,6 +246,14 @@ en cada push y PR.
   `FilterOption` aceptan `group` (subtítulo en `AutocompleteField` y `FilterChip`; las opciones
   de un grupo van juntas). El filtro y el grupo "Destino" de Viajes son la ruta de un cliente
   (`routeKey` en `utils/tripGroups`), escrita como su tarifa.
+- **Crear desde todas las listas (specs/0031):** `create` de `AutocompleteField` acepta una o
+  varias opciones (`[{ label: 'Crear camión', … }, { label: 'Crear remolque', … }]`). Los diálogos
+  pueden abrir otro encima: `RateDialog` abre `ClientDialog` y `TrailerDialog` abre `TruckDialog`
+  directamente (no con `useCreateDialogs`, que los importa a ellos). "+ Crear viaje" abre
+  `pages/TripEditor/TripDialog`: el mismo `TripForm` a pantalla completa, con `onSaved` (no navega),
+  `preset` (el camión o remolque de un relleno) y `onDirtyChange` (pregunta antes de cerrar).
+  Medición muestra el equipo recién creado aunque no tenga tanque, con "Agregar tanque", que abre
+  `/flota/tanques/nuevo?equipo=truck:{id}` (`TankEditor` lo toma de la dirección).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
