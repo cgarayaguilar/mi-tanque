@@ -224,9 +224,8 @@ en cada push y PR.
   `TrailerFields`, `RateFields`) y el mismo guardado (`hooks/useCreateFleetItem`, que usa también
   `useSaveFleetItem`). Un formulario los abre con `useCreateDialogs(orgId)`:
   `create(tipo, texto, alCrear)` y `{dialog}` en la página. El formulario del diálogo detiene su
-  `submit` para que no
-  llegue al del viaje (los eventos de React cruzan el portal). Al crear un camión o una tarifa se
-  llama a `chooseTruck`/`chooseRate`, que leen el store como está ahora
+  `submit` para que no llegue al del viaje (los eventos de React cruzan el portal). Al crear un
+  camión o una tarifa se llama a `chooseTruck`/`chooseRate`, que leen el store como está ahora
   (`useFleetStore.getState()`), porque lo recién creado no está en las listas de ese render.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
