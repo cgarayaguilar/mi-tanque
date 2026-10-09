@@ -13,6 +13,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import AutocompleteField from 'components/AutocompleteField'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import ConfirmDialog from 'components/ConfirmDialog'
 import DateTimeField from 'components/DateTimeField'
 import EmptyState from 'components/EmptyState'
@@ -105,6 +106,8 @@ function ExpenseForm({
   const remember = useExpensesStore(state => state.remember)
   const uid = useSessionStore(state => state.user?.uid ?? '')
   const [now] = useState(() => new Date())
+  // "+ Crear …" in each list (backend specs/0028)
+  const { create, dialog } = useCreateDialogs(orgId)
   const [confirming, setConfirming] = useState(false)
   const [receiptPath, setReceiptPath] = useState(
     expense?.receiptPhotoPath ?? null
@@ -115,6 +118,7 @@ function ExpenseForm({
     control,
     setFocus,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -243,6 +247,14 @@ function ExpenseForm({
             error={errors.categoryId?.message}
             control={control}
             name="categoryId"
+            create={{
+              label: 'Crear categoría',
+              onCreate: text => {
+                create('category', text, id => {
+                  setValue('categoryId', id, { shouldValidate: true })
+                })
+              },
+            }}
             disabled={!canWrite}
           />
           <SelectField
@@ -275,6 +287,14 @@ function ExpenseForm({
               error={errors.truckId?.message}
               control={control}
               name="truckId"
+              create={{
+                label: 'Crear camión',
+                onCreate: text => {
+                  create('truck', text, id => {
+                    setValue('truckId', id, { shouldValidate: true })
+                  })
+                },
+              }}
               disabled={!canWrite}
             />
           )}
@@ -287,6 +307,14 @@ function ExpenseForm({
               error={errors.trailerId?.message}
               control={control}
               name="trailerId"
+              create={{
+                label: 'Crear remolque',
+                onCreate: text => {
+                  create('trailer', text, id => {
+                    setValue('trailerId', id, { shouldValidate: true })
+                  })
+                },
+              }}
               disabled={!canWrite}
             />
           )}
@@ -312,6 +340,14 @@ function ExpenseForm({
               ]}
               control={control}
               name="driverId"
+              create={{
+                label: 'Crear conductor',
+                onCreate: text => {
+                  create('driver', text, id => {
+                    setValue('driverId', id, { shouldValidate: true })
+                  })
+                },
+              }}
               disabled={!canWrite}
             />
           </MoreDetails>
@@ -373,6 +409,7 @@ function ExpenseForm({
           Borrar
         </Button>
       )}
+      {dialog}
       <ConfirmDialog
         open={confirming}
         title="¿Borrar este gasto?"

@@ -28,6 +28,8 @@ const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
   readMembers: vi.fn(() => Promise.resolve([])),
   photoUrl: vi.fn(() => Promise.resolve('blob:receipt')),
+  newFleetId: vi.fn(() => 'new-truck'),
+  createFleetItem: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/fleet', () => fleetApi)
 
@@ -577,5 +579,57 @@ describe("a refuel's expense", () => {
         })
       )
     })
+  })
+})
+
+// backend specs/0028 CA-6: "+ Crear …" from the expense's lists
+describe('creating from the lists', () => {
+  const createFrom = async (label: string, text: string) => {
+    const field = await screen.findByRole('combobox', {
+      name: new RegExp(`^${label}`),
+    })
+    field.focus()
+    fireEvent.change(field, { target: { value: text } })
+    fireEvent.click(await screen.findByRole('option', { name: /^\+ Crear/ }))
+  }
+
+  test('a category typed is created and chosen', async () => {
+    renderAt('/gastos/nuevo')
+    await createFrom('Categoría', 'Lavado')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Nueva categoría',
+    })
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Lavado')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => {
+      expect(expensesApi.createCategory).toHaveBeenCalledWith(
+        'new-expense',
+        'org-a',
+        'Lavado'
+      )
+    })
+    expect(screen.getByRole('combobox', { name: 'Categoría' })).toHaveValue(
+      'Lavado'
+    )
+  })
+
+  test('a truck created is chosen', async () => {
+    renderAt('/gastos/nuevo')
+    await createFrom('Camión', 'Unidad 30')
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo camión' })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar camión' })
+    )
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Camión' })).toHaveValue(
+        'Unidad 30'
+      )
+    })
+    expect(fleetApi.createFleetItem).toHaveBeenCalledWith(
+      'trucks',
+      'new-truck',
+      'org-a',
+      expect.objectContaining({ name: 'Unidad 30' })
+    )
   })
 })

@@ -70,6 +70,16 @@ const renderAt = (path: string) => {
   render(<App />)
 }
 
+/** "+ Crear …" from a list, after typing in it (specs/0028). */
+const createFrom = async (label: string, text: string) => {
+  const field = await screen.findByRole('combobox', {
+    name: new RegExp(`^${label.replace(/[()]/g, '\\$&')}`),
+  })
+  field.focus()
+  fireEvent.change(field, { target: { value: text } })
+  fireEvent.click(await screen.findByRole('option', { name: /^\+ Crear/ }))
+}
+
 const type = (label: string, value: string) => {
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
 }
@@ -315,12 +325,16 @@ describe('the form', () => {
   })
 
   // CA-5
-  test('"Nuevo cliente" creates one and chooses it', async () => {
+  // backend specs/0028 CA-5: "+ Crear cliente" in the list
+  test('"+ Crear cliente" in the list creates one and chooses it', async () => {
     renderAt('/viajes/nuevo')
+    expect(
+      await screen.findByRole('combobox', { name: 'Cliente' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nuevo cliente' })).toBeNull()
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Nuevo cliente' })
-    )
+    await createFrom('Cliente', 'transportes perez')
+    // An existing name is not offered as new: the plain option opens it
     const dialog = await screen.findByRole('dialog', { name: 'Nuevo cliente' })
     fireEvent.change(within(dialog).getByLabelText('Nombre del cliente'), {
       target: { value: 'transportes perez' },
@@ -352,6 +366,131 @@ describe('the form', () => {
     expect(screen.getByRole('combobox', { name: 'Cliente' })).toHaveValue(
       'Acarreos del Norte'
     )
+  })
+})
+
+// backend specs/0028: "+ Crear …" from the trip's lists
+describe('creating from the lists', () => {
+  // CA-1
+  test('a driver typed and not found is created with that name and chosen', async () => {
+    renderAt('/viajes/nuevo')
+    await choose('Cliente', 'Transportes Pérez')
+    await createFrom('Conductor', 'Zoila Mena')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Nuevo conductor',
+    })
+    expect(within(dialog).getByLabelText('Nombre del conductor')).toHaveValue(
+      'Zoila Mena'
+    )
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar conductor' })
+    )
+    await waitFor(() => {
+      expect(fleetApi.createFleetItem).toHaveBeenCalledWith(
+        'drivers',
+        'new-client',
+        'org-a',
+        expect.objectContaining({ name: 'Zoila Mena' })
+      )
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(screen.getByRole('combobox', { name: 'Conductor' })).toHaveValue(
+      'Zoila Mena'
+    )
+    // What was filled before stays
+    expect(screen.getByRole('combobox', { name: 'Cliente' })).toHaveValue(
+      'Transportes Pérez'
+    )
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Conductor guardado' })
+  })
+
+  // CA-4
+  test('a repeated driver is said in the dialog and not saved', async () => {
+    renderAt('/viajes/nuevo')
+    await createFrom('Conductor', 'Zoila')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Nuevo conductor',
+    })
+    fireEvent.change(within(dialog).getByLabelText('Nombre del conductor'), {
+      target: { value: 'pedro ruiz' },
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar conductor' })
+    )
+    expect(
+      await within(dialog).findByText('Ya existe un conductor con ese nombre')
+    ).toBeInTheDocument()
+    expect(fleetApi.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  // CA-2
+  test('a truck created is chosen', async () => {
+    renderAt('/viajes/nuevo')
+    await createFrom('Camión', 'Unidad 30')
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo camión' })
+    expect(
+      within(dialog).getByLabelText('Nombre o número de unidad')
+    ).toHaveValue('Unidad 30')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar camión' })
+    )
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Camión' })).toHaveValue(
+        'Unidad 30'
+      )
+    })
+    expect(fleetApi.createFleetItem).toHaveBeenCalledWith(
+      'trucks',
+      'new-client',
+      'org-a',
+      expect.objectContaining({ name: 'Unidad 30' })
+    )
+  })
+
+  // CA-3
+  test('a rate opens empty; created, it is chosen and brings its client', async () => {
+    renderAt('/viajes/nuevo')
+    await createFrom('Tarifa', 'León')
+    const dialog = await screen.findByRole('dialog', { name: 'Nueva tarifa' })
+    expect(within(dialog).getByLabelText('Origen')).toHaveValue('')
+    fireEvent.change(within(dialog).getByLabelText('Origen'), {
+      target: { value: 'Rivas' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Destino'), {
+      target: { value: 'Managua' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Precio'), {
+      target: { value: '7000' },
+    })
+    await choose('Cliente (opcional)', 'Fletes Ríos', dialog)
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Guardar tarifa' })
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(screen.getByRole('combobox', { name: 'Tarifa' })).toHaveValue(
+      'Rivas - Managua - C$7,000.00'
+    )
+    expect(screen.getByRole('combobox', { name: 'Cliente' })).toHaveValue(
+      'Fletes Ríos'
+    )
+    expect(screen.getByText('Ingresos: C$7,000.00 NIO')).toBeInTheDocument()
+  })
+
+  test('cancelling changes nothing', async () => {
+    renderAt('/viajes/nuevo')
+    await createFrom('Remolque (opcional)', 'Caja 9')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Nuevo remolque',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(fleetApi.createFleetItem).not.toHaveBeenCalled()
   })
 })
 

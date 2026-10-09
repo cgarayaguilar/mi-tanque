@@ -10,7 +10,6 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
-import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons from 'components/ChoiceButtons'
 import DateTimeField from 'components/DateTimeField'
@@ -18,7 +17,7 @@ import MoreDetails, {
   countFilled,
   useMoreDetails,
 } from 'components/MoreDetails'
-import NewClientDialog from 'components/NewClientDialog'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import NumberField from 'components/NumberField'
 import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
@@ -132,7 +131,8 @@ export default function TripForm({
   const [secondDriver, setSecondDriver] = useState(
     Boolean(trip?.secondDriverId)
   )
-  const [newClient, setNewClient] = useState(false)
+  // "+ Crear …" in each list (backend specs/0028)
+  const { create, dialog } = useCreateDialogs(orgId)
   // "Sin remolque" chosen is a choice too: the truck does not replace it
   // (audit 0027); an edited trip already has its own
   const [trailerChosen, setTrailerChosen] = useState(trip !== null)
@@ -212,8 +212,10 @@ export default function TripForm({
     })
   }
 
+  // The store as it is now, not this render's lists: a rate or a truck just
+  // created from the list is already there (specs/0028)
   const chooseRate = (rateId: string) => {
-    const rate = rates.find(item => item.id === rateId)
+    const rate = useFleetStore.getState().rates.find(item => item.id === rateId)
     setClientNotice(null)
     if (!rate?.clientId || rate.clientId === getValues('clientId')) return
     const had = getValues('clientId')
@@ -222,6 +224,20 @@ export default function TripForm({
     if (had && name) {
       setClientNotice(`Cambiamos el cliente a ${name}, el de la tarifa`)
     }
+  }
+
+  // A rate just created: chosen if it can price this trip, in its currency
+  const chooseCreatedRate = (rateId: string) => {
+    const rate = useFleetStore.getState().rates.find(item => item.id === rateId)
+    if (rate && rate.currency !== (trip?.currency ?? currency)) {
+      sileo.warning({
+        title: 'Guardamos la tarifa, pero este viaje no puede usarla',
+        description: `La tarifa está en ${rate.currency} y este viaje en ${trip?.currency ?? currency}.`,
+      })
+      return
+    }
+    setValue('rateId', rateId, { shouldValidate: true })
+    chooseRate(rateId)
   }
 
   const chooseMode = (mode: string) => {
@@ -236,16 +252,17 @@ export default function TripForm({
   // The truck brings its hitched trailer and the driver linked to its
   // assigned member, only where nothing was chosen yet (RF-9)
   const chooseTruck = (truckId: string) => {
-    const truck = trucks.find(item => item.id === truckId)
+    const fleet = useFleetStore.getState()
+    const truck = fleet.trucks.find(item => item.id === truckId)
     if (!truck) return
     if (!trailerChosen && !getValues('trailerId')) {
-      const trailer = trailers.find(
+      const trailer = fleet.trailers.find(
         item => !item.archived && item.hitchedTruckId === truck.id
       )
       if (trailer) setValue('trailerId', trailer.id)
     }
     if (!getValues('driverId') && truck.assignedDriverUid) {
-      const driver = drivers.find(
+      const driver = fleet.drivers.find(
         item => !item.archived && item.memberUid === truck.assignedDriverUid
       )
       if (driver) setValue('driverId', driver.id, { shouldValidate: true })
@@ -350,31 +367,29 @@ export default function TripForm({
       }}
     >
       <Stack spacing={5}>
-        {/* 1. The client, or a new one (RF-10) */}
-        <Box>
-          <AutocompleteField
-            id="tripClient"
-            label="Cliente"
-            options={clientOptions}
-            placeholder="Elige el cliente"
-            error={errors.clientId?.message}
-            {...(clientNotice !== null && { hint: clientNotice })}
-            control={control}
-            name="clientId"
-            onChange={() => {
-              setClientNotice(null)
-            }}
-          />
-          <Button
-            startIcon={<PersonAddOutlinedIcon />}
-            onClick={() => {
-              setNewClient(true)
-            }}
-            sx={{ mt: 1, ml: -2 }}
-          >
-            Nuevo cliente
-          </Button>
-        </Box>
+        {/* 1. The client, or a new one from the list (specs/0028) */}
+        <AutocompleteField
+          id="tripClient"
+          label="Cliente"
+          options={clientOptions}
+          placeholder="Elige el cliente"
+          error={errors.clientId?.message}
+          {...(clientNotice !== null && { hint: clientNotice })}
+          control={control}
+          name="clientId"
+          onChange={() => {
+            setClientNotice(null)
+          }}
+          create={{
+            label: 'Crear cliente',
+            onCreate: text => {
+              create('client', text, id => {
+                setClientNotice(null)
+                setValue('clientId', id, { shouldValidate: true })
+              })
+            },
+          }}
+        />
 
         {/* 2. From a rate or by hand */}
         <ChoiceButtons
@@ -396,6 +411,14 @@ export default function TripForm({
               control={control}
               name="rateId"
               onChange={chooseRate}
+              create={{
+                label: 'Crear tarifa',
+                // Empty, by the owner's choice (specs/0028)
+                withText: false,
+                onCreate: () => {
+                  create('rate', '', chooseCreatedRate)
+                },
+              }}
             />
             {chosenRate && (
               <Typography
@@ -535,6 +558,15 @@ export default function TripForm({
           control={control}
           name="truckId"
           onChange={chooseTruck}
+          create={{
+            label: 'Crear camión',
+            onCreate: text => {
+              create('truck', text, id => {
+                setValue('truckId', id, { shouldValidate: true })
+                chooseTruck(id)
+              })
+            },
+          }}
         />
         <AutocompleteField
           id="tripTrailer"
@@ -545,6 +577,15 @@ export default function TripForm({
           onChange={() => {
             setTrailerChosen(true)
           }}
+          create={{
+            label: 'Crear remolque',
+            onCreate: text => {
+              create('trailer', text, id => {
+                setTrailerChosen(true)
+                setValue('trailerId', id)
+              })
+            },
+          }}
         />
         <AutocompleteField
           id="tripDriver"
@@ -554,6 +595,14 @@ export default function TripForm({
           error={errors.driverId?.message}
           control={control}
           name="driverId"
+          create={{
+            label: 'Crear conductor',
+            onCreate: text => {
+              create('driver', text, id => {
+                setValue('driverId', id, { shouldValidate: true })
+              })
+            },
+          }}
         />
         {secondDriver ? (
           <Box
@@ -574,6 +623,14 @@ export default function TripForm({
               error={errors.secondDriverId?.message}
               control={control}
               name="secondDriverId"
+              create={{
+                label: 'Crear conductor',
+                onCreate: text => {
+                  create('driver', text, id => {
+                    setValue('secondDriverId', id, { shouldValidate: true })
+                  })
+                },
+              }}
             />
             <IconButton
               aria-label="Quitar el segundo conductor"
@@ -713,6 +770,16 @@ export default function TripForm({
                       error={rowErrors?.categoryId?.message}
                       control={control}
                       name={`${row}.categoryId`}
+                      create={{
+                        label: 'Crear categoría',
+                        onCreate: text => {
+                          create('category', text, id => {
+                            setValue(`${row}.categoryId`, id, {
+                              shouldValidate: true,
+                            })
+                          })
+                        },
+                      }}
                     />
                   </Box>
                   <IconButton
@@ -830,17 +897,7 @@ export default function TripForm({
         </Button>
       </Stack>
 
-      {newClient && (
-        <NewClientDialog
-          orgId={orgId}
-          onCreated={clientId => {
-            setValue('clientId', clientId, { shouldValidate: true })
-          }}
-          onClose={() => {
-            setNewClient(false)
-          }}
-        />
-      )}
+      {dialog}
     </Box>
   )
 }
