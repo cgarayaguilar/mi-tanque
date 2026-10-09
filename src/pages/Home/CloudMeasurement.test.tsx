@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { sileo } from 'sileo'
 import App from '../../App'
 import { useFleetStore } from 'store/fleet'
@@ -19,6 +25,9 @@ import { choose } from '../../testing/choose'
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
   readMembers: vi.fn(() => Promise.resolve([])),
+  // "+ Crear camión" in Equipo (specs/0031 RF-4)
+  newFleetId: vi.fn(() => 'new-truck'),
+  createFleetItem: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/fleet', () => fleetApi)
 
@@ -134,7 +143,14 @@ test('a truck with two tanks asks for the truck, then the tank (CA-1)', async ()
   fireEvent.mouseDown(await screen.findByLabelText('Equipo'))
   expect(
     (await screen.findAllByRole('option')).map(option => option.textContent)
-  ).toEqual(['Camión · Unidad 12', 'Remolque · Caja 7', 'Tanques individuales'])
+  ).toEqual([
+    // specs/0031 RF-4
+    '+ Crear camión',
+    '+ Crear remolque',
+    'Camión · Unidad 12',
+    'Remolque · Caja 7',
+    'Tanques individuales',
+  ])
   fireEvent.keyDown(screen.getByLabelText('Equipo'), { key: 'Escape' })
   // One card asks for the tank: no select plus summary (owner, 2026-10-02)
   expect(screen.getByText('Elige el tanque')).toBeInTheDocument()
@@ -438,4 +454,41 @@ test('a save refused because the role changed reloads the account instead of bla
   await waitFor(() => {
     expect(sessionApi.readAccount).toHaveBeenCalledWith('luis')
   })
+})
+
+// backend specs/0031 RF-4, CA-6
+test('a truck created from Equipo asks for its tank', async () => {
+  renderHome()
+  const field = await screen.findByRole('combobox', { name: /^Equipo/ })
+  field.focus()
+  fireEvent.change(field, { target: { value: 'Unidad 31' } })
+  fireEvent.click(
+    await screen.findByRole('option', { name: '+ Crear camión «Unidad 31»' })
+  )
+  const dialog = await screen.findByRole('dialog', { name: 'Nuevo camión' })
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Guardar camión' })
+  )
+
+  expect(
+    await screen.findByText('Unidad 31 todavía no tiene tanque.')
+  ).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: /^Equipo/ })).toHaveValue(
+    'Camión · Unidad 31'
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar tanque' }))
+  await waitFor(() => {
+    expect(window.location.pathname + window.location.search).toBe(
+      '/flota/tanques/nuevo?equipo=truck:new-truck'
+    )
+  })
+})
+
+test('a viewer is not offered to create equipment', async () => {
+  signIn('viewer')
+  renderHome()
+  fireEvent.mouseDown(await screen.findByLabelText('Equipo'))
+  expect(
+    (await screen.findAllByRole('option')).map(option => option.textContent)
+  ).not.toContain('+ Crear camión')
 })

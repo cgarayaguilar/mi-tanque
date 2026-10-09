@@ -29,6 +29,7 @@ import NumberField from 'components/NumberField'
 import Stat from 'components/Stat'
 import TankShapeIcon from 'components/TankShapeIcon'
 import { AutocompleteBase } from 'components/AutocompleteField'
+import { useCreateDialogs } from 'components/CreateDialogs'
 import { useSaveCloudMeasurement } from 'hooks/useSaveCloudMeasurement'
 import type { FleetTank, Truck } from 'schemas/fleet'
 import {
@@ -370,6 +371,9 @@ export default function CloudMeasurement() {
   const [chosenEquipment, setChosenEquipment] = useState<string | null>(null)
   const [chosenTank, setChosenTank] = useState<string | null>(null)
   const [mode, setMode] = useState<MeasureMode>('measure')
+  // Equipment just created here, still without a tank (specs/0031 RF-4)
+  const [created, setCreated] = useState<string | null>(null)
+  const { create, dialog } = useCreateDialogs(orgId)
 
   useEffect(() => {
     if (orgId) void load(orgId)
@@ -403,8 +407,15 @@ export default function CloudMeasurement() {
     }
     if (keys.has(INDIVIDUAL))
       options.push({ value: INDIVIDUAL, label: 'Tanques individuales' })
+    // Shown while chosen, though it has no tank yet (specs/0031 RF-4)
+    const createdName = created === null ? undefined : nameOf.get(created)
+    if (created !== null && createdName !== undefined && !keys.has(created))
+      options.push({
+        value: created,
+        label: `${created.startsWith('truck:') ? 'Camión' : 'Remolque'} · ${createdName}`,
+      })
     return options
-  }, [activeTanks, trucks, trailers])
+  }, [activeTanks, trucks, trailers, created, nameOf])
 
   const remembered = activeTanks.find(tank => tank.id === readLastTank(orgId))
   const equipment =
@@ -494,8 +505,49 @@ export default function CloudMeasurement() {
             setChosenEquipment(value)
             setChosenTank(null)
           }}
+          {...(canWriteFleet(role) && {
+            create: (['truck', 'trailer'] as const).map(kind => ({
+              label: kind === 'truck' ? 'Crear camión' : 'Crear remolque',
+              onCreate: (text: string) => {
+                create(kind, text, itemId => {
+                  setCreated(`${kind}:${itemId}`)
+                  setChosenEquipment(`${kind}:${itemId}`)
+                  setChosenTank(null)
+                })
+              },
+            })),
+          })}
         />
       </Stack>
+
+      {/* Just created: its tank, to be able to measure it (RF-4) */}
+      {equipment !== null && tanksOfEquipment.length === 0 && (
+        <Box
+          role="status"
+          sx={{
+            mt: 3,
+            px: 4,
+            py: 3,
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: `${String(radius.lg)}px`,
+          }}
+        >
+          <Typography variant="body2">
+            {nameOf.get(equipment) ?? 'Este equipo'} todavía no tiene tanque.
+          </Typography>
+          <Button
+            startIcon={<LocalGasStationIcon />}
+            onClick={() => {
+              navigate(`/flota/tanques/nuevo?equipo=${equipment}`)
+            }}
+            sx={{ mt: 1, ml: -2 }}
+          >
+            Agregar tanque
+          </Button>
+        </Box>
+      )}
 
       {tanksOfEquipment.length > 0 && (
         <TankCard
@@ -533,6 +585,7 @@ export default function CloudMeasurement() {
           )}
         </>
       )}
+      {dialog}
     </>
   )
 }
