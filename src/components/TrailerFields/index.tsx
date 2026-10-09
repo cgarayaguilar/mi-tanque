@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Stack from '@mui/material/Stack'
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form'
 import AutocompleteField, {
@@ -35,6 +36,8 @@ interface TrailerFieldsProps {
   idPrefix?: string
   /** "+ Crear camión" in "Enganchado a" (backend specs/0031). */
   createTruck?: CreateOption | undefined
+  /** Laid out by the screen in sections (specs/0032); in a list otherwise. */
+  sections?: (groups: { identity: ReactNode; more: ReactNode }) => ReactNode
 }
 
 /**
@@ -51,9 +54,10 @@ export default function TrailerFields({
   disabled = false,
   idPrefix = '',
   createTruck,
+  sections,
 }: TrailerFieldsProps) {
-  return (
-    <Stack spacing={5}>
+  const identity = (
+    <>
       <TextField
         id={`${idPrefix}name`}
         label="Nombre o número de unidad"
@@ -149,39 +153,48 @@ export default function TrailerFields({
         name="insuranceExpiresOn"
         disabled={disabled}
       />
-      <MoreDetails
-        open={details.open}
-        onToggle={details.toggle}
-        filled={countFilled([
-          values.trailerType === 'reefer' ? values.reeferConsumption : '',
-          values.vin,
-          values.description,
-        ])}
-      >
-        {values.trailerType === 'reefer' && (
-          <NumberField
-            id={`${idPrefix}reeferConsumption`}
-            label="Consumo del equipo de frío (opcional)"
-            unit="gal/h"
-            placeholder="Ej. 0.8"
-            hint="Galones por hora del termo."
-            error={errors.reeferConsumption?.message}
-            registration={register('reeferConsumption')}
-          />
-        )}
-        <TextField
-          id={`${idPrefix}vin`}
-          label="VIN o número de serie (opcional)"
-          error={errors.vin?.message}
-          registration={register('vin')}
+    </>
+  )
+  const more = (
+    <MoreDetails
+      open={details.open}
+      onToggle={details.toggle}
+      filled={countFilled([
+        values.trailerType === 'reefer' ? values.reeferConsumption : '',
+        values.vin,
+        values.description,
+      ])}
+    >
+      {values.trailerType === 'reefer' && (
+        <NumberField
+          id={`${idPrefix}reeferConsumption`}
+          label="Consumo del equipo de frío (opcional)"
+          unit="gal/h"
+          placeholder="Ej. 0.8"
+          hint="Galones por hora del termo."
+          error={errors.reeferConsumption?.message}
+          registration={register('reeferConsumption')}
         />
-        <TextField
-          id={`${idPrefix}description`}
-          label="Descripción (opcional)"
-          error={errors.description?.message}
-          registration={register('description')}
-        />
-      </MoreDetails>
+      )}
+      <TextField
+        id={`${idPrefix}vin`}
+        label="VIN o número de serie (opcional)"
+        error={errors.vin?.message}
+        registration={register('vin')}
+      />
+      <TextField
+        id={`${idPrefix}description`}
+        label="Descripción (opcional)"
+        error={errors.description?.message}
+        registration={register('description')}
+      />
+    </MoreDetails>
+  )
+  if (sections) return sections({ identity, more })
+  return (
+    <Stack spacing={5}>
+      {identity}
+      {more}
     </Stack>
   )
 }

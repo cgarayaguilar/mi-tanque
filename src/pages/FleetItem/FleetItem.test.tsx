@@ -98,8 +98,9 @@ const pickModel = async (
       name: `Elegir: tanque de ${String(capacity)} galones, ${String(diameter)} pulgadas de diámetro y ${String(length)} de largo`,
     })
   )
+  // Only the catalog closes: a tank's dialog stays (specs/0032)
   await waitFor(() => {
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Elige un modelo' })).toBeNull()
   })
 }
 
@@ -404,7 +405,16 @@ describe('simpler forms (backend specs/0009)', () => {
     ]) {
       expect(within(form).getByLabelText(label)).toBeVisible()
     }
-    expect(within(form).getByLabelText('Odómetro (opcional)')).not.toBeVisible()
+    // specs/0032 RF-1: in sections; the odometer has its own
+    expect(
+      within(form)
+        .getAllByRole('heading', { level: 2 })
+        .map(heading => heading.textContent)
+    ).toEqual(['Datos del camión', 'Tanques', 'Rendimiento y odómetro'])
+    expect(within(form).getByLabelText('Odómetro (opcional)')).toBeVisible()
+    expect(
+      within(form).getByLabelText('VIN o número de serie (opcional)')
+    ).not.toBeVisible()
     const more = within(form).getByRole('button', { name: 'Ver más detalles' })
     expect(more).toHaveAttribute('aria-expanded', 'false')
 
@@ -417,6 +427,14 @@ describe('simpler forms (backend specs/0009)', () => {
 
   // CA-3: what is kept behind the button is counted
   test('editing says how many details it keeps', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck({ vin: '1FUJGLDR5CLBP8834', description: 'Nuevo' })],
+      trailers: [],
+      tanks: [],
+    })
     renderAt('/flota/camiones/truck-1')
     expect(
       await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
@@ -426,12 +444,14 @@ describe('simpler forms (backend specs/0009)', () => {
   // CA-4 (RF-6)
   test('an error behind the button opens it and takes the user there', async () => {
     renderAt('/flota/camiones/truck-1')
-    await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
-    type('Odómetro (opcional)', 'mucho')
+    await screen.findByRole('button', { name: 'Ver más detalles' })
+    type('VIN o número de serie (opcional)', 'X'.repeat(30))
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Odómetro (opcional)')).toHaveFocus()
+      expect(
+        screen.getByLabelText('VIN o número de serie (opcional)')
+      ).toHaveFocus()
     })
     expect(
       screen.getByRole('button', { name: 'Ocultar detalles' })
@@ -442,9 +462,9 @@ describe('simpler forms (backend specs/0009)', () => {
   // Audit 2026-10-02: the hidden field took the focus from the visible one
   test('a visible error keeps the focus; the details open anyway', async () => {
     renderAt('/flota/camiones/truck-1')
-    await screen.findByRole('button', { name: 'Ver más detalles · 2 datos' })
+    await screen.findByRole('button', { name: 'Ver más detalles' })
     type('Nombre o número de unidad', '')
-    type('Odómetro (opcional)', 'mucho')
+    type('VIN o número de serie (opcional)', 'X'.repeat(30))
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
     await waitFor(() => {
@@ -1421,5 +1441,218 @@ describe('creating from the lists', () => {
     expect(
       await screen.findByRole('combobox', { name: /^Cliente/ })
     ).toBeDisabled()
+  })
+})
+
+// backend specs/0032: the tanks of a truck or a trailer, in its form
+describe('tanks from the equipment', () => {
+  const tankDialog = async () => {
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Agregar tanque' })
+    )
+    return screen.findByRole('dialog', { name: 'Nuevo tanque' })
+  }
+  const typeIn = (dialog: HTMLElement, label: string, value: string) => {
+    fireEvent.change(within(dialog).getByLabelText(label), {
+      target: { value },
+    })
+  }
+  const saveDialog = async (dialog: HTMLElement) => {
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => {
+      expect(dialog).not.toBeInTheDocument()
+    })
+  }
+
+  // CA-2
+  test('a new truck with two tanks: written after it, up to two', async () => {
+    api.newFleetId
+      .mockReturnValueOnce('truck-31')
+      .mockReturnValueOnce('tank-a')
+      .mockReturnValueOnce('tank-b')
+    renderAt('/flota/camiones/nuevo')
+    expect(
+      await screen.findByText(
+        'Aún no tiene tanques. Agrega uno para poder medirlo.'
+      )
+    ).toBeInTheDocument()
+    type('Nombre o número de unidad', 'Unidad 31')
+
+    // From a model
+    let dialog = await tankDialog()
+    typeIn(dialog, 'Nombre del tanque', 'Tanque izquierdo')
+    await pickModel(75, 25, 39)
+    await saveDialog(dialog)
+    // With its measures
+    dialog = await tankDialog()
+    typeIn(dialog, 'Nombre del tanque', 'Tanque derecho')
+    await choose('¿Cómo lo describes?', 'Con sus medidas', dialog)
+    typeIn(dialog, 'Diámetro', '26')
+    typeIn(dialog, 'Largo', '48')
+    typeIn(dialog, 'Capacidad', '100')
+    await saveDialog(dialog)
+
+    const list = screen.getByRole('list', { name: 'Tanques del camión' })
+    expect(
+      within(list)
+        .getAllByRole('button', { name: /^Tanque / })
+        .map(card => card.getAttribute('aria-label'))
+    ).toEqual(['Tanque Tanque izquierdo', 'Tanque Tanque derecho'])
+    expect(list).toHaveTextContent('100 gal')
+    expect(screen.queryByRole('button', { name: 'Agregar tanque' })).toBeNull()
+    expect(
+      screen.getByText('Un camión lleva hasta 2 tanques.')
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledTimes(3)
+    })
+    // The truck first: the rules want it there (RF-5)
+    expect(
+      (api.createFleetItem.mock.calls as unknown as string[][]).map(call => [
+        call[0],
+        call[1],
+      ])
+    ).toEqual([
+      ['trucks', 'truck-31'],
+      ['tanks', 'tank-a'],
+      ['tanks', 'tank-b'],
+    ])
+    expect(api.createFleetItem).toHaveBeenCalledWith(
+      'tanks',
+      'tank-b',
+      ORG_ID,
+      expect.objectContaining({
+        name: 'Tanque derecho',
+        capacityGal: 100,
+        equipment: { kind: 'truck', id: 'truck-31' },
+      })
+    )
+    // One toast for all (RF-5)
+    expect(sileo.success).toHaveBeenCalledTimes(1)
+    expect(sileo.success).toHaveBeenCalledWith({ title: 'Camión guardado' })
+  })
+
+  // CA-3
+  test('editing one and taking out the other, written when saved', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck()],
+      trailers: [],
+      tanks: [
+        tank(),
+        tank({ id: 'tank-2', name: 'Tanque derecho', capacityGal: 100 }),
+      ],
+    })
+    renderAt('/flota/camiones/truck-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tanque Tanque derecho' })
+    )
+    const dialog = await screen.findByRole('dialog', { name: 'Editar tanque' })
+    await choose('¿Cómo lo describes?', 'Con sus medidas', dialog)
+    typeIn(dialog, 'Capacidad', '110')
+    await saveDialog(dialog)
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Opciones del tanque ${tank().name}`,
+      })
+    )
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Quitar' }))
+    const confirm = screen.getByRole('dialog', {
+      name: '¿Quitar este tanque del camión?',
+    })
+    expect(confirm).toHaveTextContent(
+      'Queda como tanque individual, con su historial, al guardar el camión.'
+    )
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Quitar' }))
+    expect(api.updateFleetItem).not.toHaveBeenCalledWith(
+      'tanks',
+      expect.anything(),
+      expect.anything()
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'tanks',
+        'tank-2',
+        expect.objectContaining({ capacityGal: 110 })
+      )
+    })
+    expect(api.updateFleetItem).toHaveBeenCalledWith('tanks', tank().id, {
+      equipment: { kind: 'none', id: null },
+    })
+  })
+
+  // CA-4
+  test('a tank does not go to an equipment with two', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck()],
+      trailers: [],
+      tanks: [tank(), tank({ id: 'tank-2', name: 'Tanque derecho' })],
+    })
+    renderAt('/flota/tanques/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre del tanque')
+        .then(() => 'Nombre del tanque'),
+      'Tanque de reserva'
+    )
+    await pickModel(75, 25, 39)
+    await choose('Pertenece a', 'Camión · Unidad 12')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar tanque' }))
+    expect(
+      await screen.findByText('Unidad 12 ya tiene 2 tanques')
+    ).toBeInTheDocument()
+    expect(api.createFleetItem).not.toHaveBeenCalled()
+  })
+
+  // CA-5
+  test('a reefer trailer with its tank', async () => {
+    api.newFleetId
+      .mockReturnValueOnce('trailer-9')
+      .mockReturnValueOnce('tank-c')
+    renderAt('/flota/remolques/nuevo')
+    expect(
+      await screen.findByRole('heading', { name: 'Datos del remolque' })
+    ).toBeInTheDocument()
+    type('Nombre o número de unidad', 'Caja 9')
+    await choose('Tipo de remolque', 'Refrigerado')
+    const dialog = await tankDialog()
+    typeIn(dialog, 'Nombre del tanque', 'Tanque del termo')
+    await pickModel(75, 25, 39)
+    await saveDialog(dialog)
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar remolque' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'tanks',
+        'tank-c',
+        ORG_ID,
+        expect.objectContaining({
+          name: 'Tanque del termo',
+          equipment: { kind: 'trailer', id: 'trailer-9' },
+        })
+      )
+    })
+  })
+
+  // CA-6
+  test('a viewer sees the tanks without adding, editing or taking out', async () => {
+    signIn('viewer')
+    renderAt('/flota/camiones/truck-1')
+    expect(
+      await screen.findByRole('button', { name: `Tanque ${tank().name}` })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar tanque' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /^Opciones del tanque/ })
+    ).toBeNull()
   })
 })

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -27,6 +28,23 @@ export const TRUCK_DETAILS = [
   'vin',
   'description',
 ] as const
+
+/** Behind "Ver más detalles" when the screen shows them in sections (0032). */
+export const TRUCK_SECTION_DETAILS = [
+  'assignedDriverUid',
+  'vin',
+  'description',
+] as const
+
+/** A truck's fields in groups, for its screen's sections (specs/0032 RF-1). */
+export interface TruckFieldGroups {
+  /** Name, plate, brand, model, year, color and insurance. */
+  identity: ReactNode
+  /** Loaded and empty efficiency, and odometer. */
+  performance: ReactNode
+  /** "Ver más detalles": assigned driver, VIN and description. */
+  more: ReactNode
+}
 
 // One ⓘ for both: one per field pushed "Cargado (opcional)" to two lines
 const efficiencyHelp = (unit: 'km' | 'mi') =>
@@ -60,6 +78,8 @@ interface TruckFieldsProps {
   disabled?: boolean
   /** Before each id: two forms on one page (a trip and its dialog). */
   idPrefix?: string
+  /** Laid out by the screen in sections (specs/0032); in a list otherwise. */
+  sections?: (groups: TruckFieldGroups) => ReactNode
 }
 
 /**
@@ -77,6 +97,7 @@ export default function TruckFields({
   members,
   disabled = false,
   idPrefix = '',
+  sections,
 }: TruckFieldsProps) {
   const listedBrand =
     values.brandChoice !== undefined &&
@@ -90,8 +111,8 @@ export default function TruckFields({
     })),
   ]
 
-  return (
-    <Stack spacing={5}>
+  const identity = (
+    <>
       <TextField
         id={`${idPrefix}name`}
         label="Nombre o número de unidad"
@@ -190,6 +211,118 @@ export default function TruckFields({
         name="insuranceExpiresOn"
         disabled={disabled}
       />
+    </>
+  )
+  const performance = (
+    <>
+      {/* Loaded and empty on one row (backend specs/0021 RF-4): short
+        labels under a title, or they wrap unevenly at 375 px */}
+      <Box role="group" aria-labelledby={`${idPrefix}efficiency-title`}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            id={`${idPrefix}efficiency-title`}
+            variant="overline"
+            component="p"
+            sx={{ color: 'text.secondary' }}
+          >
+            Rendimiento
+          </Typography>
+          <MeasureHelp label="el rendimiento" text={efficiencyHelp(unit)} />
+        </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 2,
+          }}
+        >
+          <NumberField
+            id={`${idPrefix}efficiency`}
+            dense
+            label="Cargado (opcional)"
+            unit={`${unit}/gal`}
+            placeholder="Ej. 6.5"
+            error={errors.efficiency?.message}
+            registration={register('efficiency')}
+          />
+          <NumberField
+            id={`${idPrefix}efficiencyEmpty`}
+            dense
+            label="Vacío (opcional)"
+            unit={`${unit}/gal`}
+            placeholder="Ej. 8"
+            error={errors.efficiencyEmpty?.message}
+            registration={register('efficiencyEmpty')}
+          />
+        </Box>
+        <Typography
+          variant="caption"
+          component="p"
+          sx={{ mt: 1, color: 'text.secondary' }}
+        >
+          Para estimar cuánto puedes recorrer con el combustible, cargado y
+          vacío.
+        </Typography>
+      </Box>
+      <NumberField
+        id={`${idPrefix}odometer`}
+        label="Odómetro (opcional)"
+        unit={unit}
+        placeholder="Ej. 120000"
+        hint={`El ${unit === 'mi' ? 'millaje' : 'kilometraje'} actual. La unidad se cambia en Mi cuenta.`}
+        error={errors.odometer?.message}
+        registration={register('odometer')}
+      />
+    </>
+  )
+  const rest = (
+    <>
+      <AutocompleteField
+        id={`${idPrefix}assignedDriverUid`}
+        label="Chofer asignado (opcional)"
+        options={driverOptions}
+        control={control}
+        name="assignedDriverUid"
+        disabled={disabled}
+      />
+      <TextField
+        id={`${idPrefix}vin`}
+        label="VIN o número de serie (opcional)"
+        error={errors.vin?.message}
+        registration={register('vin')}
+      />
+      <TextField
+        id={`${idPrefix}description`}
+        label="Descripción (opcional)"
+        placeholder="Notas para tu equipo"
+        error={errors.description?.message}
+        registration={register('description')}
+      />
+    </>
+  )
+
+  if (sections) {
+    return sections({
+      identity,
+      performance,
+      more: (
+        <MoreDetails
+          open={details.open}
+          onToggle={details.toggle}
+          filled={countFilled([
+            values.assignedDriverUid,
+            values.vin,
+            values.description,
+          ])}
+        >
+          {rest}
+        </MoreDetails>
+      ),
+    })
+  }
+  return (
+    <Stack spacing={5}>
+      {identity}
       <MoreDetails
         open={details.open}
         onToggle={details.toggle}
@@ -202,85 +335,8 @@ export default function TruckFields({
           values.description,
         ])}
       >
-        {/* Loaded and empty on one row (backend specs/0021 RF-4): short
-          labels under a title, or they wrap unevenly at 375 px */}
-        <Box role="group" aria-labelledby={`${idPrefix}efficiency-title`}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography
-              id={`${idPrefix}efficiency-title`}
-              variant="overline"
-              component="p"
-              sx={{ color: 'text.secondary' }}
-            >
-              Rendimiento
-            </Typography>
-            <MeasureHelp label="el rendimiento" text={efficiencyHelp(unit)} />
-          </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: 2,
-            }}
-          >
-            <NumberField
-              id={`${idPrefix}efficiency`}
-              dense
-              label="Cargado (opcional)"
-              unit={`${unit}/gal`}
-              placeholder="Ej. 6.5"
-              error={errors.efficiency?.message}
-              registration={register('efficiency')}
-            />
-            <NumberField
-              id={`${idPrefix}efficiencyEmpty`}
-              dense
-              label="Vacío (opcional)"
-              unit={`${unit}/gal`}
-              placeholder="Ej. 8"
-              error={errors.efficiencyEmpty?.message}
-              registration={register('efficiencyEmpty')}
-            />
-          </Box>
-          <Typography
-            variant="caption"
-            component="p"
-            sx={{ mt: 1, color: 'text.secondary' }}
-          >
-            Para estimar cuánto puedes recorrer con el combustible, cargado y
-            vacío.
-          </Typography>
-        </Box>
-        <NumberField
-          id={`${idPrefix}odometer`}
-          label="Odómetro (opcional)"
-          unit={unit}
-          placeholder="Ej. 120000"
-          hint={`El ${unit === 'mi' ? 'millaje' : 'kilometraje'} actual. La unidad se cambia en Mi cuenta.`}
-          error={errors.odometer?.message}
-          registration={register('odometer')}
-        />
-        <AutocompleteField
-          id={`${idPrefix}assignedDriverUid`}
-          label="Chofer asignado (opcional)"
-          options={driverOptions}
-          control={control}
-          name="assignedDriverUid"
-          disabled={disabled}
-        />
-        <TextField
-          id={`${idPrefix}vin`}
-          label="VIN o número de serie (opcional)"
-          error={errors.vin?.message}
-          registration={register('vin')}
-        />
-        <TextField
-          id={`${idPrefix}description`}
-          label="Descripción (opcional)"
-          placeholder="Notas para tu equipo"
-          error={errors.description?.message}
-          registration={register('description')}
-        />
+        {performance}
+        {rest}
       </MoreDetails>
     </Stack>
   )

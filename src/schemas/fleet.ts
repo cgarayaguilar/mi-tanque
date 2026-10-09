@@ -421,7 +421,7 @@ export const truckFromForm = (values: TruckFormValues, unit: DistanceUnit) => {
  * The brand and model to save (specs/0016 RF-4): the list's name, the typed
  * one with "Otra…", or none.
  */
-const brandAndModel = (values: TruckFormValues) => {
+export const brandAndModel = (values: TruckFormValues) => {
   const listedBrand =
     values.brandChoice !== '' && values.brandChoice !== OTHER_CHOICE
   const brand = listedBrand

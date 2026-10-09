@@ -29,7 +29,9 @@ export const useCreateFleetItem = (section: FleetSection) => {
   return (
     item: Truck | Trailer | FleetTank | Client | Driver | Rate,
     fields: object,
-    isNew: boolean
+    isNew: boolean,
+    /** Without its own toast: a truck's tanks go with "Camión guardado". */
+    quiet = false
   ): void => {
     const collection: FleetCollection = section.collection
     const write = () =>
@@ -45,6 +47,7 @@ export const useCreateFleetItem = (section: FleetSection) => {
         description: 'Revisa los datos y vuelve a intentarlo.',
       })
     })
+    if (quiet) return
     sileo.success({
       title: `${capitalize(section.one)} guardad${sectionWords(section).it}`,
       ...(!navigator.onLine && {
