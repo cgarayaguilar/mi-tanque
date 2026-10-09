@@ -268,6 +268,13 @@ en cada push y PR.
   (conteos y avisos, con tests). Los módulos de Flota ya no son pestañas: `/flota/{módulo}` es su
   pantalla con "← Más" y su título (`Fleet` se monta de nuevo por módulo), y `/flota` lleva a
   `/mas`. Categorías de gasto abierta con `?desde=mas` vuelve a Más.
+- **Equipo propio o de un tercero (specs/0035):** camiones y remolques tienen `ownership`
+  (`'own'`/`'third_party'`) y `ownerName` (solo de un tercero); lo de antes se lee como propio. El
+  viaje copia `truckOwnership`/`trailerOwnership` al guardarse (`tripFromForm`); un viaje de antes
+  se lee con su equipo de hoy (`tripOwnership` en `utils/ownership`, junto a `ownershipLine` y
+  `thirdParty`). Los filtros "Dueño" (Flota) y "Dueño del camión/remolque" (Viajes) son
+  `FilterChip` con `named`; `filterTrips` recibe cómo saber el dueño. Las reglas aceptan
+  documentos sin estos campos.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
