@@ -164,7 +164,7 @@ en cada push y PR.
 - **Clientes (specs/0022):** una sección más de Flota (`/flota/clientes`), en el mismo store y
   servicio (`useFleetStore().clients`, colección `clients`), sin foto (`section.photo`). Los campos
   son `components/ClientFields`, con su esquema en `schemas/clients`, para reutilizarlos en el
-  diálogo "Nuevo cliente" del viaje (specs/0025). El nombre no se repite: lo revisa la app con
+  diálogo "Nuevo cliente" (`components/CreateDialogs`, specs/0028). El nombre no se repite: lo revisa la app con
   `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
 - **Conductores (specs/0023):** igual que Clientes (`/flota/conductores`, colección `drivers`,
   `components/DriverFields`, `schemas/drivers`), con el vencimiento de la licencia y un enlace
@@ -215,6 +215,18 @@ en cada push y PR.
   el formulario del viaje no es un renglón: se muestra aparte y nunca se quita. Con cuenta, el
   relleno va en la moneda de la organización y `RefuelForm` no muestra selector (los importados
   del teléfono conservan la suya).
+- **Crear desde la lista (specs/0028):** `AutocompleteField` acepta `create` ("+ Crear conductor",
+  siempre la primera opción; con lo escrito que no existe, "+ Crear conductor «Marta»" y el diálogo
+  abre con ese nombre; `withText: false` para la tarifa, que abre vacía). Con algo escrito y
+  coincidencias, Enter sigue eligiendo la primera coincidencia. Los diálogos viven en
+  `components/CreateDialogs` (cliente, conductor, camión, remolque, tarifa y categoría), con los
+  mismos campos y validaciones de Flota (`ClientFields`, `DriverFields`, `TruckFields`,
+  `TrailerFields`, `RateFields`) y el mismo guardado (`hooks/useCreateFleetItem`, que usa también
+  `useSaveFleetItem`). Un formulario los abre con `useCreateDialogs(orgId)`: `create(tipo, texto,
+alCrear)` y `{dialog}` en la página. El formulario del diálogo detiene su `submit` para que no
+  llegue al del viaje (los eventos de React cruzan el portal). Al crear un camión o una tarifa se
+  llama a `chooseTruck`/`chooseRate`, que leen el store como está ahora
+  (`useFleetStore.getState()`), porque lo recién creado no está en las listas de ese render.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
