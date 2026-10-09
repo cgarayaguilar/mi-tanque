@@ -275,6 +275,16 @@ en cada push y PR.
   `thirdParty`). Los filtros "Dueño" (Flota) y "Dueño del camión/remolque" (Viajes) son
   `FilterChip` con `named`; `filterTrips` recibe cómo saber el dueño. Las reglas aceptan
   documentos sin estos campos.
+- **Documentos del viaje (specs/0037):** sección "Documentos" de la pantalla del viaje
+  (`pages/Trip/TripDocuments`, con `NewDocumentDialog`), no del formulario: cada uno se sube al
+  momento, con señal. Colección `tripDocuments` y archivo en
+  `orgs/{orgId}/trips/{tripId}/documents/{id}.jpg|pdf`: una foto se comprime (`compressImage`), un
+  PDF va tal cual (hasta 10 MB), hasta 30 por viaje (lo revisa la app). Lo de antes de subir
+  (formato, tamaño, nombre) está en `schemas/tripDocuments`; Firestore y Storage, en
+  `services/tripDocuments` (estático solo en `hooks/useTripDocuments`, que usa solo la página del
+  viaje). La app nunca borra un archivo: borra el documento y el trigger del backend borra su
+  archivo; al borrar el viaje, también sus documentos. Renombran o borran el Dueño, el
+  Supervisor o quien lo subió (`canManageDocument`).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

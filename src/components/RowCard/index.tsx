@@ -17,6 +17,14 @@ export interface RowRemoval {
   /** "Se borra al guardar el viaje." */
   description: string
   onRemove: () => void
+  /** Its word in the menu and the confirmation; "Quitar" if not said. */
+  actionLabel?: string
+}
+
+/** Another option of its ⋮ menu, before removing: "Renombrar". */
+export interface RowAction {
+  label: string
+  onClick: () => void
 }
 
 interface RowCardProps {
@@ -35,8 +43,11 @@ interface RowCardProps {
   issue?: string | null | undefined
   /** Tapping it; without it, the card is not a button. */
   onClick?: (() => void) | undefined
+  /** Tapping it opens this address in another tab: a trip's PDF. */
+  href?: string | undefined
   /** Its ⋮ menu with "Quitar"; without it, no menu. */
   removal?: RowRemoval
+  actions?: RowAction[]
 }
 
 /**
@@ -53,7 +64,9 @@ export default function RowCard({
   leading,
   issue,
   onClick,
+  href,
   removal,
+  actions = [],
 }: RowCardProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -148,10 +161,21 @@ export default function RowCard({
         borderRadius: `${String(radius.lg)}px`,
         overflow: 'hidden',
         transition: 'box-shadow 0.15s',
-        ...(onClick && { '&:hover': { boxShadow: softShadow } }),
+        ...((onClick ?? href) && { '&:hover': { boxShadow: softShadow } }),
       }}
     >
-      {onClick ? (
+      {href ? (
+        <ButtonBase
+          component="a"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={label}
+          sx={content}
+        >
+          {body}
+        </ButtonBase>
+      ) : onClick ? (
         <ButtonBase onClick={onClick} aria-label={label} sx={content}>
           {body}
         </ButtonBase>
@@ -179,20 +203,31 @@ export default function RowCard({
               setMenuAnchor(null)
             }}
           >
+            {actions.map(action => (
+              <MenuItem
+                key={action.label}
+                onClick={() => {
+                  setMenuAnchor(null)
+                  action.onClick()
+                }}
+              >
+                {action.label}
+              </MenuItem>
+            ))}
             <MenuItem
               onClick={() => {
                 setMenuAnchor(null)
                 setConfirming(true)
               }}
             >
-              Quitar
+              {removal.actionLabel ?? 'Quitar'}
             </MenuItem>
           </Menu>
           <ConfirmDialog
             open={confirming}
             title={removal.title}
             description={removal.description}
-            confirmLabel="Quitar"
+            confirmLabel={removal.actionLabel ?? 'Quitar'}
             onConfirm={() => {
               setConfirming(false)
               removal.onRemove()

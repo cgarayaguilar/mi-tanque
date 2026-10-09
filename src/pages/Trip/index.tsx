@@ -22,6 +22,7 @@ import EmptyState from 'components/EmptyState'
 import SessionGate from 'components/SessionGate'
 import TripStatusChip from 'components/TripStatusChip'
 import { useTrip } from 'hooks/useTrip'
+import { useTripDocuments } from 'hooks/useTripDocuments'
 import { useTripExpenses } from 'hooks/useTripExpenses'
 import { totalsByCategory, type Expense } from 'schemas/expenses'
 import { rateLabel, routeName } from 'schemas/rates'
@@ -40,6 +41,7 @@ import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 import { thirdParty, tripOwnership } from 'utils/ownership'
+import TripDocuments from './TripDocuments'
 
 // The backend's moves take a second or two; after this, a reload shows them
 const REFRESH_MS = 2500
@@ -147,6 +149,8 @@ function TripDetails({ trip }: { trip: Trip }) {
   const canWrite = canWriteFleet(role)
   const [confirming, setConfirming] = useState(false)
   const orgId = useSessionStore(state => state.organization?.id ?? '')
+  const uid = useSessionStore(state => state.user?.uid ?? '')
+  const documents = useTripDocuments(orgId, trip.id)
   const categories = useExpensesStore(state => state.categories)
   const loadCategories = useExpensesStore(state => state.loadCategories)
   const applyTripExpenses = useExpensesStore(state => state.applyTripExpenses)
@@ -430,6 +434,20 @@ function TripDetails({ trip }: { trip: Trip }) {
         </Stack>
       </Box>
 
+      <Divider sx={{ my: 6 }} />
+
+      <TripDocuments
+        orgId={orgId}
+        tripId={trip.id}
+        documents={documents}
+        role={role}
+        uid={uid}
+        canWrite={canWrite}
+        nameOf={memberUid =>
+          members.find(member => member.uid === memberUid)?.displayName ?? null
+        }
+      />
+
       {(trip.description ?? trip.notes) && (
         <>
           <Divider sx={{ my: 6 }} />
@@ -482,18 +500,27 @@ function TripDetails({ trip }: { trip: Trip }) {
       <ConfirmDialog
         open={confirming}
         title={`¿Borrar el viaje ${route}?`}
-        description={
+        description={[
           // Not read yet, but it has some (its total): still said
           expensesStatus !== 'ready' && trip.expensesTotal > 0
-            ? `Sus gastos quedarán como gastos del camión ${truckName}. No se puede deshacer.`
+            ? `Sus gastos quedarán como gastos del camión ${truckName}.`
             : expenses.length === 0
-              ? 'No se puede deshacer.'
+              ? null
               : `${
                   expenses.length === 1
                     ? 'Su gasto quedará como gasto'
                     : `Sus ${String(expenses.length)} gastos quedarán como gastos`
-                } del camión ${truckName}. No se puede deshacer.`
-        }
+                } del camión ${truckName}.`,
+          // Its documents go with it (specs/0037 RF-13)
+          documents.documents.length === 0
+            ? null
+            : documents.documents.length === 1
+              ? 'Su documento también se borrará.'
+              : `Sus ${String(documents.documents.length)} documentos también se borrarán.`,
+          'No se puede deshacer.',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         confirmLabel="Borrar"
         onConfirm={confirmDelete}
         onClose={() => {

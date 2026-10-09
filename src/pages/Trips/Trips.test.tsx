@@ -9,6 +9,7 @@ import {
 import { sileo } from 'sileo'
 import App from '../../App'
 import TripForm from 'pages/TripEditor/TripForm'
+import type { TripDocument } from 'schemas/tripDocuments'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
@@ -38,8 +39,19 @@ const fleetApi = vi.hoisted(() => ({
   ),
   newFleetId: vi.fn(() => 'new-client'),
   createFleetItem: vi.fn(() => Promise.resolve()),
+  photoUrl: vi.fn(() => Promise.resolve('https://files.test/document')),
 }))
 vi.mock('services/fleet', () => fleetApi)
+
+const documentsApi = vi.hoisted(() => ({
+  readTripDocuments: vi.fn(),
+  uploadTripDocument: vi.fn(),
+  renameTripDocument: vi.fn(() => Promise.resolve()),
+  deleteTripDocument: vi.fn(() => Promise.resolve()),
+  newTripDocumentId: vi.fn(() => 'new-document'),
+  PHOTO_TOO_BIG: 'trip-document-photo-too-big',
+}))
+vi.mock('services/tripDocuments', () => documentsApi)
 
 const tripsApi = vi.hoisted(() => ({
   readTripsInPeriod: vi.fn(),
@@ -170,6 +182,7 @@ beforeEach(() => {
     truncated: false,
   })
   tripsApi.readTrip.mockResolvedValue(null)
+  documentsApi.readTripDocuments.mockResolvedValue([])
   signIn()
 })
 
@@ -1275,6 +1288,260 @@ describe('audit of the trip form (2026-10-09)', () => {
 
     expect(
       await screen.findByRole('button', { name: 'Agregar gasto' })
+    ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0037
+describe('its documents', () => {
+  const tripDocument = (
+    overrides: Partial<TripDocument> = {}
+  ): TripDocument => ({
+    id: 'd1',
+    orgId: 'org-a',
+    tripId: 'trip-1',
+    name: 'Factura 1234',
+    contentType: 'application/pdf',
+    size: 1.2 * 1024 * 1024,
+    path: 'orgs/org-a/trips/trip-1/documents/d1.pdf',
+    createdAt: new Date(2026, 9, 9, 14, 32),
+    createdBy: 'luis',
+    ...overrides,
+  })
+  const photo = tripDocument({
+    id: 'd2',
+    name: 'Carta de porte',
+    contentType: 'image/jpeg',
+    size: 300 * 1024,
+    path: 'orgs/org-a/trips/trip-1/documents/d2.jpg',
+    createdBy: 'ana',
+  })
+  const revokeObjectURL = vi.fn()
+  const choose = (input: string, file: File) => {
+    fireEvent.change(screen.getByLabelText(input), {
+      target: { files: [file] },
+    })
+  }
+
+  beforeEach(() => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    URL.createObjectURL = vi.fn(() => 'blob:preview')
+    URL.revokeObjectURL = revokeObjectURL
+  })
+
+  // CA-1, CA-2 (RF-9, RF-12)
+  test('a PDF opens in another tab, a photo full screen', async () => {
+    documentsApi.readTripDocuments.mockResolvedValue([tripDocument(), photo])
+    renderAt('/viajes/trip-1')
+
+    const section = await screen.findByRole('region', {
+      name: 'Documentos (2)',
+    })
+    const pdf = await within(section).findByRole('link', {
+      name: 'PDF: Factura 1234',
+    })
+    expect(pdf).toHaveAttribute('href', 'https://files.test/document')
+    expect(pdf).toHaveAttribute('target', '_blank')
+    expect(pdf).toHaveTextContent('Subido por ti')
+    expect(pdf).toHaveTextContent('9 oct 2026, 14:32 · 1.2 MB')
+    const card = await within(section).findByRole('button', {
+      name: 'Foto: Carta de porte',
+    })
+    expect(card).toHaveTextContent('Subido por Ana López')
+    fireEvent.click(card)
+    expect(
+      within(screen.getByRole('dialog', { name: 'Carta de porte' })).getByRole(
+        'img',
+        { name: 'Carta de porte' }
+      )
+    ).toBeInTheDocument()
+  })
+
+  // CA-2 (RF-10)
+  test('a PDF of the phone is named as its file, and uploaded', async () => {
+    documentsApi.uploadTripDocument.mockImplementation(
+      (input: { name: string }) =>
+        Promise.resolve(tripDocument({ id: 'new-document', name: input.name }))
+    )
+    renderAt('/viajes/trip-1')
+    expect(
+      await screen.findByText('Aún no hay documentos en este viaje.')
+    ).toBeInTheDocument()
+
+    choose(
+      'Archivo del teléfono',
+      new File(['%PDF'], 'Guía 77.pdf', { type: 'application/pdf' })
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Nuevo documento' })
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Guía 77')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Subir' }))
+
+    await waitFor(() => {
+      expect(sileo.success).toHaveBeenCalledWith({ title: 'Documento subido' })
+    })
+    expect(documentsApi.uploadTripDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orgId: 'org-a',
+        tripId: 'trip-1',
+        id: 'new-document',
+        name: 'Guía 77',
+        kind: 'pdf',
+      }),
+      expect.any(Function)
+    )
+    expect(
+      await screen.findByRole('link', { name: 'PDF: Guía 77' })
+    ).toBeInTheDocument()
+  })
+
+  // CA-1 (RF-10): a photo of the camera is named by its moment
+  test('a photo of the camera shows before uploading', async () => {
+    renderAt('/viajes/trip-1')
+    await screen.findByText('Aún no hay documentos en este viaje.')
+
+    choose(
+      'Foto de la cámara',
+      new File(['jpeg'], 'image.jpg', { type: 'image/jpeg' })
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Nuevo documento' })
+    expect(
+      within(dialog).getByRole('img', { name: 'Vista previa' })
+    ).toHaveAttribute('src', 'blob:preview')
+    expect(
+      within(dialog).getByLabelText<HTMLInputElement>('Nombre').value
+    ).toMatch(/^Foto del /)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:preview')
+    expect(documentsApi.uploadTripDocument).not.toHaveBeenCalled()
+  })
+
+  // CA-3 (RF-11)
+  test('what cannot be uploaded says why', async () => {
+    documentsApi.readTripDocuments.mockResolvedValue(
+      Array.from({ length: 30 }, (_, index) =>
+        tripDocument({ id: `d${String(index)}`, name: `Doc ${String(index)}` })
+      )
+    )
+    renderAt('/viajes/trip-1')
+    await screen.findByRole('region', { name: 'Documentos (30)' })
+
+    choose(
+      'Archivo del teléfono',
+      new File(['x'], 'a.pdf', { type: 'application/pdf' })
+    )
+    expect(sileo.warning).toHaveBeenLastCalledWith({
+      title: 'Este viaje ya tiene 30 documentos.',
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  test('another format, a big PDF or no signal: nothing is uploaded', async () => {
+    renderAt('/viajes/trip-1')
+    await screen.findByText('Aún no hay documentos en este viaje.')
+
+    choose(
+      'Archivo del teléfono',
+      new File(['x'], 'a.docx', { type: 'text/plain' })
+    )
+    expect(sileo.warning).toHaveBeenLastCalledWith({
+      title: 'Solo se aceptan fotos y PDF.',
+    })
+    choose(
+      'Archivo del teléfono',
+      new File([new Uint8Array(11 * 1024 * 1024)], 'big.pdf', {
+        type: 'application/pdf',
+      })
+    )
+    expect(sileo.warning).toHaveBeenLastCalledWith({
+      title: 'El PDF pesa más de 10 MB.',
+    })
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    choose(
+      'Archivo del teléfono',
+      new File(['x'], 'a.pdf', { type: 'application/pdf' })
+    )
+    expect(sileo.warning).toHaveBeenLastCalledWith({
+      title: 'Necesitas conexión para subir el documento.',
+    })
+    vi.restoreAllMocks()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  // CA-4 (RF-4, RF-12)
+  test("a driver renames and deletes theirs, not the others'", async () => {
+    signIn('driver')
+    documentsApi.readTripDocuments.mockResolvedValue([tripDocument(), photo])
+    renderAt('/viajes/trip-1')
+    await screen.findByRole('region', { name: 'Documentos (2)' })
+
+    expect(
+      screen.queryByRole('button', {
+        name: 'Opciones del documento Carta de porte',
+      })
+    ).toBeNull()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Opciones del documento Factura 1234',
+      })
+    )
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Renombrar' }))
+    const dialog = screen.getByRole('dialog', { name: 'Renombrar documento' })
+    fireEvent.change(within(dialog).getByLabelText('Nombre'), {
+      target: { value: 'Factura 99' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => {
+      expect(documentsApi.renameTripDocument).toHaveBeenCalledWith(
+        'd1',
+        'Factura 99'
+      )
+    })
+    expect(
+      await screen.findByRole('link', { name: 'PDF: Factura 99' })
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Opciones del documento Factura 99' })
+    )
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }))
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: '¿Borrar Factura 99?' })
+      ).getByRole('button', { name: 'Borrar' })
+    )
+    await waitFor(() => {
+      expect(documentsApi.deleteTripDocument).toHaveBeenCalledWith('d1')
+    })
+    expect(screen.queryByRole('link', { name: 'PDF: Factura 99' })).toBeNull()
+  })
+
+  test('a viewer opens them, without adding or changing', async () => {
+    signIn('viewer')
+    documentsApi.readTripDocuments.mockResolvedValue([tripDocument()])
+    renderAt('/viajes/trip-1')
+
+    expect(
+      await screen.findByRole('link', { name: 'PDF: Factura 1234' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tomar foto' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Subir archivo' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /^Opciones del documento/ })
+    ).toBeNull()
+  })
+
+  // CA-5 (RF-13)
+  test('deleting the trip says its documents go too', async () => {
+    documentsApi.readTripDocuments.mockResolvedValue([tripDocument(), photo])
+    renderAt('/viajes/trip-1')
+    await screen.findByRole('region', { name: 'Documentos (2)' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }))
+    expect(
+      await screen.findByText(
+        'Sus 2 documentos también se borrarán. No se puede deshacer.',
+        { exact: false }
+      )
     ).toBeInTheDocument()
   })
 })
