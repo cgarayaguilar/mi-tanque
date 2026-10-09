@@ -237,10 +237,15 @@ en cada push y PR.
   primera sección con error. `TripSummaryBar` es `sticky` al pie, dentro del formulario.
 - **Filtrar, agrupar y ordenar viajes (specs/0030):** la lógica es pura, en `utils/tripGroups`
   (`filterTrips`, `sortTrips`, `groupTrips`, `groupSummary`, `destinationOptions`), con sus tests;
-  la página solo la usa. Destino se compara con `destinationKey` (sin tildes, mayúsculas ni
-  espacios de más). Filtros, agrupado y orden viven en `view` de `store/trips` (se conservan al
+  la página solo la usa. Destino es la ruta de un cliente (`routeKey`, sin tildes, mayúsculas ni
+  espacios de más; specs/0033). Filtros, agrupado y orden viven en `view` de `store/trips` (se conservan al
   volver de un viaje y se reinician con la organización). "Agrupar" y "Ordenar" son `FilterChip`
   con `named` ("Agrupar: Camión"); el orden por defecto es el "Todas" del chip.
+- **Tarifas por cliente (specs/0033):** toda lista de tarifas va agrupada por cliente con
+  `ratesByClient` (`schemas/rates`: "General" o el cliente del viaje primero). `SelectOption` y
+  `FilterOption` aceptan `group` (subtítulo en `AutocompleteField` y `FilterChip`; las opciones
+  de un grupo van juntas). El filtro y el grupo "Destino" de Viajes son la ruta de un cliente
+  (`routeKey` en `utils/tripGroups`), escrita como su tarifa.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
