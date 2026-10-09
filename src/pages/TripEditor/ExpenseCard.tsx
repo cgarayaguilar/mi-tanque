@@ -4,7 +4,7 @@ import { sileo } from 'sileo'
 import type { Currency } from 'schemas/account'
 import { formatMeasurementDate } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
-import RowCard from './RowCard'
+import RowCard from 'components/RowCard'
 
 interface ExpenseCardProps {
   /** Its category's name. */

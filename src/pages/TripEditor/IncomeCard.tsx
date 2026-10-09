@@ -2,7 +2,7 @@ import type { Currency } from 'schemas/account'
 import type { ExtraValues } from 'schemas/trips'
 import { moneyTotal } from 'utils/formatMoney'
 import { parseDecimal } from 'utils/parseDecimal'
-import RowCard from './RowCard'
+import RowCard from 'components/RowCard'
 
 /**
  * The trip's price, the first of its income (backend specs/0029 RF-3): it

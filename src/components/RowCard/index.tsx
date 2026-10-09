@@ -23,11 +23,14 @@ interface RowCardProps {
   /** What a screen reader says: "Gasto de Peajes, C$350.00 NIO". */
   label: string
   title: string
-  amount: string
+  /** Its amount, big; a tank's card has none. */
+  amount?: string
   /** Under the amount, in small type: its date, its description… */
   lines?: (string | null | undefined)[]
   /** After the title: the "Relleno" chip, the receipt's icon. */
   marks?: ReactNode
+  /** Before it all, as in Flota's cards: a tank's shape. */
+  leading?: ReactNode
   /** It failed to save: "Revisa este gasto". */
   issue?: string | null | undefined
   /** Tapping it; without it, the card is not a button. */
@@ -37,8 +40,9 @@ interface RowCardProps {
 }
 
 /**
- * An income or an expense of the trip's form, as a card (backend specs/0029
- * RF-5): tapping it edits it, and its ⋮ menu removes it after asking.
+ * A row of a form as a card: an income or an expense of a trip (backend
+ * specs/0029 RF-5), a tank of a truck (specs/0032 RF-3). Tapping it edits it,
+ * and its ⋮ menu removes it after asking.
  */
 export default function RowCard({
   label,
@@ -46,6 +50,7 @@ export default function RowCard({
   amount,
   lines = [],
   marks,
+  leading,
   issue,
   onClick,
   removal,
@@ -53,7 +58,7 @@ export default function RowCard({
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const [confirming, setConfirming] = useState(false)
 
-  const body = (
+  const text = (
     <>
       <Box
         component="span"
@@ -68,17 +73,19 @@ export default function RowCard({
         </Typography>
         {marks}
       </Box>
-      <Typography
-        component="span"
-        sx={{
-          ...typeScale.figureSm,
-          display: 'block',
-          my: 0.5,
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {amount}
-      </Typography>
+      {amount && (
+        <Typography
+          component="span"
+          sx={{
+            ...typeScale.figureSm,
+            display: 'block',
+            my: 0.5,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {amount}
+        </Typography>
+      )}
       {lines
         .filter((line): line is string => Boolean(line))
         .map(line => (
@@ -102,6 +109,22 @@ export default function RowCard({
         </Typography>
       )}
     </>
+  )
+
+  const body = leading ? (
+    <Box
+      component="span"
+      sx={{ display: 'flex', alignItems: 'center', gap: 3 }}
+    >
+      <Box component="span" sx={{ display: 'flex', flexShrink: 0 }}>
+        {leading}
+      </Box>
+      <Box component="span" sx={{ display: 'block', minWidth: 0, flexGrow: 1 }}>
+        {text}
+      </Box>
+    </Box>
+  ) : (
+    text
   )
 
   const content = {
