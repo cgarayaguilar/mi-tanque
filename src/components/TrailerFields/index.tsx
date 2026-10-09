@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Stack from '@mui/material/Stack'
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form'
+import ChoiceButtons from 'components/ChoiceButtons'
 import AutocompleteField, {
   type CreateOption,
 } from 'components/AutocompleteField'
@@ -15,6 +16,7 @@ import {
   TRAILER_TYPES,
   type TrailerFormValues,
 } from 'schemas/fleet'
+import { OWNERSHIP_OPTIONS } from 'utils/ownership'
 
 /** The fields behind "Ver más detalles", for useMoreDetails (specs/0009). */
 export const TRAILER_DETAILS = [
@@ -65,6 +67,25 @@ export default function TrailerFields({
         error={errors.name?.message}
         registration={register('name')}
       />
+      {/* Own or of a third party, and whose (backend specs/0035 RF-3) */}
+      <ChoiceButtons
+        id={`${idPrefix}ownership`}
+        label="¿De quién es?"
+        options={OWNERSHIP_OPTIONS}
+        control={control}
+        name="ownership"
+        disabled={disabled}
+      />
+      {values.ownership === 'third_party' && (
+        <TextField
+          id={`${idPrefix}ownerName`}
+          label="Dueño (opcional)"
+          placeholder="Transportes López"
+          maxLength={FLEET_LIMITS.ownerName}
+          error={errors.ownerName?.message}
+          registration={register('ownerName')}
+        />
+      )}
       <SelectField
         id={`${idPrefix}trailerType`}
         label="Tipo de remolque"

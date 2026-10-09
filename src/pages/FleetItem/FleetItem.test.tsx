@@ -1656,3 +1656,64 @@ describe('tanks from the equipment', () => {
     ).toBeNull()
   })
 })
+
+// backend specs/0035 CA-1: own or of a third party, asked in the form
+describe('ownership', () => {
+  test("a third party's truck is saved with its owner; own clears it", async () => {
+    api.newFleetId.mockReturnValueOnce('truck-50')
+    renderAt('/flota/camiones/nuevo')
+    type(
+      await screen
+        .findByLabelText('Nombre o número de unidad')
+        .then(() => 'Nombre o número de unidad'),
+      'Unidad 50'
+    )
+    expect(chosen('¿De quién es?')).toBe('Propio')
+    expect(screen.queryByLabelText('Dueño (opcional)')).toBeNull()
+    await choose('¿De quién es?', 'De un tercero')
+    type('Dueño (opcional)', 'Transportes López')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar camión' }))
+    await waitFor(() => {
+      expect(api.createFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'truck-50',
+        ORG_ID,
+        expect.objectContaining({
+          ownership: 'third_party',
+          ownerName: 'Transportes López',
+        })
+      )
+    })
+  })
+
+  test('back to own, the owner is not saved; a truck from before opens as own', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck({ ownership: 'third_party', ownerName: 'López' })],
+      trailers: [],
+      tanks: [],
+    })
+    renderAt('/flota/camiones/truck-1')
+    expect(await screen.findByLabelText('Dueño (opcional)')).toHaveValue(
+      'López'
+    )
+    await choose('¿De quién es?', 'Propio')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'trucks',
+        'truck-1',
+        expect.objectContaining({ ownership: 'own', ownerName: null })
+      )
+    })
+  })
+
+  test('a trailer asks it too', async () => {
+    renderAt('/flota/remolques/nuevo')
+    expect(
+      await screen.findByRole('group', { name: '¿De quién es?' })
+    ).toBeInTheDocument()
+  })
+})

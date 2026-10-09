@@ -33,7 +33,13 @@ import { clientContact, type Client } from 'schemas/clients'
 import { driverContact, type Driver } from 'schemas/drivers'
 import { ratesByClient, type Rate } from 'schemas/rates'
 import { moneyTotal } from 'utils/formatMoney'
-import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
+import type {
+  FleetTank,
+  LastMeasurement,
+  Ownership,
+  Trailer,
+  Truck,
+} from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
@@ -52,6 +58,7 @@ import {
 } from 'utils/fleetSections'
 import { foldText } from 'utils/foldText'
 import { formatNumber } from 'utils/formatNumber'
+import { OWNERSHIP_OPTIONS, ownershipLine } from 'utils/ownership'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
 import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
@@ -203,6 +210,10 @@ function FleetScreen() {
   const [showArchived, setShowArchived] = useState(false)
   // Trucks by brand and model, typed names recognized (specs/0016 RF-8)
   const [brand, setBrand] = useState<string | null>(null)
+  // "Dueño" of trucks and trailers (specs/0035 RF-5)
+  const [owner, setOwner] = useState<Ownership | null>(null)
+  const ownedBy = (item: Truck | Trailer) =>
+    owner === null || item.ownership === owner
   // Rates by client: an id, GENERAL or all (specs/0024 RF-5)
   const [rateClient, setRateClient] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
@@ -299,7 +310,16 @@ function FleetScreen() {
           (t: Truck) =>
             (brand === null || truckBrand(t) === brand) &&
             (model === null || truckModel(t) === model) &&
-            matches(query, t.name, t.plate, t.brand, t.model, t.color?.label)
+            ownedBy(t) &&
+            matches(
+              query,
+              t.name,
+              t.plate,
+              t.brand,
+              t.model,
+              t.color?.label,
+              t.ownerName
+            )
         ).map(truck => {
           const { efficiency, odometer } = truckFigures(truck, distanceUnit)
           const tankCount = tanksPerTruck.get(truck.id) ?? 0
@@ -312,6 +332,7 @@ function FleetScreen() {
                 title={truck.name}
                 lines={[
                   vehicleSubtitle(truck) || null,
+                  ownershipLine(truck),
                   [
                     tankCount === 1
                       ? '1 tanque'
@@ -337,8 +358,18 @@ function FleetScreen() {
           }
         })
       : section.collection === 'trailers'
-        ? visible(trailers, (t: Trailer) =>
-            matches(query, t.name, t.plate, trailerTypeLabel(t), t.color?.label)
+        ? visible(
+            trailers,
+            (t: Trailer) =>
+              ownedBy(t) &&
+              matches(
+                query,
+                t.name,
+                t.plate,
+                trailerTypeLabel(t),
+                t.color?.label,
+                t.ownerName
+              )
           ).map(trailer => ({
             id: trailer.id,
             card: (
@@ -350,6 +381,7 @@ function FleetScreen() {
                   [trailerTypeLabel(trailer), trailer.plate]
                     .filter(Boolean)
                     .join(' · '),
+                  ownershipLine(trailer),
                   trailer.hitchedTruckId
                     ? `Enganchado a ${truckName.get(trailer.hitchedTruckId) ?? 'un camión'}`
                     : 'Sin enganchar',
@@ -540,7 +572,9 @@ function FleetScreen() {
         </Stack>
       )
     }
-    if (cards.length === 0 && !query && !showArchived && total > 0) {
+    // A search or the "Dueño" filter left nothing: not "you have none"
+    const narrowed = query !== '' || owner !== null
+    if (cards.length === 0 && !narrowed && !showArchived && total > 0) {
       // Everything is archived: say so instead of "you have none"
       return (
         <EmptyState
@@ -557,7 +591,7 @@ function FleetScreen() {
         />
       )
     }
-    if (cards.length === 0 && !query && !showArchived) {
+    if (cards.length === 0 && !narrowed && !showArchived) {
       return (
         <EmptyState
           headingLevel="h2"
@@ -606,9 +640,10 @@ function FleetScreen() {
                   },
                 }
               : {
-                  label: 'Limpiar búsqueda',
+                  label: owner === null ? 'Limpiar búsqueda' : 'Quitar filtros',
                   onClick: () => {
                     setSearch('')
+                    setOwner(null)
                   },
                 }
           }
@@ -749,6 +784,19 @@ function FleetScreen() {
                   }))}
                   value={model}
                   onChange={setModel}
+                />
+              )}
+            {(section.collection === 'trucks' ||
+              section.collection === 'trailers') &&
+              (section.collection === 'trucks' ? trucks : trailers).length >
+                0 && (
+                <FilterChip
+                  label="Dueño"
+                  allLabel="Todos"
+                  options={OWNERSHIP_OPTIONS}
+                  value={owner}
+                  onChange={setOwner}
+                  named
                 />
               )}
             {section.collection === 'rates' &&

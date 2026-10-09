@@ -8,6 +8,7 @@ import type {
   UseFormRegister,
   UseFormSetValue,
 } from 'react-hook-form'
+import ChoiceButtons from 'components/ChoiceButtons'
 import AutocompleteField from 'components/AutocompleteField'
 import ColorField from 'components/ColorField'
 import DateField from 'components/DateField'
@@ -17,6 +18,7 @@ import NumberField from 'components/NumberField'
 import TextField from 'components/TextField'
 import { TRUCK_BRANDS, TRUCK_MODELS } from 'data/truckModels'
 import { FLEET_LIMITS, OTHER_CHOICE, type TruckFormValues } from 'schemas/fleet'
+import { OWNERSHIP_OPTIONS } from 'utils/ownership'
 import { ROLE_LABELS, type Role } from 'utils/roles'
 
 /** The fields behind "Ver más detalles", for useMoreDetails (specs/0009). */
@@ -120,6 +122,25 @@ export default function TruckFields({
         error={errors.name?.message}
         registration={register('name')}
       />
+      {/* Own or of a third party, and whose (backend specs/0035 RF-3) */}
+      <ChoiceButtons
+        id={`${idPrefix}ownership`}
+        label="¿De quién es?"
+        options={OWNERSHIP_OPTIONS}
+        control={control}
+        name="ownership"
+        disabled={disabled}
+      />
+      {values.ownership === 'third_party' && (
+        <TextField
+          id={`${idPrefix}ownerName`}
+          label="Dueño (opcional)"
+          placeholder="Transportes López"
+          maxLength={FLEET_LIMITS.ownerName}
+          error={errors.ownerName?.message}
+          registration={register('ownerName')}
+        />
+      )}
       <TextField
         id={`${idPrefix}plate`}
         label="Placa (opcional)"

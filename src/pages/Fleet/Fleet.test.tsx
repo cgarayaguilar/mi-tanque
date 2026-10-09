@@ -650,3 +650,39 @@ describe('Más', () => {
     expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
   })
 })
+
+// backend specs/0035 CA-3: the "Dueño" filter, the card and the search
+test("a third party's truck is found by owner, filter and search", async () => {
+  api.readFleet.mockResolvedValue({
+    rates: [],
+    drivers: [],
+    clients: [],
+    trucks: [
+      truck(),
+      truck({
+        id: 'truck-50',
+        name: 'Unidad 50',
+        ownership: 'third_party',
+        ownerName: 'Transportes López',
+      }),
+    ],
+    trailers: [],
+    tanks: [],
+  })
+  renderAt('/flota/camiones')
+  expect(
+    await screen.findByRole('button', { name: 'Camión Unidad 50' })
+  ).toHaveTextContent('De un tercero · Transportes López')
+
+  await filterBy('Dueño', 'De un tercero')
+  expect(screen.queryByRole('button', { name: 'Camión Unidad 12' })).toBeNull()
+  await filterBy('Dueño', 'Todos')
+
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar camiones' }), {
+    target: { value: 'lopez' },
+  })
+  expect(
+    await screen.findByRole('button', { name: 'Camión Unidad 50' })
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Camión Unidad 12' })).toBeNull()
+})
