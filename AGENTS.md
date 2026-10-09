@@ -164,8 +164,8 @@ en cada push y PR.
 - **Clientes (specs/0022):** una sección más de Flota (`/flota/clientes`), en el mismo store y
   servicio (`useFleetStore().clients`, colección `clients`), sin foto (`section.photo`). Los campos
   son `components/ClientFields`, con su esquema en `schemas/clients`, para reutilizarlos en el
-  diálogo "Nuevo cliente" (`components/CreateDialogs`, specs/0028). El nombre no se repite: lo revisa la app con
-  `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
+  diálogo "Nuevo cliente" (`components/CreateDialogs`, specs/0028). El nombre no se repite: lo
+  revisa la app con `clientWithName` (`foldText`), porque las reglas no pueden. Se archivan, nunca se borran.
 - **Conductores (specs/0023):** igual que Clientes (`/flota/conductores`, colección `drivers`,
   `components/DriverFields`, `schemas/drivers`), con el vencimiento de la licencia y un enlace
   opcional a un miembro (`memberUid`), que no se repite entre conductores activos y que el backend
@@ -222,8 +222,9 @@ en cada push y PR.
   `components/CreateDialogs` (cliente, conductor, camión, remolque, tarifa y categoría), con los
   mismos campos y validaciones de Flota (`ClientFields`, `DriverFields`, `TruckFields`,
   `TrailerFields`, `RateFields`) y el mismo guardado (`hooks/useCreateFleetItem`, que usa también
-  `useSaveFleetItem`). Un formulario los abre con `useCreateDialogs(orgId)`: `create(tipo, texto,
-alCrear)` y `{dialog}` en la página. El formulario del diálogo detiene su `submit` para que no
+  `useSaveFleetItem`). Un formulario los abre con `useCreateDialogs(orgId)`:
+  `create(tipo, texto, alCrear)` y `{dialog}` en la página. El formulario del diálogo detiene su
+  `submit` para que no
   llegue al del viaje (los eventos de React cruzan el portal). Al crear un camión o una tarifa se
   llama a `chooseTruck`/`chooseRate`, que leen el store como está ahora
   (`useFleetStore.getState()`), porque lo recién creado no está en las listas de ese render.
