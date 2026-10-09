@@ -23,7 +23,6 @@ import {
   TRIP_STATUSES,
   tripIncome,
   type Trip,
-  type TripStatus,
 } from 'schemas/trips'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
@@ -32,6 +31,22 @@ import { layout, radius, softShadow, typeScale } from 'theme/tokens'
 import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
 import { canWriteFleet } from 'utils/roles'
+import {
+  DEFAULT_TRIP_ORDER,
+  destinationOptions,
+  filterTrips,
+  groupSummary,
+  groupTrips,
+  NO_TRIP_FILTERS,
+  sortTrips,
+  TRIP_GROUPING_LABELS,
+  TRIP_GROUPINGS,
+  TRIP_ORDER_LABELS,
+  TRIP_ORDERS,
+  type TripFilters,
+  type TripGroup,
+  type TripNames,
+} from 'utils/tripGroups'
 import { tripTotals } from 'utils/tripTotals'
 import { RETRY_HINT } from 'utils/withTimeout'
 
@@ -41,6 +56,16 @@ const STATUS_OPTIONS = TRIP_STATUSES.map(status => ({
   value: status,
   label: TRIP_STATUS_LABELS[status],
 }))
+
+const GROUPING_OPTIONS = TRIP_GROUPINGS.map(grouping => ({
+  value: grouping,
+  label: TRIP_GROUPING_LABELS[grouping],
+}))
+
+// The default, "Fecha, más reciente primero", is the chip's "all" option
+const ORDER_OPTIONS = TRIP_ORDERS.filter(
+  order => order !== DEFAULT_TRIP_ORDER
+).map(order => ({ value: order, label: TRIP_ORDER_LABELS[order] }))
 
 /** The names in a period's trips, once each, for a filter's options. */
 const optionsOf = (pairs: [string, string][]) =>
@@ -117,6 +142,56 @@ function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
   )
 }
 
+/** A group of the list: its name, what it adds up to and its trips (RF-4). */
+function TripGroupSection({
+  group,
+  index,
+  onOpen,
+}: {
+  group: TripGroup
+  index: number
+  onOpen: (trip: Trip) => void
+}) {
+  const titleId = `trip-group-${String(index)}`
+  return (
+    <Box component="section" aria-labelledby={titleId}>
+      <Box sx={{ mb: 2 }}>
+        <Typography
+          id={titleId}
+          variant="subtitle1"
+          component="h2"
+          sx={{ overflowWrap: 'anywhere' }}
+        >
+          {group.title}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{ color: 'text.secondary', overflowWrap: 'anywhere' }}
+        >
+          {groupSummary(group.trips)}
+        </Typography>
+      </Box>
+      <Stack
+        component="ul"
+        spacing={2}
+        aria-label={`Viajes de ${group.title}`}
+        sx={{ listStyle: 'none', m: 0, p: 0 }}
+      >
+        {group.trips.map(trip => (
+          <li key={trip.id}>
+            <TripCard
+              trip={trip}
+              onClick={() => {
+                onOpen(trip)
+              }}
+            />
+          </li>
+        ))}
+      </Stack>
+    </Box>
+  )
+}
+
 function TripsScreen() {
   const [, navigate] = useLocation()
   const orgId = useSessionStore(state => state.organization?.id ?? '')
@@ -125,11 +200,9 @@ function TripsScreen() {
   const trips = useTripsStore()
   const loadFleet = useFleetStore(state => state.load)
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
-  const [status, setStatus] = useState<TripStatus | null>(null)
-  const [clientId, setClientId] = useState<string | null>(null)
-  const [truckId, setTruckId] = useState<string | null>(null)
-  const [driverId, setDriverId] = useState<string | null>(null)
-  const { load } = trips
+  // Kept in the store: back from a trip, the list is as it was (RF-8)
+  const { load, view, setFilters, setGrouping, setOrder } = trips
+  const { filters, grouping, order } = view
 
   useEffect(() => {
     if (!orgId) return
@@ -140,7 +213,7 @@ function TripsScreen() {
   const period = tripsPeriodOf(trips)
   const periodText = formatPeriod(period)
 
-  const { clients, trucks, drivers } = useFleetStore()
+  const { clients, trucks, trailers, drivers } = useFleetStore()
   // The current names, as the cards show them; the saved one if gone
   // (audit 0027)
   const options = useMemo(() => {
@@ -174,22 +247,51 @@ function TripsScreen() {
           ])
           .map(named(drivers))
       ),
+      destinations: destinationOptions(trips.items),
     }
   }, [trips.items, clients, trucks, drivers])
 
-  const shown = trips.items.filter(
-    trip =>
-      (status === null || trip.status === status) &&
-      (clientId === null || trip.clientId === clientId) &&
-      (truckId === null || trip.truckId === truckId) &&
-      (driverId === null || trip.driverIds.includes(driverId))
-  )
+  // The current names, for the groups too (specs/0030 RF-4)
+  const names = useMemo((): TripNames => {
+    const nameIn =
+      (items: readonly { id: string; name: string }[]) =>
+      (id: string, saved: string) =>
+        items.find(item => item.id === id)?.name ?? saved
+    return {
+      client: nameIn(clients),
+      truck: nameIn(trucks),
+      trailer: nameIn(trailers),
+      driver: nameIn(drivers),
+    }
+  }, [clients, trucks, trailers, drivers])
+
+  // A filter whose option is not in the new period goes away (RF-8)
+  useEffect(() => {
+    if (trips.status !== 'ready') return
+    const offered: Partial<Record<keyof TripFilters, { value: string }[]>> = {
+      clientId: options.clients,
+      truckId: options.trucks,
+      driverId: options.drivers,
+      destination: options.destinations,
+    }
+    const gone = Object.entries(offered).filter(
+      ([key, choices]) =>
+        filters[key as keyof TripFilters] !== null &&
+        !choices.some(
+          choice => choice.value === filters[key as keyof TripFilters]
+        )
+    )
+    if (gone.length > 0)
+      setFilters(Object.fromEntries(gone.map(([key]) => [key, null])))
+  }, [trips.status, options, filters, setFilters])
+
+  const shown = sortTrips(filterTrips(trips.items, filters), order)
+  const groups = grouping && groupTrips(shown, grouping, order, names)
   const totals = tripTotals(shown)
-  const filtered =
-    status !== null ||
-    clientId !== null ||
-    truckId !== null ||
-    driverId !== null
+  const filtered = Object.values(filters).some(value => value !== null)
+  const open = (trip: Trip) => {
+    navigate(`/viajes/${trip.id}`)
+  }
 
   const renderList = () => {
     if (trips.status === 'error' && trips.items.length === 0) {
@@ -249,13 +351,30 @@ function TripsScreen() {
           action={{
             label: 'Quitar filtros',
             onClick: () => {
-              setStatus(null)
-              setClientId(null)
-              setTruckId(null)
-              setDriverId(null)
+              setFilters(NO_TRIP_FILTERS)
             },
           }}
         />
+      )
+    }
+    if (groups) {
+      return (
+        <Stack spacing={6}>
+          {groups.map((group, index) => (
+            <TripGroupSection
+              key={group.key}
+              group={group}
+              index={index}
+              onOpen={open}
+            />
+          ))}
+          {grouping === 'driver' &&
+            shown.some(trip => trip.secondDriverId !== null) && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Los viajes con dos conductores están en los dos grupos.
+              </Typography>
+            )}
+        </Stack>
       )
     }
     return (
@@ -270,7 +389,7 @@ function TripsScreen() {
             <TripCard
               trip={trip}
               onClick={() => {
-                navigate(`/viajes/${trip.id}`)
+                open(trip)
               }}
             />
           </li>
@@ -334,45 +453,79 @@ function TripsScreen() {
           {periodText}
         </Button>
 
-        {/* One row of chips (specs/0017), with what the period has */}
-        <Box sx={{ mb: 3 }}>
-          <FilterBar>
-            <FilterChip
-              label="Estado"
-              allLabel="Todos"
-              options={STATUS_OPTIONS}
-              value={status}
-              onChange={setStatus}
-            />
-            {(options.clients.length > 1 || clientId !== null) && (
+        {/* One row of chips (specs/0017): the filters, always there once
+            the period has trips, then how to group and sort (specs/0030) */}
+        {(trips.items.length > 0 || filtered) && (
+          <Box sx={{ mb: 3 }}>
+            <FilterBar>
+              <FilterChip
+                label="Estado"
+                allLabel="Todos"
+                options={STATUS_OPTIONS}
+                value={filters.status}
+                onChange={status => {
+                  setFilters({ status })
+                }}
+              />
               <FilterChip
                 label="Cliente"
                 allLabel="Todos"
                 options={options.clients}
-                value={clientId}
-                onChange={setClientId}
+                value={filters.clientId}
+                onChange={clientId => {
+                  setFilters({ clientId })
+                }}
               />
-            )}
-            {(options.trucks.length > 1 || truckId !== null) && (
               <FilterChip
                 label="Camión"
                 allLabel="Todos"
                 options={options.trucks}
-                value={truckId}
-                onChange={setTruckId}
+                value={filters.truckId}
+                onChange={truckId => {
+                  setFilters({ truckId })
+                }}
               />
-            )}
-            {(options.drivers.length > 1 || driverId !== null) && (
               <FilterChip
                 label="Conductor"
                 allLabel="Todos"
                 options={options.drivers}
-                value={driverId}
-                onChange={setDriverId}
+                value={filters.driverId}
+                onChange={driverId => {
+                  setFilters({ driverId })
+                }}
               />
-            )}
-          </FilterBar>
-        </Box>
+              <FilterChip
+                label="Destino"
+                allLabel="Todos"
+                options={options.destinations}
+                value={filters.destination}
+                onChange={destination => {
+                  setFilters({ destination })
+                }}
+              />
+              <FilterChip
+                label="Agrupar"
+                allLabel="Sin agrupar"
+                options={GROUPING_OPTIONS}
+                value={grouping}
+                onChange={setGrouping}
+                named
+                clearLabel="Quitar el agrupado"
+              />
+              <FilterChip
+                label="Ordenar"
+                allLabel={TRIP_ORDER_LABELS[DEFAULT_TRIP_ORDER]}
+                options={ORDER_OPTIONS}
+                value={order === DEFAULT_TRIP_ORDER ? null : order}
+                onChange={chosen => {
+                  setOrder(chosen ?? DEFAULT_TRIP_ORDER)
+                }}
+                named
+                clearLabel="Ordenar por fecha, más reciente primero"
+              />
+            </FilterBar>
+          </Box>
+        )}
 
         {trips.items.length > 0 && (
           <Box

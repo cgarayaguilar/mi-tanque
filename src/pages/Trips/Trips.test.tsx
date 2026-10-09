@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -24,7 +25,7 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose } from '../../testing/choose'
-import { filterBy } from '../../testing/filterBy'
+import { filterBy, filterChip } from '../../testing/filterBy'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -253,6 +254,102 @@ describe('the list', () => {
     renderAt('/viajes')
     await screen.findByRole('list', { name: 'Viajes' })
     expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
+  })
+})
+
+// backend specs/0030
+describe('filter, group and sort', () => {
+  const cardsIn = (list: HTMLElement) =>
+    within(list)
+      .getAllByRole('button')
+      .map(card => card.getAttribute('aria-label'))
+
+  // CA-1
+  test('every filter is there; Destino and Camión add up', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+
+    // One truck in the period: its chip is there all the same
+    expect(filterChip('Camión')).toBeInTheDocument()
+    await filterBy('Destino', 'San José')
+    await filterBy('Camión', 'Unidad 12')
+    expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))).toEqual([
+      'Viaje Managua → San José, Programado',
+      'Viaje Managua → San José, Cancelado',
+    ])
+    expect(
+      screen.getByRole('status', { name: 'Totales de lo filtrado' })
+    ).toHaveTextContent('1 viajeIngresosC$27,500.00 NIO')
+  })
+
+  // CA-2, CA-3
+  test('grouped by driver: what each one brought in', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+
+    await filterBy('Agrupar', 'Conductor')
+    expect(filterChip('Agrupar')).toHaveTextContent('Agrupar: Conductor')
+    const groups = screen.getAllByRole('heading', { level: 2 })
+    expect(groups.map(group => group.textContent)).toEqual([
+      'Marta Gómez',
+      'Pedro Ruiz',
+    ])
+    const pedro = screen.getByRole('region', { name: 'Pedro Ruiz' })
+    // The cancelled one is there, but does not count
+    expect(pedro).toHaveTextContent('1 viaje · C$27,500.00 NIO')
+    expect(
+      cardsIn(within(pedro).getByRole('list', { name: 'Viajes de Pedro Ruiz' }))
+    ).toHaveLength(2)
+  })
+
+  // CA-5
+  test('by price, the lowest first', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+
+    await filterBy('Ordenar', 'Precio, menor primero')
+    expect(filterChip('Ordenar')).toHaveTextContent(
+      'Ordenar: Precio, menor primero'
+    )
+    // A tie goes newest first
+    expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))).toEqual([
+      'Viaje León → Tegucigalpa, En curso',
+      'Viaje Managua → San José, Programado',
+      'Viaje Managua → San José, Cancelado',
+    ])
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ordenar por fecha, más reciente primero',
+      })
+    )
+    expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))[0]).toBe(
+      'Viaje Managua → San José, Programado'
+    )
+  })
+
+  // CA-6
+  test('back from a trip, the list is as it was', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+    await filterBy('Agrupar', 'Camión')
+    await filterBy('Destino', 'San José')
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Viaje Managua → San José, Programado',
+      })
+    )
+    expect(window.location.pathname).toBe('/viajes/trip-1')
+    act(() => {
+      window.history.back()
+    })
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/viajes')
+    })
+    expect(
+      await screen.findByRole('region', { name: 'Unidad 12' })
+    ).toHaveTextContent('1 viaje · C$27,500.00 NIO')
+    expect(filterChip('Destino')).toHaveTextContent('San José')
   })
 })
 
