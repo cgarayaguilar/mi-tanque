@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography'
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto'
 import { useOnlineStatus } from 'hooks/useOnlineStatus'
 import { radius } from 'theme/tokens'
+import { recoverFromLostPermission } from 'store/session'
 import { reportError } from 'utils/reportError'
 
 interface PhotoFieldProps {
@@ -24,6 +25,17 @@ interface PhotoFieldProps {
   upload?: (file: File) => Promise<{ path: string; url: string }>
   onUploaded?: (path: string) => void
   disabled?: boolean
+  /**
+   * What the error reports say it was: a fleet item's photo, or an
+   * expense's receipt (audit 2026-10-09).
+   */
+  kind?: 'fleetPhoto' | 'expenseReceipt'
+}
+
+// Storage's and Firestore's "you may not": not the connection
+const isDenied = (error: unknown) => {
+  const code = (error as { code?: unknown } | null)?.code
+  return code === 'storage/unauthorized' || code === 'permission-denied'
 }
 
 /** The item's single photo (specs/0003 RF-13): shown, added or replaced. */
@@ -35,7 +47,15 @@ export default function PhotoField({
   upload,
   onUploaded,
   disabled = false,
+  kind = 'fleetPhoto',
 }: PhotoFieldProps) {
+  const operations = {
+    fleetPhoto: { load: 'loadFleetPhoto', upload: 'uploadFleetPhoto' },
+    expenseReceipt: {
+      load: 'loadExpenseReceipt',
+      upload: 'uploadExpenseReceipt',
+    },
+  }[kind]
   const online = useOnlineStatus()
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -51,13 +71,13 @@ export default function PhotoField({
       },
       (error: unknown) => {
         // The rest of the form still works; the photo just does not show
-        reportError(error, { operation: 'loadFleetPhoto' })
+        reportError(error, { operation: operations.load })
       }
     )
     return () => {
       cancelled = true
     }
-  }, [path, loadUrl])
+  }, [path, loadUrl, operations.load])
 
   const choose = async (file: File | undefined) => {
     if (!file || !upload) return
@@ -78,10 +98,14 @@ export default function PhotoField({
       onUploaded?.(result.path)
       sileo.success({ title: 'Foto guardada' })
     } catch (error) {
-      reportError(error, { operation: 'uploadFleetPhoto' })
+      reportError(error, { operation: operations.upload })
+      // A role lost meanwhile: the session reloads it (specs/0005 RF-12)
+      if (recoverFromLostPermission(error)) return
       sileo.error({
         title: 'No pudimos subir la foto',
-        description: 'Revisa tu conexión y vuelve a intentarlo.',
+        description: isDenied(error)
+          ? 'No tienes permiso para subirla. Si el problema sigue, avísanos.'
+          : 'Revisa tu conexión y vuelve a intentarlo.',
       })
     } finally {
       setBusy(false)

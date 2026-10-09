@@ -32,6 +32,7 @@ import {
   type RefuelOfExpense,
 } from 'schemas/expenses'
 import { loadFirebase, loadStorage } from 'services/firebase'
+import { rememberPhotoUrl } from 'services/fleet'
 import { compressImage } from 'utils/compressImage'
 import { reportError } from 'utils/reportError'
 import { withTimeout } from 'utils/withTimeout'
@@ -276,7 +277,15 @@ export const newExpenseData = (
 })
 
 /** The changes of an edited expense, for a write or a batch. */
-export const expenseChanges = (uid: string, fields: ExpenseFields) => ({
+/**
+ * An edit of an expense. Its receipt is left as it is: only `uploadReceipt`
+ * writes it, and a copy read before (another phone added the photo, or the
+ * upload ended after the form opened) would clear it (audit 2026-10-09).
+ */
+export const expenseChanges = (
+  uid: string,
+  { receiptPhotoPath: _, ...fields }: ExpenseFields
+) => ({
   ...fields,
   takenAt: Timestamp.fromDate(fields.takenAt),
   updatedAt: serverTimestamp(),
@@ -361,6 +370,8 @@ export const uploadReceipt = async (
   const receiptRef = ref(storage, path)
   await uploadBytes(receiptRef, compressed, { contentType: 'image/jpeg' })
   const url = await getDownloadURL(receiptRef)
+  // Same path as before: the new photo, not the cached one (audit 2026-10-09)
+  rememberPhotoUrl(path, url)
   const { db } = await loadFirebase()
   await updateDoc(doc(db, 'expenses', id), {
     receiptPhotoPath: path,

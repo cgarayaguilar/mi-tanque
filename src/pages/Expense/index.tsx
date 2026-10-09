@@ -175,15 +175,15 @@ function ExpenseForm({
       id,
       orgId,
       ...fields,
-      receiptPhotoPath: receiptPath,
+      // The photo as it is now, if it was uploaded while editing
+      receiptPhotoPath:
+        useExpensesStore.getState().known[id]?.receiptPhotoPath ?? receiptPath,
       refuelId: null,
       createdAt: expense?.createdAt ?? null,
       createdBy: expense?.createdBy ?? uid,
     }
     save(saved, () =>
-      expense
-        ? updateExpense(id, { ...fields, receiptPhotoPath: receiptPath })
-        : createExpense(id, orgId, fields)
+      expense ? updateExpense(id, fields) : createExpense(id, orgId, fields)
     ).catch((error: unknown) => {
       reportError(error, { operation: 'saveExpense' })
       if (recoverFromLostPermission(error)) return
@@ -238,7 +238,14 @@ function ExpenseForm({
           <NumberField
             id="expenseAmount"
             label="Monto"
-            prefix={currencySymbol(expense?.currency ?? currency)}
+            prefix={currencySymbol(
+              expense?.currency ??
+                (values.kind === 'trip'
+                  ? tripChoices.find(item => item.id === values.tripId)
+                      ?.currency
+                  : undefined) ??
+                currency
+            )}
             placeholder="1,850"
             error={errors.amount?.message}
             registration={register('amount')}
@@ -386,10 +393,14 @@ function ExpenseForm({
             path={receiptPath}
             loadUrl={photoUrl}
             upload={file => uploadReceipt(orgId, id, file)}
+            kind="expenseReceipt"
             onUploaded={path => {
               setReceiptPath(path)
-              // Opened again, it shows the photo it now has
-              remember([{ ...expense, receiptPhotoPath: path }])
+              // Opened again, it shows the photo it now has; on what is
+              // known now, not this screen's copy, or a save made while it
+              // uploaded would go back (audit 2026-10-09)
+              const known = useExpensesStore.getState().known[id] ?? expense
+              remember([{ ...known, receiptPhotoPath: path }])
             }}
             disabled={!canWrite}
           />

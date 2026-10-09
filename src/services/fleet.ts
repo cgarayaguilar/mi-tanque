@@ -338,6 +338,11 @@ export const photoPathFor = (
 
 const photoUrls = new Map<string, string>()
 
+/** A photo just uploaded: its path keeps the new URL for the session. */
+export const rememberPhotoUrl = (path: string, url: string) => {
+  photoUrls.set(path, url)
+}
+
 /** Download URL of a stored photo, remembered for the session. */
 export const photoUrl = async (path: string): Promise<string> => {
   const cached = photoUrls.get(path)
