@@ -781,3 +781,10 @@ test('the categories opened from Más go back to Más', async () => {
     expect(window.location.pathname).toBe('/mas')
   })
 })
+
+// backend specs/0036: what the expense was is in sight
+test('the description is in sight, the driver behind "Ver más detalles"', async () => {
+  renderAt('/gastos/nuevo')
+  expect(await screen.findByLabelText('Descripción (opcional)')).toBeVisible()
+  expect(screen.getByLabelText('Conductor (opcional)')).not.toBeVisible()
+})

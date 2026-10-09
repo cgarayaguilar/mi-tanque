@@ -794,10 +794,12 @@ describe('its expenses in the form', () => {
     const first = await openDialog('Agregar gasto', 'Nuevo gasto')
     await choose('Categoría', 'Peajes', first)
     type('Monto', '1850', first)
+    // In sight, not behind "Ver más detalles" (specs/0036)
+    expect(within(first).getByLabelText('Descripción (opcional)')).toBeVisible()
+    type('Descripción (opcional)', 'Peaje de Tipitapa', first)
     fireEvent.click(
       within(first).getByRole('button', { name: 'Ver más detalles' })
     )
-    type('Descripción (opcional)', 'Peaje de Tipitapa', first)
     await choose('Conductor (opcional)', 'Marta Gómez', first)
     await saveDialog(first)
     const second = await openDialog('Agregar gasto', 'Nuevo gasto')

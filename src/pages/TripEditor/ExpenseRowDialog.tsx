@@ -20,8 +20,9 @@ import {
 } from 'schemas/trips'
 import { currencySymbol } from 'utils/formatMoney'
 
-// Behind "Ver más detalles" (specs/0029 RF-4)
-const DETAILS = ['description', 'driverId'] as const
+// Behind "Ver más detalles" (specs/0029 RF-4); the description is in
+// sight (specs/0036)
+const DETAILS = ['driverId'] as const
 
 interface ExpenseRowDialogProps {
   row: ExpenseRowValues
@@ -108,6 +109,15 @@ export default function ExpenseRowDialog({
           error={errors.amount?.message}
           registration={register('amount')}
         />
+        {/* What it was, in sight: fundamental (specs/0036) */}
+        <TextField
+          id="tripExpenseDescription"
+          label="Descripción (opcional)"
+          placeholder="Peaje de Tipitapa"
+          maxLength={TRIP_LIMITS.expenseDescription}
+          error={errors.description?.message}
+          registration={register('description')}
+        />
         <DateTimeField
           id="tripExpenseTakenAt"
           label="Fecha y hora"
@@ -118,16 +128,8 @@ export default function ExpenseRowDialog({
         <MoreDetails
           open={details.open}
           onToggle={details.toggle}
-          filled={countFilled([values.description, values.driverId])}
+          filled={countFilled([values.driverId])}
         >
-          <TextField
-            id="tripExpenseDescription"
-            label="Descripción (opcional)"
-            placeholder="Peaje de Tipitapa"
-            maxLength={TRIP_LIMITS.expenseDescription}
-            error={errors.description?.message}
-            registration={register('description')}
-          />
           <AutocompleteField
             id="tripExpenseDriver"
             label="Conductor (opcional)"

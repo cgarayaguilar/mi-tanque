@@ -69,8 +69,9 @@ import { tripOption, useTripChoices } from './useTripChoices'
 
 const FORM_ID = 'expense-form'
 
-// Behind "Ver más detalles" (specs/0026 RF-10)
-const DETAILS = ['description', 'driverId'] as const
+// Behind "Ver más detalles" (specs/0026 RF-10); the description is in
+// sight (specs/0036)
+const DETAILS = ['driverId'] as const
 
 const KIND_OPTIONS = EXPENSE_KINDS.map(kind => ({
   value: kind,
@@ -260,6 +261,15 @@ function ExpenseForm({
             }}
             disabled={!canWrite}
           />
+          {/* What it was, in sight: fundamental (specs/0036) */}
+          <TextField
+            id="expenseDescription"
+            label="Descripción (opcional)"
+            placeholder="Peaje de Tipitapa"
+            maxLength={EXPENSE_LIMITS.description}
+            error={errors.description?.message}
+            registration={register('description')}
+          />
           <SelectField
             id="expenseKind"
             label="Corresponde a"
@@ -331,16 +341,8 @@ function ExpenseForm({
           <MoreDetails
             open={details.open}
             onToggle={details.toggle}
-            filled={countFilled([values.description, values.driverId])}
+            filled={countFilled([values.driverId])}
           >
-            <TextField
-              id="expenseDescription"
-              label="Descripción (opcional)"
-              placeholder="Peaje de Tipitapa"
-              maxLength={EXPENSE_LIMITS.description}
-              error={errors.description?.message}
-              registration={register('description')}
-            />
             <AutocompleteField
               id="expenseDriver"
               label="Conductor (opcional)"
