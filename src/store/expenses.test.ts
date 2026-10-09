@@ -110,3 +110,25 @@ test("a trip's expenses as read replace the ones known of that trip", async () =
   expect(state.known.b?.amount).toBe(99)
   expect(state.items.map(item => item.id)).toEqual(['b'])
 })
+
+// Audit 2026-10-09: a refused save left an expense that was never saved
+test('a refused save puts back what there was', async () => {
+  const saved = expense({ takenAt: new Date() })
+  useExpensesStore.getState().remember([saved])
+  const changed = { ...saved, amount: 9 }
+  await expect(
+    useExpensesStore
+      .getState()
+      .save(changed, () => Promise.reject(new Error('denied')))
+  ).rejects.toThrow('denied')
+  expect(useExpensesStore.getState().known[saved.id]).toBe(saved)
+
+  const fresh = expense({ id: 'fresh', takenAt: new Date() })
+  await expect(
+    useExpensesStore
+      .getState()
+      .save(fresh, () => Promise.reject(new Error('denied')))
+  ).rejects.toThrow('denied')
+  expect(useExpensesStore.getState().known.fresh).toBeUndefined()
+  expect(useExpensesStore.getState().items).toEqual([])
+})

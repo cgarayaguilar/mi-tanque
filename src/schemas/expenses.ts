@@ -241,7 +241,11 @@ export const expenseFromForm = (
   return {
     takenAt: fromDateTimeValue(values.takenAt) ?? new Date(),
     amount: toCents(parseDecimal(values.amount)),
-    currency: previous?.currency ?? context.currency,
+    // A new trip's expense is in its trip's currency, which its total adds
+    // up (audit 2026-10-09)
+    currency:
+      previous?.currency ??
+      (values.kind === 'trip' && trip ? trip.currency : context.currency),
     categoryId: values.categoryId,
     // The saved name stays if the category is no longer at hand
     categoryName:
@@ -284,6 +288,10 @@ const LINK_KEYS = new Set<string>([
   'trailerName',
 ])
 
+// A name follows its id: a category or driver renamed since does not
+// rewrite every row of the trip (audit 2026-10-09)
+const NAME_KEYS = new Set<string>(['categoryName', 'driverName'])
+
 /**
  * Whether a row is as it was. Its link does not count: when the trip
  * changes truck or route the backend moves its expenses, so the batch
@@ -292,7 +300,7 @@ const LINK_KEYS = new Set<string>([
  */
 const sameFields = (expense: Expense, fields: ExpenseFields) =>
   (Object.keys(fields) as (keyof ExpenseFields)[])
-    .filter(key => !LINK_KEYS.has(key))
+    .filter(key => !LINK_KEYS.has(key) && !NAME_KEYS.has(key))
     .every(key => {
       const before = expense[key]
       const after = fields[key]
@@ -300,6 +308,25 @@ const sameFields = (expense: Expense, fields: ExpenseFields) =>
         ? before.getTime() === after.getTime()
         : before === after
     })
+
+/** How many rows a save writes: the new and the changed (audit 2026-10-09). */
+export const expenseRowWrites = (
+  rows: readonly TripExpenseRow[],
+  previous: readonly Expense[]
+) => {
+  const before = new Map(
+    previous.map(expense => [expense.id, expenseToRow(expense)])
+  )
+  return rows.filter(row => {
+    const old = before.get(row.id)
+    return (
+      !old ||
+      (Object.keys(old) as (keyof TripExpenseRow)[]).some(
+        key => old[key] !== row[key]
+      )
+    )
+  }).length
+}
 
 /**
  * What saving a trip writes of its expenses (RF-12): the new rows, the

@@ -195,15 +195,35 @@ export const useExpensesStore = create<ExpensesState>()((set, get) => {
 
     save: async (expense, write) => {
       const { start, end } = expensesPeriodOf(get())
-      const inPeriod = expense.takenAt >= start && expense.takenAt <= end
+      const inPeriod = (item: { takenAt: Date }) =>
+        item.takenAt >= start && item.takenAt <= end
+      const before = get().known[expense.id]
+      const listed = get().items.find(item => item.id === expense.id)
       set(state => ({
         items: newestFirst([
           ...state.items.filter(item => item.id !== expense.id),
-          ...(inPeriod ? [expense] : []),
+          ...(inPeriod(expense) ? [expense] : []),
         ]),
         known: { ...state.known, [expense.id]: expense },
       }))
-      await write()
+      try {
+        await write()
+      } catch (error) {
+        // Refused (rules, permissions): it is shown as it was, not as a
+        // expense that was never saved (audit 2026-10-09)
+        set(state => {
+          if (state.known[expense.id] !== expense) return {}
+          const { [expense.id]: _, ...known } = state.known
+          return {
+            items: newestFirst([
+              ...state.items.filter(item => item.id !== expense.id),
+              ...(listed ? [listed] : []),
+            ]),
+            known: before ? { ...known, [expense.id]: before } : known,
+          }
+        })
+        throw error
+      }
     },
 
     remove: async (id, write) => {

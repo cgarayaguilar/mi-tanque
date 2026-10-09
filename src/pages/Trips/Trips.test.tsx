@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react'
 import { sileo } from 'sileo'
 import App from '../../App'
+import TripForm from 'pages/TripEditor/TripForm'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
@@ -1184,6 +1185,96 @@ describe('its expenses on its screen', () => {
       await screen.findByText(
         'Sus 3 gastos quedarán como gastos del camión Unidad 12. No se puede deshacer.'
       )
+    ).toBeInTheDocument()
+  })
+})
+
+describe('audit of the trip form (2026-10-09)', () => {
+  // An expense in another currency was shown and summed as the trip's
+  test("an expense in another currency keeps it, out of the trip's total", async () => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    expensesApi.readTripExpenses.mockResolvedValue([
+      expense(),
+      expense({ id: 'expense-2', currency: 'USD', amount: 100 }),
+    ])
+    renderAt('/viajes/trip-1/editar')
+
+    expect(
+      await screen.findByRole('button', { name: /^Gasto de Peajes, .*USD$/ })
+    ).toBeInTheDocument()
+    expect(screen.getByText('Gastos: C$1,850.00 NIO')).toBeInTheDocument()
+  })
+
+  // A refused save left a trip that was never saved, and its expenses
+  test('a refused save leaves nothing that was not saved', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    tripsApi.saveTripWithExpenses.mockRejectedValueOnce(
+      Object.assign(new Error('denied'), { code: 'invalid-argument' })
+    )
+    renderAt('/viajes/nuevo')
+    await choose('Cliente', 'Transportes Pérez')
+    await choose('Tarifa', 'Managua - San José - C$25,000.00')
+    await choose('Camión', 'Unidad 12')
+    const row = await openDialog('Agregar gasto', 'Nuevo gasto')
+    await choose('Categoría', 'Peajes', row)
+    type('Monto', '1850', row)
+    await saveDialog(row)
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
+
+    await waitFor(() => {
+      expect(sileo.error).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'No pudimos guardar el viaje' })
+      )
+    })
+    expect(useTripsStore.getState().known['new-trip']).toBeUndefined()
+    expect(useExpensesStore.getState().known['new-expense']).toBeUndefined()
+  })
+
+  // "+ Crear viaje" from a refuel brought the truck alone
+  test('a preset truck brings its trailer and driver', async () => {
+    await useFleetStore.getState().load('org-a')
+    render(
+      <TripForm
+        trip={null}
+        expenses={[]}
+        id="new-trip"
+        orgId="org-a"
+        currency="NIO"
+        preset={{ truckId: 'truck-1' }}
+        onSaved={() => undefined}
+      />
+    )
+    await choose('Cliente', 'Transportes Pérez')
+    await choose('Tarifa', 'Managua - San José - C$25,000.00')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
+
+    await waitFor(() => {
+      expect(tripsApi.saveTripWithExpenses).toHaveBeenCalledWith(
+        'new-trip',
+        'org-a',
+        expect.objectContaining({
+          truckId: 'truck-1',
+          trailerId: 'trailer-1',
+          driverId: 'driver-1',
+        }),
+        true,
+        expect.anything()
+      )
+    })
+  })
+
+  // The limit counted every row: a trip with 10 could not get one more
+  test('a trip with 10 expenses can still add one', async () => {
+    tripsApi.readTrip.mockResolvedValue(trip())
+    expensesApi.readTripExpenses.mockResolvedValue(
+      Array.from({ length: 10 }, (_, index) =>
+        expense({ id: `expense-${String(index)}` })
+      )
+    )
+    renderAt('/viajes/trip-1/editar')
+
+    expect(
+      await screen.findByRole('button', { name: 'Agregar gasto' })
     ).toBeInTheDocument()
   })
 })

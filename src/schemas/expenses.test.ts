@@ -8,6 +8,7 @@ import {
   expenseFormSchema,
   expenseFromForm,
   expenseLinkText,
+  expenseRowWrites,
   expenseToForm,
   expenseToRow,
   refuelBaseKind,
@@ -130,6 +131,17 @@ describe('the form', () => {
         left
       )
     ).toMatchObject({ truckId: 'truck-2', trailerId: null, trailerName: null })
+  })
+
+  // Audit 2026-10-09: it took the organization's, out of the trip's total
+  test("a new trip's expense is in its trip's currency", () => {
+    expect(
+      expenseFromForm(
+        { ...valid, kind: 'trip', tripId: 'trip-1', truckId: '' },
+        context,
+        trip({ currency: 'USD' })
+      ).currency
+    ).toBe('USD')
   })
 
   test('the currency and photo saved stay when editing', () => {
@@ -264,6 +276,41 @@ describe("a trip's rows", () => {
       ]
     )
     expect(changes.update[0]?.fields.driverName).toBe('Pedro Ruiz')
+  })
+
+  // Audit 2026-10-09: a rename rewrote every row, past the batch's reads
+  test('a category or driver renamed since rewrites nothing', () => {
+    const renamed: ExpenseContext = {
+      ...context,
+      categories: context.categories.map(category => ({
+        ...category,
+        name: `${category.name} (nuevo)`,
+      })),
+      drivers: context.drivers.map(item => ({ ...item, name: 'Pedro R.' })),
+    }
+    const changes = tripExpenseChanges(
+      previous.map(expenseToRow),
+      trip(),
+      previous,
+      renamed,
+      'luis'
+    )
+    expect(changes.update).toEqual([])
+  })
+
+  // Audit 2026-10-09: the limit is on what a save writes, not on the rows
+  test('what a save writes: the new rows and the changed ones', () => {
+    const rows = [
+      ...previous.map(expenseToRow),
+      { ...expenseToRow(first), id: 'new-1' },
+    ]
+    expect(expenseRowWrites(rows, previous)).toBe(1)
+    expect(
+      expenseRowWrites(
+        [{ ...expenseToRow(first), amount: '9' }, ...rows.slice(1)],
+        previous
+      )
+    ).toBe(2)
   })
 
   test('rows left as they were write nothing', () => {

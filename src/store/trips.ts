@@ -147,15 +147,35 @@ export const useTripsStore = create<TripsState>()((set, get) => {
 
     save: async (trip, write) => {
       const { start, end } = tripsPeriodOf(get())
-      const inPeriod = trip.startAt >= start && trip.startAt <= end
+      const inPeriod = (item: { startAt: Date }) =>
+        item.startAt >= start && item.startAt <= end
+      const before = get().known[trip.id]
+      const listed = get().items.find(item => item.id === trip.id)
       set(state => ({
         items: newestFirst([
           ...state.items.filter(item => item.id !== trip.id),
-          ...(inPeriod ? [trip] : []),
+          ...(inPeriod(trip) ? [trip] : []),
         ]),
         known: { ...state.known, [trip.id]: trip },
       }))
-      await write()
+      try {
+        await write()
+      } catch (error) {
+        // Refused (rules, permissions): it is shown as it was, not as a
+        // trip that was never saved (audit 2026-10-09)
+        set(state => {
+          if (state.known[trip.id] !== trip) return {}
+          const { [trip.id]: _, ...known } = state.known
+          return {
+            items: newestFirst([
+              ...state.items.filter(item => item.id !== trip.id),
+              ...(listed ? [listed] : []),
+            ]),
+            known: before ? { ...known, [trip.id]: before } : known,
+          }
+        })
+        throw error
+      }
     },
 
     remove: async (id, write) => {

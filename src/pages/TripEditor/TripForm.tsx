@@ -29,6 +29,7 @@ import SelectField from 'components/SelectField'
 import TextField from 'components/TextField'
 import type { Currency } from 'schemas/account'
 import {
+  expenseRowWrites,
   expenseToRow,
   isRefuelExpense,
   tripExpenseChanges,
@@ -123,6 +124,37 @@ const STATUS_OPTIONS = TRIP_STATUSES.map(status => ({
 const issuesIn = (error: unknown) =>
   Array.isArray(error) ? error.filter(Boolean).length : error ? 1 : 0
 
+/**
+ * What choosing a truck brings: its hitched trailer and the driver linked
+ * to its assigned member (specs/0025 RF-9). Read from the store as it is
+ * now, so a truck just created counts (specs/0028).
+ */
+const truckBrings = (truckId: string) => {
+  const fleet = useFleetStore.getState()
+  const truck = fleet.trucks.find(item => item.id === truckId)
+  if (!truck) return { trailerId: undefined, driverId: undefined }
+  const trailer = fleet.trailers.find(
+    item => !item.archived && item.hitchedTruckId === truck.id
+  )
+  const driver = truck.assignedDriverUid
+    ? fleet.drivers.find(
+        item => !item.archived && item.memberUid === truck.assignedDriverUid
+      )
+    : undefined
+  return { trailerId: trailer?.id, driverId: driver?.id }
+}
+
+/** A new trip's values; a preset truck brings its own (audit 2026-10-09). */
+const newTripValues = (now: Date, preset: TripFormProps['preset']) => {
+  const brings = preset?.truckId ? truckBrings(preset.truckId) : null
+  return {
+    ...EMPTY_TRIP_FORM(now),
+    ...(brings?.trailerId && { trailerId: brings.trailerId }),
+    ...(brings?.driverId && { driverId: brings.driverId }),
+    ...preset,
+  }
+}
+
 /** A trip's form, to create or edit it (backend specs/0025 RF-9, 0029). */
 export default function TripForm({
   trip,
@@ -164,7 +196,7 @@ export default function TripForm({
     resolver: zodResolver(tripFormSchema),
     defaultValues: trip
       ? { ...tripToForm(trip), expenses: tripExpenses.map(expenseToRow) }
-      : { ...EMPTY_TRIP_FORM(now), ...preset },
+      : newTripValues(now, preset),
   })
   useEffect(() => {
     onDirtyChange?.(isDirty)
@@ -252,12 +284,20 @@ export default function TripForm({
     }),
   })
 
-  const expensesTotal = toCents(
-    expenseRows.fields.reduce((sum, row) => {
-      const amount = parseDecimal(row.amount)
-      return sum + (Number.isNaN(amount) ? 0 : amount)
-    }, refuelsTotal)
-  )
+  // A saved row keeps its own currency; only the trip's adds up (audit
+  // 2026-10-09: an expense in another currency was summed as the trip's)
+  const rowCurrency = (rowId: string) =>
+    tripExpenses.find(expense => expense.id === rowId)?.currency ?? currency
+  const rowsTotal = (rows: readonly ExpenseRowValues[]) =>
+    toCents(
+      rows
+        .filter(row => rowCurrency(row.id) === currency)
+        .reduce((sum, row) => {
+          const amount = parseDecimal(row.amount)
+          return sum + (Number.isNaN(amount) ? 0 : amount)
+        }, refuelsTotal)
+    )
+  const expensesTotal = rowsTotal(expenseRows.fields)
 
   // A new expense's date is the trip's start, or now if it starts later
   // (0026 RF-12)
@@ -313,21 +353,11 @@ export default function TripForm({
   // The truck brings its hitched trailer and the driver linked to its
   // assigned member, only where nothing was chosen yet (RF-9)
   const chooseTruck = (truckId: string) => {
-    const fleet = useFleetStore.getState()
-    const truck = fleet.trucks.find(item => item.id === truckId)
-    if (!truck) return
-    if (!trailerChosen && !getValues('trailerId')) {
-      const trailer = fleet.trailers.find(
-        item => !item.archived && item.hitchedTruckId === truck.id
-      )
-      if (trailer) setValue('trailerId', trailer.id)
-    }
-    if (!getValues('driverId') && truck.assignedDriverUid) {
-      const driver = fleet.drivers.find(
-        item => !item.archived && item.memberUid === truck.assignedDriverUid
-      )
-      if (driver) setValue('driverId', driver.id, { shouldValidate: true })
-    }
+    const { trailerId, driverId } = truckBrings(truckId)
+    if (trailerId && !trailerChosen && !getValues('trailerId'))
+      setValue('trailerId', trailerId)
+    if (driverId && !getValues('driverId'))
+      setValue('driverId', driverId, { shouldValidate: true })
   }
 
   const onSubmit = (values: TripFormValues) => {
@@ -346,12 +376,7 @@ export default function TripForm({
       orgId,
       ...fields,
       // The backend keeps it (RF-3); meanwhile, what the rows add up to
-      expensesTotal: toCents(
-        values.expenses.reduce(
-          (sum, row) => sum + parseDecimal(row.amount),
-          refuelsTotal
-        )
-      ),
+      expensesTotal: rowsTotal(values.expenses),
       createdAt: trip?.createdAt ?? null,
       createdBy: trip?.createdBy ?? uid,
     }
@@ -363,10 +388,32 @@ export default function TripForm({
       { currency, categories, trucks, trailers, drivers },
       uid
     )
+    // One batch carries only so many rows (audit 2026-10-09: an old trip's
+    // rows were all editable, past the limit)
+    if (
+      expenses.create.length + expenses.update.length >
+      TRIP_LIMITS.expenses
+    ) {
+      sileo.error({
+        title: 'Son muchos gastos para guardar a la vez',
+        description: `Guarda hasta ${String(TRIP_LIMITS.expenses)} gastos nuevos o cambiados; los demás, después.`,
+      })
+      return
+    }
     applyTripExpenses(expenses.saved, expenses.remove)
     saveTrip(saved, () =>
       saveTripWithExpenses(id, orgId, fields, trip === null, expenses)
     ).catch((error: unknown) => {
+      // Refused, nothing of the batch was written: its rows go back as they
+      // were (audit 2026-10-09)
+      applyTripExpenses(
+        tripExpenses.filter(
+          expense =>
+            expenses.remove.includes(expense.id) ||
+            expenses.saved.some(item => item.id === expense.id)
+        ),
+        expenses.create.map(item => item.id)
+      )
       reportError(error, { operation: 'saveTrip' })
       if (recoverFromLostPermission(error)) return
       sileo.error({
@@ -778,7 +825,11 @@ export default function TripForm({
           title="Gastos"
           hint="Lo que costó el viaje."
           issues={sectionIssues(4)}
-          {...(expenseRows.fields.length < TRIP_LIMITS.expenses && {
+          // New or changed rows, the ones a save writes (audit 2026-10-09)
+          {...(expenseRowWrites(
+            rowFields.map(({ row }) => row),
+            tripExpenses
+          ) < TRIP_LIMITS.expenses && {
             action: addButton('Agregar gasto', () => {
               setExpenseOpen({ index: null, row: newExpenseRow() })
             }),
@@ -816,7 +867,7 @@ export default function TripForm({
                     key={key}
                     category={categoryName(row.categoryId, row.id)}
                     amount={Number.isNaN(amount) ? 0 : amount}
-                    currency={currency}
+                    currency={old?.currency ?? currency}
                     takenAt={fromDateTimeValue(row.takenAt)}
                     description={row.description.trim() || null}
                     driverName={
@@ -922,7 +973,7 @@ export default function TripForm({
         <ExpenseRowDialog
           row={openRow}
           isNew={expenseOpen.index === null}
-          currency={currency}
+          currency={openRowOld?.currency ?? currency}
           categoryOptions={categories
             .filter(
               category =>

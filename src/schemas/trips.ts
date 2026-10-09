@@ -17,8 +17,9 @@ export const TRIP_LIMITS = {
   amountMax: 100_000_000,
   extras: 10,
   extraDescription: 80,
-  // The trip and its expenses go in one batch, where the rules may read
-  // at most 20 documents: 10 categories fit beside the trip's (specs/0026)
+  // The trip and its new or changed expenses go in one batch, where the
+  // rules may read at most 20 documents: each row may read its category
+  // and its driver (specs/0026, 0029); see the audit of 2026-10-09
   expenses: 10,
   expenseDescription: 200,
   tripNumber: 20,
