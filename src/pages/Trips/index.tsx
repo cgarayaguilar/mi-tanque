@@ -168,7 +168,10 @@ function TripGroupSection({
           variant="body2"
           sx={{ color: 'text.secondary', overflowWrap: 'anywhere' }}
         >
-          {groupSummary(group.trips)}
+          {/* A route's client first (specs/0033 RF-2) */}
+          {[group.subtitle, groupSummary(group.trips)]
+            .filter(Boolean)
+            .join(' · ')}
         </Typography>
       </Box>
       <Stack
@@ -247,7 +250,6 @@ function TripsScreen() {
           ])
           .map(named(drivers))
       ),
-      destinations: destinationOptions(trips.items),
     }
   }, [trips.items, clients, trucks, drivers])
 
@@ -264,6 +266,11 @@ function TripsScreen() {
       driver: nameIn(drivers),
     }
   }, [clients, trucks, trailers, drivers])
+  // Each client's routes (specs/0033 RF-1)
+  const destinations = useMemo(
+    () => destinationOptions(trips.items, names),
+    [trips.items, names]
+  )
 
   // A filter whose option is not in the new period goes away (RF-8)
   useEffect(() => {
@@ -272,7 +279,7 @@ function TripsScreen() {
       clientId: options.clients,
       truckId: options.trucks,
       driverId: options.drivers,
-      destination: options.destinations,
+      destination: destinations,
     }
     const gone = Object.entries(offered).filter(
       ([key, choices]) =>
@@ -283,7 +290,7 @@ function TripsScreen() {
     )
     if (gone.length > 0)
       setFilters(Object.fromEntries(gone.map(([key]) => [key, null])))
-  }, [trips.status, options, filters, setFilters])
+  }, [trips.status, options, destinations, filters, setFilters])
 
   const shown = sortTrips(filterTrips(trips.items, filters), order)
   const groups = grouping && groupTrips(shown, grouping, order, names)
@@ -497,7 +504,7 @@ function TripsScreen() {
               <FilterChip
                 label="Destino"
                 allLabel="Todos"
-                options={options.destinations}
+                options={destinations}
                 value={filters.destination}
                 onChange={destination => {
                   setFilters({ destination })

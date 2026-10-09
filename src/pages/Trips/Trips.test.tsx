@@ -271,7 +271,15 @@ describe('filter, group and sort', () => {
 
     // One truck in the period: its chip is there all the same
     expect(filterChip('Camión')).toBeInTheDocument()
-    await filterBy('Destino', 'San José')
+    // specs/0033 RF-1: each route under its client
+    fireEvent.click(filterChip('Destino'))
+    const menu = await screen.findByRole('menu', { name: 'Destino' })
+    expect(menu).toHaveTextContent(
+      /Fletes Ríos.*León → Tegucigalpa.*Transportes Pérez.*Managua → San José/
+    )
+    fireEvent.click(
+      within(menu).getByRole('menuitemradio', { name: 'Managua → San José' })
+    )
     await filterBy('Camión', 'Unidad 12')
     expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))).toEqual([
       'Viaje Managua → San José, Programado',
@@ -332,7 +340,7 @@ describe('filter, group and sort', () => {
     renderAt('/viajes')
     await screen.findByRole('list', { name: 'Viajes' })
     await filterBy('Agrupar', 'Camión')
-    await filterBy('Destino', 'San José')
+    await filterBy('Destino', 'Managua → San José')
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -349,7 +357,7 @@ describe('filter, group and sort', () => {
     expect(
       await screen.findByRole('region', { name: 'Unidad 12' })
     ).toHaveTextContent('1 viaje · C$27,500.00 NIO')
-    expect(filterChip('Destino')).toHaveTextContent('San José')
+    expect(filterChip('Destino')).toHaveTextContent('Managua → San José')
   })
 })
 
@@ -406,7 +414,16 @@ describe('the form', () => {
   test('a rate of another client moves the trip to that client, and says so', async () => {
     renderAt('/viajes/nuevo')
     await choose('Cliente', 'Transportes Pérez')
-    await choose('Tarifa', 'León - Managua - C$9,000.00 · Fletes Ríos')
+    // specs/0033 RF-3, CA-3: under their client, the trip's first
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tarifa' }))
+    const list = await screen.findByRole('listbox')
+    expect(list).toHaveTextContent(
+      /^\+ Crear tarifaTransportes Pérez.*Managua - San José.*Fletes Ríos.*León - Managua/
+    )
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Tarifa' }), {
+      key: 'Escape',
+    })
+    await choose('Tarifa', 'León - Managua - C$9,000.00')
     expect(
       screen.getByText('Cambiamos el cliente a Fletes Ríos, el de la tarifa')
     ).toBeInTheDocument()
@@ -871,7 +888,7 @@ describe('its expenses in the form', () => {
     await choose('¿Cómo se calcula el precio?', 'Manual')
     expect(screen.getByLabelText('Origen')).toHaveValue('Managua')
     await choose('¿Cómo se calcula el precio?', 'Desde una tarifa')
-    await choose('Tarifa', 'León - Managua - C$9,000.00 · Fletes Ríos')
+    await choose('Tarifa', 'León - Managua - C$9,000.00')
     await choose('¿Cómo se calcula el precio?', 'Manual')
     expect(screen.getByLabelText('Origen')).toHaveValue('León')
     expect(screen.getByLabelText('Precio')).toHaveValue('9,000')

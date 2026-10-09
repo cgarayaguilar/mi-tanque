@@ -1,11 +1,11 @@
 import type { Trip } from 'schemas/trips'
 import {
-  destinationKey,
   destinationOptions,
   filterTrips,
   groupSummary,
   groupTrips,
   NO_TRIP_FILTERS,
+  routeKey,
   sortTrips,
   type TripNames,
 } from 'utils/tripGroups'
@@ -31,17 +31,20 @@ describe('filters', () => {
     trip({ id: 'a' }),
     trip({ id: 'b', destination: 'san  jose', truckId: 'truck-2' }),
     trip({ id: 'c', destination: 'León' }),
+    // The same route, of another client (specs/0033)
     trip({
       id: 'd',
       destination: 'León',
+      clientId: 'client-2',
+      clientName: 'Fletes Ríos',
       driverId: 'driver-2',
       secondDriverId: 'driver-1',
       driverIds: ['driver-2', 'driver-1'],
     }),
   ]
 
-  test('a destination however written, and filters that add up', () => {
-    const sanJose = destinationKey('San José')
+  test('a route however written, and filters that add up', () => {
+    const sanJose = routeKey(trip())
     expect(
       ids(filterTrips(trips, { ...NO_TRIP_FILTERS, destination: sanJose }))
     ).toEqual(['a', 'b'])
@@ -65,11 +68,52 @@ describe('filters', () => {
     ).toEqual(['d'])
   })
 
-  test('each destination once, as first written', () => {
-    expect(destinationOptions(trips)).toEqual([
-      { value: destinationKey('León'), label: 'León' },
-      { value: destinationKey('San José'), label: 'San José' },
+  // specs/0033 RF-1, CA-1: each client's routes, under its name
+  test('each route once per client, as first written', () => {
+    const leon = trip({ destination: 'León' })
+    expect(destinationOptions(trips, names)).toEqual([
+      {
+        value: routeKey({ ...leon, clientId: 'client-2' }),
+        label: 'Managua → León',
+        group: 'Fletes Ríos',
+      },
+      {
+        value: routeKey(leon),
+        label: 'Managua → León',
+        group: 'Transportes Pérez',
+      },
+      {
+        value: routeKey(trip()),
+        label: 'Managua → San José',
+        group: 'Transportes Pérez',
+      },
     ])
+    // The route and its client: not the other client's trip
+    expect(
+      ids(
+        filterTrips(trips, { ...NO_TRIP_FILTERS, destination: routeKey(leon) })
+      )
+    ).toEqual(['c'])
+  })
+
+  test("a route is written as its rate's, not as typed by hand", () => {
+    const options = destinationOptions(
+      [
+        trip({
+          id: 'typed',
+          origin: 'managua',
+          destination: 'san jose',
+          rateId: null,
+        }),
+        trip({ id: 'rated' }),
+      ],
+      names
+    )
+    expect(options.map(option => option.label)).toEqual(['Managua → San José'])
+  })
+
+  test('another origin is another route', () => {
+    expect(routeKey(trip({ origin: 'Rivas' }))).not.toBe(routeKey(trip()))
   })
 })
 
@@ -188,15 +232,26 @@ describe('groups', () => {
     ])
   })
 
-  test('by destination, however written', () => {
+  // specs/0033 RF-2, CA-2
+  test('by destination: a route per client, by client then route', () => {
     const groups = groupTrips(
-      [trip({ id: 'a' }), trip({ id: 'b', destination: 'san jose' })],
+      [
+        trip({ id: 'a' }),
+        trip({ id: 'b', destination: 'san jose' }),
+        trip({ id: 'c', origin: 'Rivas' }),
+        trip({ id: 'd', clientId: 'client-2', clientName: 'Fletes Ríos' }),
+      ],
       'destination',
       'dateDesc',
       names
     )
-    expect(groups).toHaveLength(1)
-    expect(groups[0]?.title).toBe('San José')
+    expect(
+      groups.map(group => [group.title, group.subtitle, ids(group.trips)])
+    ).toEqual([
+      ['Managua → San José', 'Fletes Ríos', ['d']],
+      ['Managua → San José', 'Transportes Pérez', ['a', 'b']],
+      ['Rivas → San José', 'Transportes Pérez', ['c']],
+    ])
   })
 
   // CA-4

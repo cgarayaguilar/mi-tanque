@@ -5,6 +5,7 @@ import {
   type Trip,
   type TripStatus,
 } from 'schemas/trips'
+import { routeName } from 'schemas/rates'
 import { foldText, squeezeSpaces } from 'utils/foldText'
 import { tripTotals } from 'utils/tripTotals'
 
@@ -57,7 +58,7 @@ export interface TripFilters {
   clientId: string | null
   truckId: string | null
   driverId: string | null
-  /** A destination's key (`destinationKey`). */
+  /** A route of a client (`routeKey`): "Destino" (specs/0033 RF-1). */
   destination: string | null
 }
 
@@ -69,9 +70,30 @@ export const NO_TRIP_FILTERS: TripFilters = {
   destination: null,
 }
 
-/** "San José", "san jose" and "San  José" are one destination (RF-1). */
-export const destinationKey = (destination: string) =>
-  foldText(squeezeSpaces(destination))
+/** "San José", "san jose" and "San  José" are one place (0030 RF-1). */
+const placeKey = (place: string) => foldText(squeezeSpaces(place))
+
+/**
+ * A trip's route for its client: "Rivas → Managua" of Acarreos del Norte
+ * is not that of Fletes Ríos (specs/0033 RF-1).
+ */
+export const routeKey = (
+  trip: Pick<Trip, 'clientId' | 'origin' | 'destination'>
+) =>
+  [trip.clientId, placeKey(trip.origin), placeKey(trip.destination)].join('|')
+
+/** "Rivas → Managua", as the trip wrote it. */
+const routeOf = (trip: Trip) =>
+  routeName(squeezeSpaces(trip.origin), squeezeSpaces(trip.destination))
+
+/**
+ * How to write a route its trips share: as a trip from a rate has it (the
+ * rate's spelling), else as the newest one wrote it.
+ */
+const routeSpelling = (trips: readonly Trip[]) => {
+  const named = trips.find(trip => trip.rateId !== null) ?? trips[0]
+  return named ? routeOf(named) : ''
+}
 
 /** The current name of an item of the fleet, or the one the trip saved. */
 export type NameOf = (id: string, saved: string) => string
@@ -92,20 +114,33 @@ export const filterTrips = (trips: readonly Trip[], filters: TripFilters) =>
       // Either of its two drivers (0025 RF-6)
       (filters.driverId === null ||
         trip.driverIds.includes(filters.driverId)) &&
-      (filters.destination === null ||
-        destinationKey(trip.destination) === filters.destination)
+      (filters.destination === null || routeKey(trip) === filters.destination)
   )
 
-/** Each destination of these trips once, as first written; A–Z. */
-export const destinationOptions = (trips: readonly Trip[]) => {
-  const spelled = new Map<string, string>()
+/**
+ * Each route of these trips once, as first written, under its client's
+ * name: clients A–Z, and their routes A–Z (specs/0033 RF-1).
+ */
+export const destinationOptions = (
+  trips: readonly Trip[],
+  names: Pick<TripNames, 'client'>
+) => {
+  const routes = new Map<string, Trip[]>()
   for (const trip of trips) {
-    const key = destinationKey(trip.destination)
-    if (!spelled.has(key)) spelled.set(key, squeezeSpaces(trip.destination))
+    const key = routeKey(trip)
+    routes.set(key, [...(routes.get(key) ?? []), trip])
   }
-  return [...spelled]
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+  return [...routes]
+    .map(([value, list]) => ({
+      value,
+      label: routeSpelling(list),
+      group: list[0] ? names.client(list[0].clientId, list[0].clientName) : '',
+    }))
+    .sort(
+      (a, b) =>
+        a.group.localeCompare(b.group, 'es') ||
+        a.label.localeCompare(b.label, 'es')
+    )
 }
 
 const newestFirst = (a: Trip, b: Trip) =>
@@ -130,14 +165,17 @@ export interface TripGroup {
   key: string
   /** "Unidad 12", "octubre 2026", "del 5 oct al 11 oct", "En curso". */
   title: string
+  /** Under the title: a route's client (specs/0033 RF-2). */
+  subtitle?: string
   trips: Trip[]
 }
 
 interface Membership {
   key: string
   title: string
-  /** How the groups line up (RF-6). */
-  rank: string | number
+  subtitle?: string
+  /** How the groups line up (RF-6): by its first part, then the next. */
+  rank: string[] | number
   /** After every other one: "Sin remolque". */
   last?: boolean
 }
@@ -153,7 +191,7 @@ const membershipsOf = (
   const named = (key: string, title: string) => ({
     key,
     title,
-    rank: foldText(title),
+    rank: [title],
   })
   switch (grouping) {
     case 'driver':
@@ -177,23 +215,29 @@ const membershipsOf = (
               trip.trailerId,
               names.trailer(trip.trailerId, trip.trailerName ?? '')
             )
-          : { key: '', title: NO_TRAILER, rank: '', last: true },
+          : { key: '', title: NO_TRAILER, rank: [], last: true },
       ]
     case 'client':
       return [
         named(trip.clientId, names.client(trip.clientId, trip.clientName)),
       ]
-    case 'destination':
+    case 'destination': {
+      // By client, then by route (specs/0033 RF-2)
+      const client = names.client(trip.clientId, trip.clientName)
+      const route = routeOf(trip)
       return [
-        named(
-          destinationKey(trip.destination),
-          squeezeSpaces(trip.destination)
-        ),
+        {
+          key: routeKey(trip),
+          title: route,
+          subtitle: client,
+          rank: [client, route],
+        },
       ]
+    }
     case 'month':
-      return [{ key: trip.yearMonth, title: trip.monthLabel, rank: '' }]
+      return [{ key: trip.yearMonth, title: trip.monthLabel, rank: [] }]
     case 'week':
-      return [{ key: trip.weekStart, title: trip.weekLabel, rank: '' }]
+      return [{ key: trip.weekStart, title: trip.weekLabel, rank: [] }]
     case 'status':
       return [
         {
@@ -234,11 +278,19 @@ export const groupTrips = (
       }
       if (typeof a.rank === 'number' && typeof b.rank === 'number')
         return a.rank - b.rank
-      return String(a.rank).localeCompare(String(b.rank), 'es')
+      const first = typeof a.rank === 'number' ? [] : a.rank
+      const second = typeof b.rank === 'number' ? [] : b.rank
+      for (const [index, part] of first.entries()) {
+        const compared = part.localeCompare(second[index] ?? '', 'es')
+        if (compared !== 0) return compared
+      }
+      return 0
     })
-    .map(({ key, title, trips }) => ({
+    .map(({ key, title, subtitle, trips }) => ({
       key,
-      title,
+      // A route as its rate writes it (specs/0033 RF-1)
+      title: grouping === 'destination' ? routeSpelling(trips) : title,
+      ...(subtitle !== undefined && { subtitle }),
       trips: sortTrips(trips, order),
     }))
 }
