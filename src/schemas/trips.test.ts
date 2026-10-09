@@ -139,6 +139,8 @@ describe('the fields written', () => {
       truckName: 'Unidad 12',
       trailerId: 'trailer-1',
       trailerName: 'Caja 7',
+      truckOwnership: 'own',
+      trailerOwnership: 'own',
       driverId: 'driver-1',
       driverName: 'Pedro Ruiz',
       secondDriverId: null,
@@ -163,6 +165,19 @@ describe('the fields written', () => {
       secondDriverName: 'Marta Gómez',
       driverIds: ['driver-1', 'driver-2'],
     })
+  })
+
+  // backend specs/0035 RF-2: whose its truck and trailer were, copied
+  test("a third party's truck is saved as such; no trailer, no owner", () => {
+    expect(
+      tripFromForm(fromRate, {
+        ...context,
+        trucks: [truck({ ownership: 'third_party', ownerName: 'López' })],
+      })
+    ).toMatchObject({ truckOwnership: 'third_party', trailerOwnership: 'own' })
+    expect(tripFromForm({ ...fromRate, trailerId: '' }, context)).toMatchObject(
+      { trailerId: null, trailerOwnership: null }
+    )
   })
 
   // Owner, 2026-10-07: changing a rate does not touch the trips saved

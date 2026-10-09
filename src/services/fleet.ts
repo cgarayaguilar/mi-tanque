@@ -54,6 +54,9 @@ const vehicle = {
   vin: nullableString,
   // 'YYYY-MM-DD'; documents from before specs/0011 lack it
   insuranceExpiresOn: z._default(z.nullable(z.string()), null),
+  // Documents from before specs/0035 lack them: own
+  ownership: z._default(z.enum(['own', 'third_party']), 'own'),
+  ownerName: z._default(nullableString, null),
 }
 const truckSchema = z.object({
   ...vehicle,

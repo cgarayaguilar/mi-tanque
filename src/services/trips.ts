@@ -60,6 +60,12 @@ const schema = z.object({
   truckName: z.string(),
   trailerId: nullableString,
   trailerName: nullableString,
+  // Trips from before specs/0035 lack them
+  truckOwnership: z._default(z.nullable(z.enum(['own', 'third_party'])), null),
+  trailerOwnership: z._default(
+    z.nullable(z.enum(['own', 'third_party'])),
+    null
+  ),
   driverId: z.string(),
   driverName: z.string(),
   secondDriverId: nullableString,

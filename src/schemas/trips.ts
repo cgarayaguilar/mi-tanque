@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 import type { Currency } from 'schemas/account'
 import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
-import type { Trailer, Truck } from 'schemas/fleet'
+import type { Ownership, Trailer, Truck } from 'schemas/fleet'
 import type { Rate } from 'schemas/rates'
 import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
 import { formatEditable } from 'utils/formatNumber'
@@ -66,6 +66,12 @@ export interface Trip extends TripPeriod {
   truckName: string
   trailerId: string | null
   trailerName: string | null
+  /**
+   * Whose its truck and trailer were when it was saved (backend specs/0035
+   * RF-2); null on a trip from before, or without a trailer.
+   */
+  truckOwnership: Ownership | null
+  trailerOwnership: Ownership | null
   driverId: string
   driverName: string
   secondDriverId: string | null
@@ -327,6 +333,14 @@ export const tripFromForm = (
     truckName: nameOf(context.trucks, values.truckId) ?? '',
     trailerId,
     trailerName: trailerId ? nameOf(context.trailers, trailerId) : null,
+    // A copy, as the names (specs/0035 RF-2)
+    truckOwnership:
+      context.trucks.find(item => item.id === values.truckId)?.ownership ??
+      'own',
+    trailerOwnership: trailerId
+      ? (context.trailers.find(item => item.id === trailerId)?.ownership ??
+        'own')
+      : null,
     driverId: values.driverId,
     driverName: nameOf(context.drivers, values.driverId) ?? '',
     secondDriverId,

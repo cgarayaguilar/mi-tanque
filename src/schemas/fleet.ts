@@ -57,6 +57,8 @@ export const FLEET_LIMITS = {
   plate: 15,
   brandModel: 30,
   vin: 25,
+  // Whose a third party's equipment is (backend specs/0035 RF-1)
+  ownerName: 60,
   description: 500,
   colorLabel: 30,
   trailerTypeOther: 30,
@@ -88,7 +90,14 @@ interface FleetItemBase {
   archived: boolean
 }
 
+/** Own, or of a third party who rents or subcontracts it (backend specs/0035). */
+export type Ownership = 'own' | 'third_party'
+
 interface VehicleFields {
+  /** Read as own when a document from before has none (RF-1). */
+  ownership: Ownership
+  /** Whose it is, only of a third party. */
+  ownerName: string | null
   plate: string | null
   brand: string | null
   model: string | null
@@ -231,6 +240,8 @@ const colorFields = {
 
 const vehicleFields = {
   name: requiredText('Escribe el nombre o número de unidad', FLEET_LIMITS.name),
+  ownership: z.enum(['own', 'third_party']),
+  ownerName: optionalText(FLEET_LIMITS.ownerName),
   plate: optionalText(FLEET_LIMITS.plate),
   brand: optionalText(FLEET_LIMITS.brandModel),
   model: optionalText(FLEET_LIMITS.brandModel),
@@ -367,6 +378,10 @@ const colorToForm = (color: VehicleColor | null) => ({
 
 const vehicleFromForm = (values: TruckFormValues | TrailerFormValues) => ({
   name: values.name.trim(),
+  ownership: values.ownership,
+  // Back to own, its owner goes (specs/0035 RF-3)
+  ownerName:
+    values.ownership === 'third_party' ? textOrNull(values.ownerName) : null,
   plate: textOrNull(values.plate),
   brand: textOrNull(values.brand),
   model: textOrNull(values.model),
@@ -379,6 +394,8 @@ const vehicleFromForm = (values: TruckFormValues | TrailerFormValues) => ({
 
 const vehicleToForm = (item: Truck | Trailer) => ({
   name: item.name,
+  ownership: item.ownership,
+  ownerName: item.ownerName ?? '',
   plate: item.plate ?? '',
   brand: item.brand ?? '',
   model: item.model ?? '',
@@ -468,6 +485,8 @@ export const truckToForm = (
       ? vehicleToForm(truck)
       : {
           name: '',
+          ownership: 'own' as const,
+          ownerName: '',
           plate: '',
           brand: '',
           model: '',
@@ -514,6 +533,8 @@ export const trailerToForm = (trailer: Trailer | null): TrailerFormValues => ({
     ? vehicleToForm(trailer)
     : {
         name: '',
+        ownership: 'own' as const,
+        ownerName: '',
         plate: '',
         brand: '',
         model: '',
