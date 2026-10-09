@@ -32,6 +32,12 @@ const api = vi.hoisted(() => ({
   newFleetId: vi.fn(() => 'new-id'),
 }))
 vi.mock('services/fleet', () => api)
+// "Más" counts the expense categories (specs/0034 RF-4)
+const expensesApi = vi.hoisted(() => ({
+  readCategories: vi.fn(() => Promise.resolve([])),
+  seedCategories: vi.fn(() => Promise.resolve([])),
+}))
+vi.mock('services/expenses', () => expensesApi)
 
 const signIn = (role: Role = 'owner') => {
   useSessionStore.setState({
@@ -72,16 +78,48 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('the bottom navigation shows Flota only with a session (CA-1)', async () => {
-  renderAt('/flota')
-  expect(await screen.findByRole('link', { name: 'Flota' })).toHaveAttribute(
+/** Back to "Más" and into another module (specs/0034 RF-6). */
+const openModule = async (label: string) => {
+  fireEvent.click(screen.getByRole('button', { name: 'Más' }))
+  fireEvent.click(
+    await screen.findByRole('link', { name: new RegExp(`^${label},`) })
+  )
+  expect(
+    await screen.findByRole('heading', { level: 1, name: label })
+  ).toBeInTheDocument()
+}
+
+// backend specs/0034 CA-1: "Más" holds the fleet, active in its modules
+test('the bottom navigation has Más, active in the modules', async () => {
+  renderAt('/flota/tarifas')
+  const nav = await screen.findByRole('navigation', { name: 'Secciones' })
+  expect(
+    within(nav)
+      .getAllByRole('link')
+      .map(link => link.textContent)
+  ).toEqual(['Historial', 'Medición', 'Viajes', 'Gastos', 'Más'])
+  expect(within(nav).getByRole('link', { name: 'Más' })).toHaveAttribute(
     'aria-current',
     'page'
   )
+  // No tabs: the module's own title (RF-6)
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'Tarifas' })
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('tab')).toBeNull()
+})
+
+// RF-7
+test('/flota goes to Más', async () => {
+  renderAt('/flota')
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Más' })
+  ).toBeInTheDocument()
+  expect(window.location.pathname).toBe('/mas')
 })
 
 test('trucks show their plate, figures and tanks', async () => {
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   const card = await screen.findByRole('button', { name: 'Camión Unidad 12' })
   expect(card).toHaveTextContent('Freightliner Cascadia 2019 · M 123-456')
@@ -96,7 +134,7 @@ test('trailers show the truck they are hitched to; tanks their shape and equipme
     await screen.findByRole('button', { name: 'Remolque Caja 7' })
   ).toHaveTextContent('Enganchado a Unidad 12')
 
-  fireEvent.click(screen.getByRole('tab', { name: 'Tanques' }))
+  await openModule('Tanques')
   expect(
     await screen.findByRole('button', { name: 'Tanque Tanque izquierdo' })
   ).toHaveTextContent(
@@ -105,7 +143,7 @@ test('trailers show the truck they are hitched to; tanks their shape and equipme
 })
 
 test('search filters by name or plate and offers to clear', async () => {
-  renderAt('/flota')
+  renderAt('/flota/camiones')
   await screen.findByRole('button', { name: 'Camión Unidad 12' })
 
   fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar camiones' }), {
@@ -141,7 +179,7 @@ test('an empty section invites to add the first one', async () => {
     trailers: [],
     tanks: [],
   })
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   fireEvent.click(await screen.findByRole('button', { name: 'Agregar camión' }))
 
@@ -157,7 +195,7 @@ test('when everything is archived it says so and shows them (CA-6)', async () =>
     trailers: [],
     tanks: [],
   })
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   fireEvent.click(await screen.findByRole('button', { name: 'Ver archivados' }))
 
@@ -168,7 +206,7 @@ test('when everything is archived it says so and shows them (CA-6)', async () =>
 test('a failed load can be retried', async () => {
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   api.readFleet.mockRejectedValueOnce(new Error('unavailable'))
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }))
 
@@ -179,7 +217,7 @@ test('a failed load can be retried', async () => {
 
 test('a viewer sees the fleet without "Agregar" (CA-9)', async () => {
   signIn('viewer')
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   await screen.findByRole('button', { name: 'Camión Unidad 12' })
   expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
@@ -228,7 +266,7 @@ test('trucks and trailers say when their insurance is due, not when archived', a
     trailers: [trailer({ insuranceExpiresOn: '2020-01-01' })],
     tanks: [],
   })
-  renderAt('/flota')
+  renderAt('/flota/camiones')
 
   expect(
     await screen.findByRole('button', {
@@ -237,7 +275,7 @@ test('trucks and trailers say when their insurance is due, not when archived', a
   ).toBeInTheDocument()
   expect(screen.queryByText('Seguro vencido')).toBeNull()
 
-  fireEvent.click(screen.getByRole('tab', { name: 'Remolques' }))
+  await openModule('Remolques')
   expect(await screen.findByText('Seguro vencido')).toBeInTheDocument()
 })
 
@@ -303,7 +341,7 @@ test('the archived chip shows the archived ones, in every tab', async () => {
   expect(await screen.findByText('Unidad 15')).toBeInTheDocument()
   expect(screen.queryByText('Unidad 12')).toBeNull()
 
-  fireEvent.click(screen.getByRole('tab', { name: 'Remolques' }))
+  await openModule('Remolques')
   const filters = await screen.findByRole('group', { name: 'Filtros' })
   expect(
     within(filters)
@@ -558,5 +596,57 @@ describe('rates', () => {
         'Agrega tu primera tarifa para tener su información a mano.'
       )
     ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0034: "Más", every module as a settings list
+describe('Más', () => {
+  // CA-2, CA-3
+  test('its rows say what each module has, and open it', async () => {
+    renderAt('/mas')
+    const fleetGroup = await screen.findByRole('list', { name: 'Flota' })
+    expect(
+      await within(fleetGroup).findByRole('link', {
+        name: /^Camiones, \d+ camion/,
+      })
+    ).toHaveAttribute('href', '/flota/camiones')
+    expect(
+      within(screen.getByRole('list', { name: 'Comercial' }))
+        .getAllByRole('link')
+        .map(link => link.getAttribute('href'))
+    ).toEqual(['/flota/clientes', '/flota/tarifas'])
+    expect(
+      within(screen.getByRole('list', { name: 'Cuenta' })).getByRole('link')
+    ).toHaveAttribute('href', '/cuenta')
+
+    fireEvent.click(screen.getByRole('link', { name: /^Tarifas,/ }))
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Tarifas' })
+    ).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/flota/tarifas')
+  })
+
+  // Regression: a phone sign-in has no name; the profile has it
+  test("the account's row says who and which organization", async () => {
+    useSessionStore.setState(state => ({
+      user: state.user && { ...state.user, displayName: null },
+    }))
+    renderAt('/mas')
+    expect(
+      await screen.findByRole('link', {
+        name: 'Mi cuenta y equipo, Luis · Flota de Luis',
+      })
+    ).toBeInTheDocument()
+  })
+
+  // CA-5
+  test('a viewer goes into the modules without "Agregar"', async () => {
+    signIn('viewer')
+    renderAt('/mas')
+    fireEvent.click(await screen.findByRole('link', { name: /^Camiones,/ }))
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Camiones' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar' })).toBeNull()
   })
 })

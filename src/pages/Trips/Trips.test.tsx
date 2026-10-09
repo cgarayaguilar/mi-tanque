@@ -184,7 +184,7 @@ test('with a session the bar has Viajes, active on its page', async () => {
     within(nav)
       .getAllByRole('link')
       .map(link => link.textContent)
-  ).toEqual(['Historial', 'Medición', 'Flota', 'Viajes', 'Gastos'])
+  ).toEqual(['Historial', 'Medición', 'Viajes', 'Gastos', 'Más'])
   expect(within(nav).getByRole('link', { name: 'Viajes' })).toHaveAttribute(
     'aria-current',
     'page'

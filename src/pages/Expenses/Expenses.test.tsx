@@ -160,7 +160,7 @@ test('with a session the bar has Gastos, active on its page', async () => {
     within(nav)
       .getAllByRole('link')
       .map(link => link.textContent)
-  ).toEqual(['Historial', 'Medición', 'Flota', 'Viajes', 'Gastos'])
+  ).toEqual(['Historial', 'Medición', 'Viajes', 'Gastos', 'Más'])
   expect(within(nav).getByRole('link', { name: 'Gastos' })).toHaveAttribute(
     'aria-current',
     'page'
@@ -770,5 +770,14 @@ describe('creating its trip', () => {
         screen.getByRole<HTMLInputElement>('combobox', { name: 'Viaje' }).value
       ).toContain('Managua → León')
     })
+  })
+})
+
+// backend specs/0034 RF-9, CA-4: back to where it was opened
+test('the categories opened from Más go back to Más', async () => {
+  renderAt('/gastos/categorias?desde=mas')
+  fireEvent.click(await screen.findByRole('button', { name: 'Más' }))
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/mas')
   })
 })

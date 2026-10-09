@@ -188,16 +188,20 @@ function CategoriesScreen() {
     )
   }
 
+  // Back to where it was opened: "Más" or Gastos (specs/0034 RF-9)
+  const fromMore =
+    new URLSearchParams(window.location.search).get('desde') === 'mas'
+
   return (
     <Box component="main" sx={{ px: 4, pt: 2, pb: 8 }}>
       <Button
         startIcon={<ArrowBackIcon />}
         onClick={() => {
-          navigate('/gastos')
+          navigate(fromMore ? '/mas' : '/gastos')
         }}
         sx={{ ml: -2, mb: 2 }}
       >
-        Gastos
+        {fromMore ? 'Más' : 'Gastos'}
       </Button>
       <Box
         sx={{

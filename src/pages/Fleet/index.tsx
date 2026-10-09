@@ -14,10 +14,9 @@ import InputAdornment from '@mui/material/InputAdornment'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
-import Tab from '@mui/material/Tab'
-import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined'
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
@@ -47,7 +46,6 @@ import {
   vehicleSubtitle,
 } from 'utils/fleetLabels'
 import {
-  FLEET_SECTIONS,
   sectionBySlug,
   sectionWords,
   type FleetSection,
@@ -669,16 +667,27 @@ function FleetScreen() {
       }}
     >
       <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
+        {/* A module of "Más", not a tab of Flota (specs/0034 RF-6) */}
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => {
+            navigate('/mas')
+          }}
+          sx={{ ml: -2, mb: 2 }}
+        >
+          Más
+        </Button>
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 2,
+            mb: 4,
           }}
         >
           <Typography variant="h3" component="h1">
-            Flota
+            {section.label}
           </Typography>
           {canWrite && (
             <Button
@@ -692,27 +701,6 @@ function FleetScreen() {
             </Button>
           )}
         </Box>
-
-        <Tabs
-          value={section.slug}
-          onChange={(_, slug: string) => {
-            setSearch('')
-            setBrand(null)
-            setRateClient(null)
-            setModel(null)
-            navigate(`/flota/${slug}`)
-          }}
-          // Four sections and more to come: they slide instead of squeezing
-          // (specs/0022 RF-4)
-          variant="scrollable"
-          scrollButtons={false}
-          aria-label="Secciones de la flota"
-          sx={{ mt: 3, mb: 4, borderBottom: 1, borderColor: 'divider' }}
-        >
-          {FLEET_SECTIONS.map(item => (
-            <Tab key={item.slug} value={item.slug} label={item.label} />
-          ))}
-        </Tabs>
 
         <OutlinedInput
           type="search"
@@ -799,9 +787,11 @@ const SEARCH_HINTS: Record<FleetSection['collection'], string> = {
 }
 
 export default function Fleet() {
+  const params = useParams<{ section?: string }>()
   return (
     <SessionGate needs="ready">
-      <FleetScreen />
+      {/* Another module starts clean: its search and filters (0034 RF-6) */}
+      <FleetScreen key={params.section ?? ''} />
     </SessionGate>
   )
 }
