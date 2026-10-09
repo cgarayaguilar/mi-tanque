@@ -4,7 +4,7 @@ import { useSessionStore } from 'store/session'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import HistoryIcon from '@mui/icons-material/History'
-import LocalShippingIcon from '@mui/icons-material/LocalShipping'
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import SpeedIcon from '@mui/icons-material/Speed'
 import AltRouteIcon from '@mui/icons-material/AltRoute'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
@@ -27,16 +27,21 @@ const SECTIONS: Section[] = [
   { href: '/', label: 'Medición', icon: <SpeedIcon /> },
 ]
 
-// With a session the organization's fleet joins the tabs (specs/0003 RF-1),
-// its trips (specs/0025 RF-5) and its expenses (specs/0026 RF-8)
+// With a session: its trips (specs/0025 RF-5), its expenses (specs/0026
+// RF-8), and "Más" with the fleet's modules and the account (specs/0034)
 const SIGNED_IN: Section[] = [
-  { href: '/flota', label: 'Flota', icon: <LocalShippingIcon /> },
   { href: '/viajes', label: 'Viajes', icon: <AltRouteIcon /> },
   { href: '/gastos', label: 'Gastos', icon: <ReceiptLongIcon /> },
+  { href: '/mas', label: 'Más', icon: <MoreHorizIcon /> },
 ]
 
-// The sections whose pages go deeper (/flota/camiones, /viajes/123)
-const PREFIXED = new Set(['/flota', '/viajes', '/gastos'])
+// The pages under each section (/viajes/123): "Más" holds the fleet's
+// modules and the account (specs/0034 RF-2)
+const UNDER: Record<string, readonly string[]> = {
+  '/viajes': ['/viajes'],
+  '/gastos': ['/gastos'],
+  '/mas': ['/mas', '/flota', '/cuenta'],
+}
 
 /** Pill tabs between the two main screens; the route decides the active one. */
 export default function NavBar() {
@@ -80,8 +85,12 @@ export default function NavBar() {
         }}
       >
         {sections.map(({ href, label, icon }) => {
-          const active = PREFIXED.has(href)
-            ? location === href || location.startsWith(`${href}/`)
+          const under = UNDER[href]
+          const active = under
+            ? under.some(
+                prefix =>
+                  location === prefix || location.startsWith(`${prefix}/`)
+              )
             : location === href
           return (
             <ButtonBase

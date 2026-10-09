@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Route } from 'wouter'
+import { Redirect, Route } from 'wouter'
 import CssBaseline from '@mui/material/CssBaseline'
 import GlobalStyles from '@mui/material/GlobalStyles'
 import { ThemeProvider } from '@mui/material/styles'
@@ -21,6 +21,8 @@ const SignIn = lazy(() => import('pages/SignIn'))
 const Welcome = lazy(() => import('pages/Welcome'))
 const Account = lazy(() => import('pages/Account'))
 const Fleet = lazy(() => import('pages/Fleet'))
+// Every module, in a settings list (backend specs/0034)
+const More = lazy(() => import('pages/More'))
 const FleetItem = lazy(() => import('pages/FleetItem'))
 // Trips (backend specs/0025)
 const Trips = lazy(() => import('pages/Trips'))
@@ -87,7 +89,11 @@ export default function App() {
         <Route path="/entrar" component={SignIn} />
         <Route path="/bienvenida" component={Welcome} />
         <Route path="/cuenta" component={Account} />
-        <Route path="/flota" component={Fleet} />
+        <Route path="/mas" component={More} />
+        {/* The fleet's tabs are modules of "Más" now (specs/0034 RF-7) */}
+        <Route path="/flota">
+          <Redirect to="/mas" replace />
+        </Route>
         <Route path="/flota/:section" component={Fleet} />
         <Route path="/flota/:section/:id" component={FleetItem} />
         <Route path="/viajes" component={Trips} />
