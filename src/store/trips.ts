@@ -5,6 +5,13 @@ import { useSessionStore } from 'store/session'
 import type { Period } from 'types'
 import { toWholeDays } from 'utils/period'
 import { reportError } from 'utils/reportError'
+import {
+  DEFAULT_TRIP_ORDER,
+  NO_TRIP_FILTERS,
+  type TripFilters,
+  type TripGrouping,
+  type TripOrder,
+} from 'utils/tripGroups'
 
 // import(): the SDK stays out of the basic mode's bundle (specs/0025 RNF-1)
 const api = () => import('services/trips')
@@ -17,6 +24,20 @@ export const currentMonth = (now = new Date()): Period => ({
   end: endOfMonth(now),
 })
 
+/** How the list shows its trips (specs/0030). */
+export interface TripsView {
+  filters: TripFilters
+  /** null: not grouped. */
+  grouping: TripGrouping | null
+  order: TripOrder
+}
+
+const DEFAULT_VIEW: TripsView = {
+  filters: NO_TRIP_FILTERS,
+  grouping: null,
+  order: DEFAULT_TRIP_ORDER,
+}
+
 interface TripsState {
   orgId: string | null
   /** null until chosen: the current month. */
@@ -27,6 +48,11 @@ interface TripsState {
   status: TripsStatus
   /** Every trip seen or saved here, by id: a trip's screen finds it at once. */
   known: Record<string, Trip>
+  /** Kept while the app is open: back from a trip, the list is as it was (RF-8). */
+  view: TripsView
+  setFilters: (filters: Partial<TripFilters>) => void
+  setGrouping: (grouping: TripGrouping | null) => void
+  setOrder: (order: TripOrder) => void
   /** A trip read on its own (its screen, outside the period shown). */
   remember: (trip: Trip) => void
   load: (orgId: string) => Promise<void>
@@ -84,6 +110,19 @@ export const useTripsStore = create<TripsState>()((set, get) => {
     truncated: false,
     status: 'idle',
     known: {},
+    view: DEFAULT_VIEW,
+
+    setFilters: filters => {
+      set(state => ({
+        view: { ...state.view, filters: { ...state.view.filters, ...filters } },
+      }))
+    },
+    setGrouping: grouping => {
+      set(state => ({ view: { ...state.view, grouping } }))
+    },
+    setOrder: order => {
+      set(state => ({ view: { ...state.view, order } }))
+    },
 
     remember: trip => {
       set(state => ({ known: { ...state.known, [trip.id]: trip } }))
@@ -136,6 +175,7 @@ export const useTripsStore = create<TripsState>()((set, get) => {
         truncated: false,
         status: 'idle',
         known: {},
+        view: DEFAULT_VIEW,
       })
     },
   }

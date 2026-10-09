@@ -51,6 +51,8 @@ export default function FilterChip<T extends string | number>({
   options,
   value,
   onChange,
+  named = false,
+  clearLabel,
 }: {
   /** The filter's name: "Marca". */
   label: string
@@ -59,6 +61,13 @@ export default function FilterChip<T extends string | number>({
   options: readonly FilterOption<T>[]
   value: T | null
   onChange: (value: T | null) => void
+  /**
+   * Chosen, it says its name too: "Agrupar: Camión", where the value alone
+   * could be read as a filter (backend specs/0030 RF-3).
+   */
+  named?: boolean
+  /** The ×'s name; "Quitar filtro Marca" by default. */
+  clearLabel?: string
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const [search, setSearch] = useState('')
@@ -127,14 +136,14 @@ export default function FilterChip<T extends string | number>({
               whiteSpace: 'nowrap',
             }}
           >
-            {chosen ?? label}
+            {chosen === null ? label : named ? `${label}: ${chosen}` : chosen}
           </Box>
           {chosen === null && <ArrowDropDownIcon fontSize="small" />}
         </ButtonBase>
         {chosen !== null && (
           <IconButton
             size="small"
-            aria-label={`Quitar filtro ${label}`}
+            aria-label={clearLabel ?? `Quitar filtro ${label}`}
             onClick={() => {
               onChange(null)
             }}
