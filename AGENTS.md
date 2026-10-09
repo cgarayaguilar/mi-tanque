@@ -254,6 +254,14 @@ en cada push y PR.
   `preset` (el camión o remolque de un relleno) y `onDirtyChange` (pregunta antes de cerrar).
   Medición muestra el equipo recién creado aunque no tenga tanque, con "Agregar tanque", que abre
   `/flota/tanques/nuevo?equipo=truck:{id}` (`TankEditor` lo toma de la dirección).
+- **Tanques desde el camión y el remolque (specs/0032):** su pantalla va en secciones
+  (`FormSection`): `TruckFields`/`TrailerFields` aceptan `sections` y entregan sus grupos (los
+  diálogos de 0028 siguen sin secciones). La sección Tanques es `pages/FleetItem/EquipmentTanks`
+  (`useEquipmentTanks`: tarjetas `RowCard` y `TankDialog`); nada se escribe hasta guardar el
+  equipo, y sus tanques se guardan **después** de él (`useCreateFleetItem` con `quiet`: un solo
+  aviso). Quitar uno guardado lo deja sin equipo. Los campos del tanque son `components/TankForm`
+  (`useTankForm` + `TankFormView`), que usa también `TankEditor`. Hasta 2 tanques por equipo
+  (`utils/equipmentTanks`: `TANKS_PER_EQUIPMENT`, `equipmentWithoutRoom`), revisado por la app.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
