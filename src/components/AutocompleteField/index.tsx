@@ -39,12 +39,16 @@ interface AutocompleteBaseProps {
   decoration?: ((value: string) => ReactNode) | undefined
   /** The input, so a failed save can focus it. */
   inputRef?: Ref<HTMLInputElement>
-  /** "+ Crear …" first in the list (specs/0028). */
-  create?: CreateOption | undefined
+  /**
+   * "+ Crear …" first in the list (specs/0028); several, in their order:
+   * "+ Crear camión", "+ Crear remolque" (specs/0031 RF-1).
+   */
+  create?: CreateOption | readonly CreateOption[] | undefined
 }
 
-// Not a value any list holds: the create option's
+// Not a value any list holds: the create options', followed by their place
 const CREATE_VALUE = '\u0000create'
+const isCreate = (value: string) => value.startsWith(CREATE_VALUE)
 
 // Stable: a new function each render makes the Autocomplete put the chosen
 // label back over what is being typed
@@ -97,18 +101,22 @@ export function AutocompleteBase({
 
   const grouped = options.some(option => option.group !== undefined)
   const text = squeezeSpaces(typed)
-  const newText =
-    create?.withText !== false &&
+  const creates =
+    create === undefined ? [] : 'label' in create ? [create] : create
+  // What was typed, if it names nothing yet, for a form that takes it
+  const newText = (option: CreateOption) =>
+    option.withText !== false &&
     text !== '' &&
-    !options.some(option => foldText(option.label) === foldText(text))
+    !options.some(item => foldText(item.label) === foldText(text))
       ? text
       : ''
-  const createOption: SelectOption | null = create
-    ? {
-        value: CREATE_VALUE,
-        label: newText ? `+ ${create.label} «${newText}»` : `+ ${create.label}`,
-      }
-    : null
+  const createOptions: SelectOption[] = creates.map((option, index) => {
+    const named = newText(option)
+    return {
+      value: `${CREATE_VALUE}${String(index)}`,
+      label: named ? `+ ${option.label} «${named}»` : `+ ${option.label}`,
+    }
+  })
 
   return (
     <FormControl fullWidth error={error !== undefined} disabled={disabled}>
@@ -154,7 +162,7 @@ export function AutocompleteBase({
         })}
         filterOptions={(all, state) => {
           const found = filterOptions(all, state)
-          shown.current = createOption ? [createOption, ...found] : found
+          shown.current = [...createOptions, ...found]
           return shown.current
         }}
         open={open}
@@ -175,11 +183,11 @@ export function AutocompleteBase({
         onKeyDown={event => {
           // "+ Crear …" goes first, but typing "hond" and Enter still picks
           // the first match, as people expect (specs/0028)
-          const first = shown.current[1]
+          const first = shown.current[createOptions.length]
           if (
             event.key === 'Enter' &&
             open &&
-            createOption !== null &&
+            createOptions.length > 0 &&
             moved.current === null &&
             text !== '' &&
             first
@@ -199,8 +207,10 @@ export function AutocompleteBase({
         closeText="Cerrar"
         onBlur={onBlur}
         onChange={(_, option) => {
-          if (option.value === CREATE_VALUE) {
-            create?.onCreate(newText)
+          if (isCreate(option.value)) {
+            const chosen =
+              creates[Number(option.value.slice(CREATE_VALUE.length))]
+            chosen?.onCreate(newText(chosen))
             return
           }
           onChange(option.value)
@@ -212,14 +222,16 @@ export function AutocompleteBase({
             {...props}
             sx={{
               gap: 2,
-              ...(option.value === CREATE_VALUE && {
-                fontWeight: 500,
+              ...(isCreate(option.value) && { fontWeight: 500 }),
+              // A line under the last "+ Crear …"
+              ...(option.value ===
+                createOptions[createOptions.length - 1]?.value && {
                 borderBottom: 1,
                 borderColor: 'divider',
               }),
             }}
           >
-            {option.value !== CREATE_VALUE && decoration?.(option.value)}
+            {!isCreate(option.value) && decoration?.(option.value)}
             {option.label}
           </Box>
         )}
@@ -256,7 +268,7 @@ interface AutocompleteFieldProps<
 > extends ChoiceFieldProps<T> {
   placeholder?: string
   decoration?: (value: string) => ReactNode
-  create?: CreateOption | undefined
+  create?: CreateOption | readonly CreateOption[] | undefined
 }
 
 /** The same, bound to a form field (React Hook Form). */
