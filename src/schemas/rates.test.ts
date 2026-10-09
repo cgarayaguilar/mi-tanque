@@ -6,6 +6,7 @@ import {
   rateFromForm,
   rateLabel,
   rateToForm,
+  ratesByClient,
   sameRate,
 } from 'schemas/rates'
 import { client, rate } from '../testing/fleetFixtures'
@@ -136,4 +137,43 @@ test('a place typed another way is saved as it is already written', () => {
   expect(knownSpelling(' managua ', places)).toBe('Managua')
   expect(knownSpelling('SAN JOSE', places)).toBe('San José')
   expect(knownSpelling(' León ', places)).toBe('León')
+})
+
+// specs/0033 RF-3, RF-4
+describe('rates by client', () => {
+  const rates = [
+    rate({ id: 'a', label: 'Rivas - Managua - C$7,000.00' }),
+    rate({
+      id: 'b',
+      clientId: 'client-2',
+      clientName: 'Fletes Ríos',
+      label: 'León - Managua - C$9,000.00',
+    }),
+    rate({ id: 'c', clientId: null, clientName: null, label: 'Masaya - León' }),
+    rate({ id: 'd', label: 'Managua - San José - C$25,000.00' }),
+  ]
+  const nameOf = (id: string) =>
+    id === 'client-1' ? 'Transportes Pérez S.A.' : null
+
+  test('"General" first, then the clients A–Z, each A–Z', () => {
+    expect(
+      ratesByClient(rates, nameOf).map(({ rate, group }) => [group, rate.id])
+    ).toEqual([
+      ['General', 'c'],
+      ['Fletes Ríos', 'b'],
+      ['Transportes Pérez S.A.', 'd'],
+      ['Transportes Pérez S.A.', 'a'],
+    ])
+  })
+
+  test("a trip's client goes first", () => {
+    expect(
+      ratesByClient(rates, nameOf, 'client-2').map(({ group }) => group)
+    ).toEqual([
+      'Fletes Ríos',
+      'General',
+      'Transportes Pérez S.A.',
+      'Transportes Pérez S.A.',
+    ])
+  })
 })

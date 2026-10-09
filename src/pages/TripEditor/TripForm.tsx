@@ -34,7 +34,7 @@ import {
   tripExpenseChanges,
   type Expense,
 } from 'schemas/expenses'
-import { knownPlaces, knownSpelling } from 'schemas/rates'
+import { knownPlaces, knownSpelling, ratesByClient } from 'schemas/rates'
 import {
   EMPTY_TRIP_FORM,
   TRIP_LIMITS,
@@ -193,18 +193,10 @@ export default function TripForm({
   const clientName = (clientId: string | null) =>
     clientId ? (clients.find(item => item.id === clientId)?.name ?? null) : null
 
-  // The rates in the organization's currency: the trip's client's first,
-  // then the general ones, then the rest
-  const rateRank = (clientId: string | null) =>
-    clientId !== null && clientId === values.clientId
-      ? 0
-      : clientId === null
-        ? 1
-        : 2
-  const usableRates = active(rates, [trip?.rateId])
-    // In the trip's currency: an old trip keeps its own (audit 0027)
-    .filter(rate => rate.currency === currency || rate.id === trip?.rateId)
-    .sort((a, b) => rateRank(a.clientId) - rateRank(b.clientId))
+  // The rates in the trip's currency: an old trip keeps its own (audit 0027)
+  const usableRates = active(rates, [trip?.rateId]).filter(
+    rate => rate.currency === currency || rate.id === trip?.rateId
+  )
   const currentRate = rates.find(rate => rate.id === values.rateId) ?? null
   // Kept rate: the trip shows and saves the copy it has, even if the rate
   // changed since (0025 RF-1; audit 0027)
@@ -411,19 +403,13 @@ export default function TripForm({
     trip?.driverId,
     trip?.secondDriverId,
   ]).map(option)
-  const rateOptions = usableRates.map(rate => {
-    const owner = rate.clientId
-      ? (clientName(rate.clientId) ?? rate.clientName)
-      : 'General'
-    return {
-      value: rate.id,
-      label:
-        rate.clientId && rate.clientId !== values.clientId
-          ? `${rate.label} · ${owner ?? ''}`
-          : rate.label,
-      keywords: owner ?? '',
-    }
-  })
+  // Under their client: the trip's client's first, then the general ones,
+  // then the rest (0025 RF-9; specs/0033 RF-3)
+  const rateOptions = ratesByClient(
+    usableRates,
+    clientName,
+    values.clientId || null
+  ).map(({ rate, group }) => ({ value: rate.id, label: rate.label, group }))
 
   const categoryName = (categoryId: string, expenseId: string) =>
     categories.find(item => item.id === categoryId)?.name ??

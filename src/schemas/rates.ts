@@ -38,6 +38,42 @@ export interface Rate {
 export const routeName = (origin: string, destination: string) =>
   `${origin} → ${destination}`
 
+/** The group of the rates without a client (specs/0024 RF-5). */
+export const GENERAL_RATES = 'General'
+
+/**
+ * The rates under their client's name (specs/0033 RF-3, RF-4): `first`'s
+ * client's first, then "General", then the other clients A–Z; inside, A–Z.
+ */
+export const ratesByClient = <
+  T extends Pick<Rate, 'clientId' | 'clientName' | 'label'>,
+>(
+  rates: readonly T[],
+  clientNameOf: (clientId: string) => string | null,
+  first: string | null = null
+) =>
+  rates
+    .map(rate => ({
+      rate,
+      group:
+        rate.clientId === null
+          ? GENERAL_RATES
+          : (clientNameOf(rate.clientId) ?? rate.clientName ?? ''),
+      rank:
+        rate.clientId !== null && rate.clientId === first
+          ? 0
+          : rate.clientId === null
+            ? 1
+            : 2,
+    }))
+    .sort(
+      (a, b) =>
+        a.rank - b.rank ||
+        a.group.localeCompare(b.group, 'es') ||
+        a.rate.label.localeCompare(b.rate.label, 'es')
+    )
+    .map(({ rate, group }) => ({ rate, group }))
+
 /** Stored with 2 decimals, like every amount (specs/0012). */
 const toCents = (value: number) => Math.round(value * 100) / 100
 

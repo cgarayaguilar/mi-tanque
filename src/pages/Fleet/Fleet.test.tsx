@@ -493,24 +493,32 @@ describe('rates', () => {
     })
   })
 
-  test('a card has the route, the price, the client or "General"', async () => {
+  // specs/0033 RF-4, CA-4: under "General" first, then each client
+  test('the cards go under their client, "General" first', async () => {
     renderAt('/flota/tarifas')
 
-    const list = await screen.findByRole('list', { name: 'Tarifas' })
-    const cards = within(list).getAllByRole('button')
-    expect(cards.map(card => card.getAttribute('aria-label'))).toEqual([
-      'Tarifa León → Managua',
-      'Tarifa Managua → San José',
-    ])
-    expect(cards[0]).toHaveTextContent('C$1,250,000.00 NIO')
-    expect(cards[0]).toHaveTextContent('General')
-    expect(cards[0]).toHaveTextContent('Contenedor de 40 pies')
-    expect(cards[1]).toHaveTextContent('Transportes Pérez S.A.')
+    await screen.findByRole('list', { name: 'Tarifas de General' })
+    expect(
+      screen
+        .getAllByRole('heading', { level: 2 })
+        .map(heading => heading.textContent)
+    ).toEqual(['General', 'Transportes Pérez S.A.'])
+    const [general] = within(
+      screen.getByRole('list', { name: 'Tarifas de General' })
+    ).getAllByRole('button')
+    expect(general).toHaveAccessibleName('Tarifa León → Managua')
+    expect(general).toHaveTextContent('C$1,250,000.00 NIO')
+    expect(general).toHaveTextContent('Contenedor de 40 pies')
+    expect(
+      within(
+        screen.getByRole('list', { name: 'Tarifas de Transportes Pérez S.A.' })
+      ).getByRole('button')
+    ).toHaveAccessibleName('Tarifa Managua → San José')
   })
 
   test('the client filter and the search narrow them', async () => {
     renderAt('/flota/tarifas')
-    await screen.findByRole('list', { name: 'Tarifas' })
+    await screen.findByRole('list', { name: 'Tarifas de General' })
 
     await filterBy('Cliente', 'General')
     expect(

@@ -32,7 +32,7 @@ import SessionGate from 'components/SessionGate'
 import TankShapeIcon from 'components/TankShapeIcon'
 import { clientContact, type Client } from 'schemas/clients'
 import { driverContact, type Driver } from 'schemas/drivers'
-import type { Rate } from 'schemas/rates'
+import { ratesByClient, type Rate } from 'schemas/rates'
 import { moneyTotal } from 'utils/formatMoney'
 import type { FleetTank, LastMeasurement, Trailer, Truck } from 'schemas/fleet'
 import { formatTimeAgo } from 'utils/formatDate'
@@ -228,6 +228,8 @@ function FleetScreen() {
     [clients]
   )
   // The client's current name; the copy saved with the rate otherwise
+  const rateClientNameOf = (clientId: string) =>
+    clientName.get(clientId) ?? null
   const rateClientName = (rate: Rate) =>
     rate.clientId === null
       ? null
@@ -290,7 +292,9 @@ function FleetScreen() {
       .sort((a, b) => a.label.localeCompare(b.label, 'es')),
   ]
 
-  const cards: { id: string; card: ReactNode }[] =
+  // With a group, the cards go under its subtitle: a rate's client
+  // (specs/0033 RF-4)
+  const cards: { id: string; card: ReactNode; group?: string }[] =
     section.collection === 'trucks'
       ? visible(
           trucks,
@@ -365,22 +369,26 @@ function FleetScreen() {
             ),
           }))
         : section.collection === 'rates'
-          ? visible(
-              rates,
-              (r: Rate) =>
-                (rateClient === null ||
-                  (rateClient === GENERAL
-                    ? r.clientId === null
-                    : r.clientId === rateClient)) &&
-                matches(
-                  query,
-                  r.origin,
-                  r.destination,
-                  rateClientName(r),
-                  r.description
-                )
-            ).map(rate => ({
+          ? ratesByClient(
+              visible(
+                rates,
+                (r: Rate) =>
+                  (rateClient === null ||
+                    (rateClient === GENERAL
+                      ? r.clientId === null
+                      : r.clientId === rateClient)) &&
+                  matches(
+                    query,
+                    r.origin,
+                    r.destination,
+                    rateClientName(r),
+                    r.description
+                  )
+              ),
+              rateClientNameOf
+            ).map(({ rate, group }) => ({
               id: rate.id,
+              group,
               card: (
                 <FleetCard
                   label={`Tarifa ${rate.name}`}
@@ -391,7 +399,7 @@ function FleetScreen() {
                   }
                   title={rate.name}
                   figure={moneyTotal(rate.currency, rate.price)}
-                  lines={[rateClientName(rate) ?? 'General', rate.description]}
+                  lines={[rate.description]}
                   archived={rate.archived}
                   onClick={() => {
                     open(rate.id)
@@ -609,15 +617,43 @@ function FleetScreen() {
         />
       )
     }
-    return (
+    const list = (items: typeof cards, label: string) => (
       <Stack
         component="ul"
         spacing={2}
-        aria-label={section.label}
+        aria-label={label}
         sx={{ listStyle: 'none', m: 0, p: 0 }}
       >
-        {cards.map(({ id, card }) => (
+        {items.map(({ id, card }) => (
           <li key={id}>{card}</li>
+        ))}
+      </Stack>
+    )
+    const groups = [...new Set(cards.map(item => item.group))]
+    if (groups.every(group => group === undefined)) {
+      return list(cards, section.label)
+    }
+    return (
+      <Stack spacing={5}>
+        {groups.map((group = '', index) => (
+          <Box
+            key={group}
+            component="section"
+            aria-labelledby={`fleet-group-${String(index)}`}
+          >
+            <Typography
+              id={`fleet-group-${String(index)}`}
+              variant="overline"
+              component="h2"
+              sx={{ display: 'block', color: 'text.secondary', mb: 1 }}
+            >
+              {group}
+            </Typography>
+            {list(
+              cards.filter(item => item.group === group),
+              `${section.label} de ${group}`
+            )}
+          </Box>
         ))}
       </Stack>
     )
