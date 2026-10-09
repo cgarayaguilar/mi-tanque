@@ -18,6 +18,8 @@ interface ColorFieldProps<T extends FieldValues> {
   otherRegistration: UseFormRegisterReturn
   otherError?: string | undefined
   disabled?: boolean
+  /** Before its ids: two forms on one page (a trailer and its truck). */
+  idPrefix?: string
 }
 
 const OPTIONS = [
@@ -37,11 +39,12 @@ export default function ColorField<T extends FieldValues>({
   otherRegistration,
   otherError,
   disabled = false,
+  idPrefix = '',
 }: ColorFieldProps<T>) {
   return (
     <Stack spacing={3}>
       <AutocompleteField
-        id="colorSwatch"
+        id={`${idPrefix}colorSwatch`}
         label="Color (opcional)"
         options={OPTIONS}
         control={control}
@@ -53,7 +56,7 @@ export default function ColorField<T extends FieldValues>({
       />
       {isOther && (
         <TextField
-          id="colorOther"
+          id={`${idPrefix}colorOther`}
           label="¿Qué color?"
           placeholder="Rojo vino"
           maxLength={FLEET_LIMITS.colorLabel}

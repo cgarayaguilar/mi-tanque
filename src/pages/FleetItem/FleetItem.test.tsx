@@ -1717,3 +1717,99 @@ describe('ownership', () => {
     ).toBeInTheDocument()
   })
 })
+
+// Audit 2026-10-09 of the create and edit flows
+describe('audit of the fleet forms', () => {
+  test('a failed read offers to retry, instead of loading for ever', async () => {
+    api.readFleet.mockRejectedValueOnce(new Error('fleet-not-read'))
+    renderAt('/flota/camiones/truck-1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }))
+    expect(
+      await screen.findByLabelText('Nombre o número de unidad')
+    ).toHaveValue('Unidad 12')
+  })
+
+  test('an archived tank is edited though its truck has two; restoring it is refused', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck()],
+      trailers: [],
+      tanks: [
+        tank({ id: 'tank-1' }),
+        tank({ id: 'tank-2', name: 'Tanque derecho' }),
+        tank({ id: 'tank-3', name: 'Tanque viejo', archived: true }),
+      ],
+    })
+    renderAt('/flota/tanques/tank-3')
+    fireEvent.click(await screen.findByRole('button', { name: 'Restaurar' }))
+    expect(sileo.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description:
+          'Unidad 12 ya tiene 2 tanques. Quítale uno o cambia este de equipo.',
+      })
+    )
+    expect(api.updateFleetItem).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith(
+        'tanks',
+        'tank-3',
+        expect.anything()
+      )
+    })
+  })
+
+  test('a tank edited and then taken out stays as it was saved', async () => {
+    api.readFleet.mockResolvedValue({
+      rates: [],
+      drivers: [],
+      clients: [],
+      trucks: [truck()],
+      trailers: [],
+      tanks: [tank()],
+    })
+    renderAt('/flota/camiones/truck-1')
+    fireEvent.click(
+      await screen.findByRole('button', { name: `Tanque ${tank().name}` })
+    )
+    const dialog = await screen.findByRole('dialog', { name: 'Editar tanque' })
+    fireEvent.change(within(dialog).getByLabelText('Nombre del tanque'), {
+      target: { value: 'Otro nombre' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Opciones del tanque Otro nombre',
+      })
+    )
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Quitar' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar' })
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(api.updateFleetItem).toHaveBeenCalledWith('tanks', tank().id, {
+        equipment: { kind: 'none', id: null },
+      })
+    })
+    expect(
+      useFleetStore.getState().tanks.find(item => item.id === tank().id)?.name
+    ).toBe(tank().name)
+  })
+
+  test('a trailer and the truck it creates do not share ids', async () => {
+    renderAt('/flota/remolques/nuevo')
+    await screen.findByLabelText('Nombre o número de unidad')
+    const field = screen.getByRole('combobox', { name: /^Enganchado a/ })
+    field.focus()
+    fireEvent.change(field, { target: { value: 'Unidad 31' } })
+    fireEvent.click(await screen.findByRole('option', { name: /^\+ Crear/ }))
+    await screen.findByRole('dialog', { name: 'Nuevo camión' })
+    const ids = [...document.querySelectorAll('[id]')].map(item => item.id)
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([])
+  })
+})

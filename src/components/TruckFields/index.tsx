@@ -216,6 +216,7 @@ export default function TruckFields({
         registration={register('year')}
       />
       <ColorField
+        idPrefix={idPrefix}
         control={control}
         swatchName="colorSwatch"
         isOther={values.colorSwatch === 'other'}

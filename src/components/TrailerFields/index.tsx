@@ -158,6 +158,7 @@ export default function TrailerFields({
         registration={register('year')}
       />
       <ColorField
+        idPrefix={idPrefix}
         control={control}
         swatchName="colorSwatch"
         isOther={values.colorSwatch === 'other'}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Skeleton from '@mui/material/Skeleton'
+import CloudOffIcon from '@mui/icons-material/CloudOff'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import { useLocation, useParams } from 'wouter'
 import EmptyState from 'components/EmptyState'
@@ -10,6 +11,7 @@ import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { sectionBySlug, sectionWords } from 'utils/fleetSections'
 import { canWriteFleet } from 'utils/roles'
+import { RETRY_HINT } from 'utils/withTimeout'
 import ClientEditor from './ClientEditor'
 import DriverEditor from './DriverEditor'
 import RateEditor from './RateEditor'
@@ -35,6 +37,23 @@ function FleetItemScreen() {
     if (orgId) void load(orgId)
   }, [orgId, load])
 
+  // A failed read says so and offers to retry, as the list (specs/0020;
+  // audit 2026-10-09: it stayed loading for ever)
+  if (status === 'error' && !isNew) {
+    return (
+      <EmptyState
+        icon={<CloudOffIcon />}
+        title={`No pudimos cargar ${sectionWords(section).the} ${section.one}`}
+        description={RETRY_HINT}
+        action={{
+          label: 'Reintentar',
+          onClick: () => {
+            void load(orgId)
+          },
+        }}
+      />
+    )
+  }
   if (status !== 'ready' && !isNew) {
     return (
       <Box sx={{ p: 4 }} aria-busy="true" aria-label="Cargando">

@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import AutocompleteField from 'components/AutocompleteField'
 import { useCreateDialogs } from 'components/CreateDialogs'
 import TankFormView, { useTankForm } from 'components/TankForm'
-import type { FleetTank } from 'schemas/fleet'
+import { equipmentToValue, type FleetTank } from 'schemas/fleet'
 import { useFleetStore } from 'store/fleet'
 import type { FleetSection } from 'utils/fleetSections'
 import { catalogFilterFor } from 'data/truckModels'
@@ -58,12 +58,15 @@ export default function TankEditor({
   const { create, dialog } = useCreateDialogs(orgId)
 
   const onSubmit = tankForm.submit((fields, formValues) => {
-    // Up to 2 tanks for each truck or trailer (specs/0032 RF-6)
-    const full = equipmentWithoutRoom(formValues.equipment, id, {
-      trucks,
-      trailers,
-      tanks,
-    })
+    // Up to 2 tanks for each truck or trailer (specs/0032 RF-6); an
+    // archived one takes no room until it is restored (audit 2026-10-09)
+    const full = tank?.archived
+      ? null
+      : equipmentWithoutRoom(formValues.equipment, id, {
+          trucks,
+          trailers,
+          tanks,
+        })
     if (full) {
       setError(
         'equipment',
@@ -120,6 +123,18 @@ export default function TankEditor({
       canWrite={canWrite}
       formId={FORM_ID}
       saving={isSubmitting}
+      // Restored, it would make a third one (audit 2026-10-09)
+      restoreIssue={() => {
+        if (!tank) return null
+        const full = equipmentWithoutRoom(
+          equipmentToValue(tank.equipment),
+          tank.id,
+          { trucks, trailers, tanks }
+        )
+        return full
+          ? `${full} ya tiene ${String(TANKS_PER_EQUIPMENT)} tanques. Quítale uno o cambia este de equipo.`
+          : null
+      }}
     >
       <Box
         component="form"

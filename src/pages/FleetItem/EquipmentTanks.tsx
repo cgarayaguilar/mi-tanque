@@ -24,6 +24,8 @@ interface TankRow {
   /** What its dialog wrote; null while untouched. */
   fields: TankFormFields | null
   isNew: boolean
+  /** As it is saved: what stays if it is taken out (audit 2026-10-09). */
+  saved: FleetTank | null
 }
 
 /**
@@ -41,7 +43,7 @@ export const useEquipmentTanks = (equipment: TankEquipment, orgId: string) => {
           tank.equipment.kind === equipment.kind &&
           tank.equipment.id === equipment.id
       )
-      .map(tank => ({ tank, fields: null, isNew: false }))
+      .map(tank => ({ tank, fields: null, isNew: false, saved: tank }))
   )
   // Saved ones taken out: left as loose tanks when the equipment is saved
   const [removed, setRemoved] = useState<FleetTank[]>([])
@@ -57,7 +59,12 @@ export const useEquipmentTanks = (equipment: TankEquipment, orgId: string) => {
       lastMeasurement: old?.tank.lastMeasurement ?? null,
       ...fields,
     }
-    const row = { tank, fields, isNew: old?.isNew ?? true }
+    const row = {
+      tank,
+      fields,
+      isNew: old?.isNew ?? true,
+      saved: old?.saved ?? null,
+    }
     setRows(
       index === null
         ? [...rows, row]
@@ -68,7 +75,8 @@ export const useEquipmentTanks = (equipment: TankEquipment, orgId: string) => {
   const remove = (index: number) => {
     const row = rows[index]
     if (!row) return
-    if (!row.isNew) setRemoved(current => [...current, row.tank])
+    // Its edits here are dropped: only its equipment changes
+    if (!row.isNew) setRemoved(current => [...current, row.saved ?? row.tank])
     setRows(current => current.filter((_, at) => at !== index))
   }
 
