@@ -138,6 +138,64 @@ const text = (max: number) =>
       z.maxLength(max, { error: `Usa ${String(max)} caracteres como máximo` })
     )
 
+// An extra income and an expense of the trip: what the trip's form holds
+// and what their dialogs edit (specs/0029)
+const extraShape = z.object({ description: z.string(), amount: z.string() })
+const expenseRowShape = z.object({
+  id: z.string(),
+  categoryId: z.string(),
+  amount: z.string(),
+  takenAt: z.string(),
+  description: z.string(),
+  // Optional; new in the trip's expenses with specs/0029
+  driverId: z.string(),
+})
+
+export type ExtraValues = z.infer<typeof extraShape>
+export type ExpenseRowValues = z.infer<typeof expenseRowShape>
+
+/** What is wrong with an extra income, by field (specs/0025 RF-9). */
+export const extraIssues = (extra: ExtraValues) => {
+  const issues: Partial<Record<keyof ExtraValues, string>> = {}
+  const description = extra.description.trim()
+  if (!description) issues.description = 'Escribe qué es'
+  else if (description.length > TRIP_LIMITS.extraDescription)
+    issues.description = `Usa ${String(TRIP_LIMITS.extraDescription)} caracteres como máximo`
+  const amount = amountIssue(extra.amount)
+  if (amount) issues.amount = amount
+  return issues
+}
+
+/** What is wrong with an expense of the trip, by field (specs/0026 RF-12). */
+export const expenseRowIssues = (row: ExpenseRowValues) => {
+  const issues: Partial<Record<keyof ExpenseRowValues, string>> = {}
+  if (!row.categoryId) issues.categoryId = 'Elige la categoría'
+  const amount = amountIssue(row.amount)
+  if (amount) issues.amount = amount
+  const date = expenseDateIssue(row.takenAt)
+  if (date) issues.takenAt = date
+  if (row.description.trim().length > TRIP_LIMITS.expenseDescription)
+    issues.description = `Usa ${String(TRIP_LIMITS.expenseDescription)} caracteres como máximo`
+  return issues
+}
+
+const withIssues =
+  <T>(issuesOf: (values: T) => Record<string, string | undefined>) =>
+  (values: T, ctx: { issues: unknown[] }) => {
+    for (const [field, message] of Object.entries(issuesOf(values)))
+      ctx.issues.push({ code: 'custom', input: values, path: [field], message })
+  }
+
+/** The dialog of an extra income (specs/0029 RF-3). */
+export const extraSchema = extraShape.check(
+  z.superRefine(withIssues(extraIssues))
+)
+
+/** The dialog of an expense of the trip (specs/0029 RF-4). */
+export const expenseRowSchema = expenseRowShape.check(
+  z.superRefine(withIssues(expenseRowIssues))
+)
+
 export const tripFormSchema = z
   .object({
     status: z.enum(TRIP_STATUSES),
@@ -147,17 +205,9 @@ export const tripFormSchema = z
     origin: text(TRIP_LIMITS.place),
     destination: text(TRIP_LIMITS.place),
     price: z.string(),
-    extras: z.array(z.object({ description: z.string(), amount: z.string() })),
+    extras: z.array(extraShape),
     // Its expenses, created, changed or deleted with it (specs/0026 RF-12)
-    expenses: z.array(
-      z.object({
-        id: z.string(),
-        categoryId: z.string(),
-        amount: z.string(),
-        takenAt: z.string(),
-        description: z.string(),
-      })
-    ),
+    expenses: z.array(expenseRowShape),
     truckId: z.string(),
     trailerId: z.string(),
     driverId: z.string(),
@@ -184,29 +234,14 @@ export const tripFormSchema = z
         if (price) issue(['price'], price.replace('el monto', 'el precio'))
       }
       values.extras.forEach((extra, index) => {
-        const description = extra.description.trim()
-        if (!description)
-          issue(['extras', index, 'description'], 'Escribe qué es')
-        else if (description.length > TRIP_LIMITS.extraDescription)
-          issue(
-            ['extras', index, 'description'],
-            `Usa ${String(TRIP_LIMITS.extraDescription)} caracteres como máximo`
-          )
-        const amount = amountIssue(extra.amount)
-        if (amount) issue(['extras', index, 'amount'], amount)
+        for (const [field, message] of Object.entries(extraIssues(extra)))
+          issue(['extras', index, field], message)
       })
       values.expenses.forEach((expense, index) => {
-        if (!expense.categoryId)
-          issue(['expenses', index, 'categoryId'], 'Elige la categoría')
-        const amount = amountIssue(expense.amount)
-        if (amount) issue(['expenses', index, 'amount'], amount)
-        const date = expenseDateIssue(expense.takenAt)
-        if (date) issue(['expenses', index, 'takenAt'], date)
-        if (expense.description.trim().length > TRIP_LIMITS.expenseDescription)
-          issue(
-            ['expenses', index, 'description'],
-            `Usa ${String(TRIP_LIMITS.expenseDescription)} caracteres como máximo`
-          )
+        for (const [field, message] of Object.entries(
+          expenseRowIssues(expense)
+        ))
+          issue(['expenses', index, field], message)
       })
       if (!values.truckId) issue(['truckId'], 'Elige el camión')
       if (!values.driverId) issue(['driverId'], 'Elige el conductor')

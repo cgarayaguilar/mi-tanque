@@ -270,6 +270,7 @@ export const expenseToRow = (expense: Expense): TripExpenseRow => ({
   amount: formatEditable(expense.amount),
   takenAt: toDateTimeValue(expense.takenAt),
   description: expense.description ?? '',
+  driverId: expense.driverId ?? '',
 })
 
 // What follows the trip: the backend moves it when the trip changes
@@ -302,7 +303,7 @@ const sameFields = (expense: Expense, fields: ExpenseFields) =>
 
 /**
  * What saving a trip writes of its expenses (RF-12): the new rows, the
- * changed ones (driver and photo kept) and the removed ones; plus every
+ * changed ones (the photo kept) and the removed ones; plus every
  * row as it will be, to show at once.
  */
 export const tripExpenseChanges = (
@@ -325,7 +326,8 @@ export const tripExpenseChanges = (
         tripId: trip.id,
         truckId: '',
         trailerId: '',
-        driverId: old?.driverId ?? '',
+        // Chosen in its dialog since specs/0029
+        driverId: row.driverId,
       },
       context,
       trip,

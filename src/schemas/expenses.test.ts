@@ -214,6 +214,7 @@ describe("a trip's rows", () => {
         amount: '800',
         takenAt: '2026-10-06T12:00',
         description: ' Almuerzo ',
+        driverId: '',
       },
     ]
     const changes = tripExpenseChanges(rows, moved, previous, context, 'ana')
@@ -246,6 +247,23 @@ describe("a trip's rows", () => {
       ['expense-2', 'luis'],
       ['new-1', 'ana'],
     ])
+  })
+
+  // specs/0029 RF-4, CA-3: a trip's expense has its driver now
+  test("a row's driver is saved, and taking it out clears it", () => {
+    const rows = [
+      { ...expenseToRow(first), driverId: 'driver-1' },
+      { ...expenseToRow(second), driverId: '' },
+    ]
+    const changes = tripExpenseChanges(rows, trip(), previous, context, 'ana')
+
+    expect(changes.update.map(item => [item.id, item.fields.driverId])).toEqual(
+      [
+        ['expense-1', 'driver-1'],
+        ['expense-2', null],
+      ]
+    )
+    expect(changes.update[0]?.fields.driverName).toBe('Pedro Ruiz')
   })
 
   test('rows left as they were write nothing', () => {
