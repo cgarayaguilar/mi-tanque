@@ -2,18 +2,9 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
-import AutocompleteField from 'components/AutocompleteField'
-import ColorField from 'components/ColorField'
-import MoreDetails, {
-  countFilled,
-  useMoreDetails,
-} from 'components/MoreDetails'
-import NumberField from 'components/NumberField'
-import SelectField from 'components/SelectField'
-import TextField from 'components/TextField'
+import { useMoreDetails } from 'components/MoreDetails'
+import TrailerFields, { TRAILER_DETAILS } from 'components/TrailerFields'
 import {
-  FLEET_LIMITS,
-  TRAILER_TYPES,
   trailerFormSchema,
   trailerFromForm,
   trailerToForm,
@@ -24,7 +15,6 @@ import { useFleetStore } from 'store/fleet'
 import type { FleetSection } from 'utils/fleetSections'
 import EditorLayout from './EditorLayout'
 import { useSaveFleetItem } from './useSaveFleetItem'
-import DateField from 'components/DateField'
 import InsuranceChip from 'components/InsuranceChip'
 import { insuranceNotice } from 'utils/insurance'
 
@@ -37,9 +27,6 @@ interface Props {
 }
 
 const FORM_ID = 'trailer-form'
-
-// Behind "Ver más detalles" (backend specs/0009 RF-8)
-const DETAILS = ['reeferConsumption', 'vin', 'description'] as const
 
 export default function TrailerEditor({
   section,
@@ -62,12 +49,11 @@ export default function TrailerEditor({
     disabled: !canWrite,
   })
   const values = useWatch({ control })
-  const trailerType = values.trailerType
   // The same notice as the fleet card (backend specs/0011 RF-5)
   const notice = trailer
     ? insuranceNotice(trailer.insuranceExpiresOn, new Date(), trailer.archived)
     : null
-  const details = useMoreDetails<TrailerFormValues>(DETAILS, setFocus)
+  const details = useMoreDetails<TrailerFormValues>(TRAILER_DETAILS, setFocus)
 
   const onSubmit = (values: TrailerFormValues) => {
     const fields = trailerFromForm(values)
@@ -112,133 +98,15 @@ export default function TrailerEditor({
       >
         <Stack spacing={5}>
           {notice && <InsuranceChip notice={notice} />}
-          <TextField
-            id="name"
-            label="Nombre o número de unidad"
-            placeholder="Caja 7"
-            error={errors.name?.message}
-            registration={register('name')}
-          />
-          <SelectField
-            id="trailerType"
-            label="Tipo de remolque"
-            options={TRAILER_TYPES.map(type => ({
-              value: type.id,
-              label: type.label,
-            }))}
+          <TrailerFields
+            register={register}
             control={control}
-            name="trailerType"
+            errors={errors}
+            values={values}
+            details={details}
+            truckOptions={truckOptions}
             disabled={!canWrite}
           />
-          {trailerType === 'other' && (
-            <TextField
-              id="trailerTypeOther"
-              label="¿Qué tipo?"
-              placeholder="Jaula ganadera"
-              maxLength={FLEET_LIMITS.trailerTypeOther}
-              error={errors.trailerTypeOther?.message}
-              registration={register('trailerTypeOther')}
-            />
-          )}
-          <AutocompleteField
-            id="hitchedTruckId"
-            label="Enganchado a (opcional)"
-            options={truckOptions}
-            hint="De este camión sale el rendimiento para estimar distancias."
-            control={control}
-            name="hitchedTruckId"
-            disabled={!canWrite}
-          />
-          <NumberField
-            id="lengthFt"
-            label="Largo (opcional)"
-            unit="pies"
-            placeholder="Ej. 53"
-            hint="Entre 10 y 60 pies."
-            error={errors.lengthFt?.message}
-            registration={register('lengthFt')}
-          />
-          <TextField
-            id="plate"
-            label="Placa (opcional)"
-            error={errors.plate?.message}
-            registration={register('plate')}
-          />
-          <Stack direction="row" spacing={3}>
-            <TextField
-              id="brand"
-              label="Marca (opcional)"
-              placeholder="Utility"
-              error={errors.brand?.message}
-              registration={register('brand')}
-            />
-            <TextField
-              id="model"
-              label="Modelo (opcional)"
-              placeholder="3000R"
-              error={errors.model?.message}
-              registration={register('model')}
-            />
-          </Stack>
-          <TextField
-            id="year"
-            label="Año (opcional)"
-            placeholder="2018"
-            inputMode="numeric"
-            maxLength={4}
-            error={errors.year?.message}
-            registration={register('year')}
-          />
-          <ColorField
-            control={control}
-            swatchName="colorSwatch"
-            isOther={values.colorSwatch === 'other'}
-            otherRegistration={register('colorOther')}
-            otherError={errors.colorOther?.message}
-            disabled={!canWrite}
-          />
-          <DateField
-            id="insuranceExpiresOn"
-            label="Vencimiento del seguro (opcional)"
-            hint="Te avisamos en Flota un mes antes."
-            error={errors.insuranceExpiresOn?.message}
-            control={control}
-            name="insuranceExpiresOn"
-            disabled={!canWrite}
-          />
-          <MoreDetails
-            open={details.open}
-            onToggle={details.toggle}
-            filled={countFilled([
-              trailerType === 'reefer' ? values.reeferConsumption : '',
-              values.vin,
-              values.description,
-            ])}
-          >
-            {trailerType === 'reefer' && (
-              <NumberField
-                id="reeferConsumption"
-                label="Consumo del equipo de frío (opcional)"
-                unit="gal/h"
-                placeholder="Ej. 0.8"
-                hint="Galones por hora del termo."
-                error={errors.reeferConsumption?.message}
-                registration={register('reeferConsumption')}
-              />
-            )}
-            <TextField
-              id="vin"
-              label="VIN o número de serie (opcional)"
-              error={errors.vin?.message}
-              registration={register('vin')}
-            />
-            <TextField
-              id="description"
-              label="Descripción (opcional)"
-              error={errors.description?.message}
-              registration={register('description')}
-            />
-          </MoreDetails>
         </Stack>
       </Box>
     </EditorLayout>
