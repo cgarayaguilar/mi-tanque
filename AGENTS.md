@@ -262,6 +262,12 @@ en cada push y PR.
   aviso). Quitar uno guardado lo deja sin equipo. Los campos del tanque son `components/TankForm`
   (`useTankForm` + `TankFormView`), que usa también `TankEditor`. Hasta 2 tanques por equipo
   (`utils/equipmentTanks`: `TANKS_PER_EQUIPMENT`, `equipmentWithoutRoom`), revisado por la app.
+- **Navegación con "Más" (specs/0034):** con sesión la barra es Historial, Medición, Viajes,
+  Gastos y Más (`NavBar`: `UNDER` dice qué direcciones marcan cada botón; Más también `/flota` y
+  `/cuenta`). `pages/More` (`/mas`, lazy) dibuja los grupos y filas de `utils/moreSections`
+  (conteos y avisos, con tests). Los módulos de Flota ya no son pestañas: `/flota/{módulo}` es su
+  pantalla con "← Más" y su título (`Fleet` se monta de nuevo por módulo), y `/flota` lleva a
+  `/mas`. Categorías de gasto abierta con `?desde=mas` vuelve a Más.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
