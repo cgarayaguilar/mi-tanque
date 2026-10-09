@@ -5,6 +5,7 @@ import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormLabel from '@mui/material/FormLabel'
 import InputAdornment from '@mui/material/InputAdornment'
+import ListSubheader from '@mui/material/ListSubheader'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import { Controller, type FieldValues } from 'react-hook-form'
 import type { ChoiceFieldProps, SelectOption } from 'components/SelectField'
@@ -52,10 +53,13 @@ const labelOf = (option: SelectOption) => option.label
 const keyOf = (option: SelectOption) => option.value
 const sameOption = (option: SelectOption, chosen: SelectOption) =>
   option.value === chosen.value
-// The label and its keywords, ignoring case and accents
+// The label, its keywords and its group, ignoring case and accents
 const filterOptions = createFilterOptions<SelectOption>({
-  stringify: option => `${option.label} ${option.keywords ?? ''}`,
+  stringify: option =>
+    `${option.label} ${option.keywords ?? ''} ${option.group ?? ''}`,
 })
+// Ungrouped (as "+ Crear …"), an option goes without a subtitle
+const groupOf = (option: SelectOption) => option.group ?? ''
 
 /**
  * A long or growing list with search (countries, currencies, colors,
@@ -91,6 +95,7 @@ export function AutocompleteBase({
   const shown = useRef<SelectOption[]>([])
   const moved = useRef<SelectOption | null>(null)
 
+  const grouped = options.some(option => option.group !== undefined)
   const text = squeezeSpaces(typed)
   const newText =
     create?.withText !== false &&
@@ -118,6 +123,35 @@ export function AutocompleteBase({
         getOptionLabel={labelOf}
         getOptionKey={keyOf}
         isOptionEqualToValue={sameOption}
+        {...(grouped && {
+          groupBy: groupOf,
+          renderGroup: ({ key, group, children }) =>
+            group === '' ? (
+              <li key={key}>
+                <Box component="ul" sx={{ p: 0 }}>
+                  {children}
+                </Box>
+              </li>
+            ) : (
+              <li key={key}>
+                <ListSubheader
+                  component="div"
+                  sx={{
+                    typography: 'overline',
+                    color: 'text.secondary',
+                    lineHeight: 'inherit',
+                    pt: 3,
+                    pb: 1,
+                  }}
+                >
+                  {group}
+                </ListSubheader>
+                <Box component="ul" sx={{ p: 0 }}>
+                  {children}
+                </Box>
+              </li>
+            ),
+        })}
         filterOptions={(all, state) => {
           const found = filterOptions(all, state)
           shown.current = createOption ? [createOption, ...found] : found

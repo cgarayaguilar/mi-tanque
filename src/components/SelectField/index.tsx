@@ -16,6 +16,11 @@ export interface SelectOption {
   label: string
   /** More words the search matches, not shown (e.g. a currency's code). */
   keywords?: string
+  /**
+   * In a list, under this subtitle: a rate's client (backend specs/0033).
+   * Options of a group go together, in the order given.
+   */
+  group?: string
 }
 
 export interface ChoiceFieldProps<T extends FieldValues> {

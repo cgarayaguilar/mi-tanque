@@ -19,6 +19,11 @@ import { foldText } from 'utils/foldText'
 export interface FilterOption<T> {
   value: T
   label: string
+  /**
+   * Under a subtitle of the menu: "Acarreos del Norte" (backend specs/0033
+   * RF-1). Options of a group go together, in the order given.
+   */
+  group?: string
 }
 
 /** Lists longer than this bring a search field (backend specs/0017 RF-5). */
@@ -80,7 +85,11 @@ export default function FilterChip<T extends string | number>({
   const typed = foldText(search.trim())
   const shown =
     searchable && typed !== ''
-      ? options.filter(option => foldText(option.label).includes(typed))
+      ? options.filter(
+          option =>
+            foldText(option.label).includes(typed) ||
+            foldText(option.group ?? '').includes(typed)
+        )
       : options
 
   const close = () => {
@@ -205,7 +214,26 @@ export default function FilterChip<T extends string | number>({
           filterMenuItem('all', allLabel, value === null, () => {
             pick(null)
           })}
-        {shown.map(option =>
+        {shown.flatMap((option, index) => [
+          // Its group's subtitle, before the first of the group
+          ...(option.group !== undefined &&
+          option.group !== shown[index - 1]?.group
+            ? [
+                <ListSubheader
+                  key={`group:${option.group}`}
+                  disableSticky
+                  sx={{
+                    typography: 'overline',
+                    color: 'text.secondary',
+                    lineHeight: 'inherit',
+                    pt: 3,
+                    pb: 1,
+                  }}
+                >
+                  {option.group}
+                </ListSubheader>,
+              ]
+            : []),
           filterMenuItem(
             String(option.value),
             option.label,
@@ -213,8 +241,8 @@ export default function FilterChip<T extends string | number>({
             () => {
               pick(option.value)
             }
-          )
-        )}
+          ),
+        ])}
         {shown.length === 0 && <MenuItem disabled>Sin resultados</MenuItem>}
       </Menu>
     </>
