@@ -11,6 +11,21 @@ import {
   type ColorMode,
 } from 'theme/tokens'
 
+declare module '@mui/material/styles' {
+  interface TypographyVariants {
+    pageTitle: React.CSSProperties
+  }
+  interface TypographyVariantsOptions {
+    pageTitle?: React.CSSProperties
+  }
+}
+
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides {
+    pageTitle: true
+  }
+}
+
 // "Mapeo al theme de MUI" in DESIGN.md
 const createMuiTheme = (mode: ColorMode): Theme => {
   const color = colorTokens[mode]
@@ -43,6 +58,7 @@ const createMuiTheme = (mode: ColorMode): Theme => {
       h4: typeScale.displaySm,
       h5: typeScale.displaySm,
       h6: typeScale.titleMd,
+      pageTitle: typeScale.pageTitle,
       subtitle1: typeScale.titleSm,
       subtitle2: typeScale.bodyStrong,
       body1: { ...typeScale.bodyMd, color: color.body },
@@ -52,6 +68,10 @@ const createMuiTheme = (mode: ColorMode): Theme => {
       button: { ...typeScale.button, textTransform: 'none' },
     },
     components: {
+      // A screen's title is its h1 (specs/0038 RF-3)
+      MuiTypography: {
+        defaultProps: { variantMapping: { pageTitle: 'h1' } },
+      },
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {

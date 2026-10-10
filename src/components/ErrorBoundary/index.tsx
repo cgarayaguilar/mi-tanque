@@ -66,9 +66,7 @@ export default class ErrorBoundary extends Component<
             textAlign: 'center',
           }}
         >
-          <Typography variant="h5" component="h1">
-            Algo salió mal
-          </Typography>
+          <Typography variant="pageTitle">Algo salió mal</Typography>
           <Typography color="text.secondary">
             Recarga la app para seguir. Tus tanques y mediciones guardados no se
             pierden.

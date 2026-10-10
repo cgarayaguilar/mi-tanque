@@ -244,8 +244,7 @@ function TripDetails({ trip }: { trip: Trip }) {
     <>
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 1 }}>
         <Typography
-          variant="h3"
-          component="h1"
+          variant="pageTitle"
           sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
         >
           {route}

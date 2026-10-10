@@ -121,9 +121,7 @@ function BasicHistory() {
     >
       <Box sx={{ p: 4, flexGrow: 1 }}>
         <SessionErrorNotice />
-        <Typography variant="h3" component="h1">
-          Historial
-        </Typography>
+        <Typography variant="pageTitle">Historial</Typography>
         <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
           Tus mediciones y rellenos en el periodo que elijas.
         </Typography>

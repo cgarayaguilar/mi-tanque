@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -185,9 +186,17 @@ export default function TankSearch() {
 
   return (
     <Box component="main" sx={{ p: 4 }}>
-      <Typography variant="h3" component="h1">
-        Elige tu tanque
-      </Typography>
+      {/* A way back without choosing (backend specs/0038 RF-2) */}
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => {
+          navigate('/')
+        }}
+        sx={{ ml: -2, mb: 2 }}
+      >
+        Medición
+      </Button>
+      <Typography variant="pageTitle">Elige tu tanque</Typography>
       <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
         Agrupados por capacidad. Filtra por galones, diámetro o largo.
       </Typography>

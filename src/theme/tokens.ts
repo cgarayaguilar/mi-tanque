@@ -92,6 +92,7 @@ export const defaultColorMode: ColorMode = 'light'
 
 export const fontFamily = {
   // Waldenburg is licensed; Newsreader is the open substitute at weight 300
+  // (and 600 for the screens' titles)
   display: "'Newsreader', 'Times New Roman', serif",
   body: "'Inter', sans-serif",
 } as const
@@ -119,6 +120,14 @@ export const typeScale = {
     fontFamily: fontFamily.display,
     fontSize: 24,
     fontWeight: 300,
+    lineHeight: 1.2,
+    letterSpacing: 0,
+  },
+  // The title of each screen, bold for contrast (backend specs/0038 RF-3)
+  pageTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    fontWeight: 600,
     lineHeight: 1.2,
     letterSpacing: 0,
   },

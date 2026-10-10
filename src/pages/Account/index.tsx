@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
+import { useLocation } from 'wouter'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
@@ -10,7 +11,9 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LogoutIcon from '@mui/icons-material/Logout'
+import NavBar from 'components/NavBar'
 import RecaptchaNotice from 'components/RecaptchaNotice'
 import AutocompleteField from 'components/AutocompleteField'
 import SessionGate from 'components/SessionGate'
@@ -33,7 +36,7 @@ import {
 } from 'schemas/account'
 import { warmUpAccount } from 'services/session'
 import { selectActiveRole, useSessionStore } from 'store/session'
-import { radius } from 'theme/tokens'
+import { layout, radius } from 'theme/tokens'
 import { authErrorMessage } from 'utils/authErrors'
 import { reportError } from 'utils/reportError'
 import { canEditOrganization, canWriteFleet, ROLE_LABELS } from 'utils/roles'
@@ -313,6 +316,7 @@ function ImportSection() {
 }
 
 function AccountScreen() {
+  const [, navigate] = useLocation()
   const { requestSignOut, signingOut, dialog } = useSignOut()
 
   useEffect(() => {
@@ -320,31 +324,51 @@ function AccountScreen() {
   }, [])
 
   return (
-    <Box component="main" sx={{ p: 4, pb: 8 }}>
-      <Typography variant="h3" component="h1" sx={{ mb: 6 }}>
-        Mi cuenta
-      </Typography>
-      <Stack spacing={4}>
-        <ProfileSection />
-        <OrganizationSection />
-        <TeamSection />
-        <ImportSection />
-      </Stack>
-      <Button
-        variant="outlined"
-        size="large"
-        fullWidth
-        startIcon={<LogoutIcon />}
-        loading={signingOut}
-        loadingPosition="start"
-        onClick={requestSignOut}
-        sx={{ mt: 8 }}
-      >
-        Cerrar sesión
-      </Button>
-      <DeleteAccountButton />
-      <RecaptchaNotice />
-      {dialog}
+    // A way out, as in the modules of "Más" (backend specs/0038 RF-1)
+    <Box
+      component="main"
+      sx={{
+        minHeight: `calc(100dvh - ${String(layout.appBarHeight)}px)`,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box sx={{ px: 4, pt: 2, pb: 8, flexGrow: 1 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => {
+            navigate('/mas')
+          }}
+          sx={{ ml: -2, mb: 2 }}
+        >
+          Más
+        </Button>
+        <Typography variant="pageTitle" sx={{ mb: 6 }}>
+          Mi cuenta
+        </Typography>
+        <Stack spacing={4}>
+          <ProfileSection />
+          <OrganizationSection />
+          <TeamSection />
+          <ImportSection />
+        </Stack>
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          startIcon={<LogoutIcon />}
+          loading={signingOut}
+          loadingPosition="start"
+          onClick={requestSignOut}
+          sx={{ mt: 8 }}
+        >
+          Cerrar sesión
+        </Button>
+        <DeleteAccountButton />
+        <RecaptchaNotice />
+        {dialog}
+      </Box>
+      <NavBar />
     </Box>
   )
 }

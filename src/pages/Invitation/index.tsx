@@ -334,7 +334,7 @@ export default function Invitation() {
 
   return (
     <Box component="main" sx={{ p: 4, pb: 8 }}>
-      <Typography variant="h3" component="h1">
+      <Typography variant="pageTitle">
         Te invitan a {preview.orgName}
       </Typography>
       <Typography variant="body1" sx={{ mt: 2 }}>

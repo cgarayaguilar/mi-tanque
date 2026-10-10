@@ -104,8 +104,7 @@ export default function EditorLayout({
       </Button>
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 6 }}>
         <Typography
-          variant="h3"
-          component="h1"
+          variant="pageTitle"
           sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
         >
           {item ? item.name : `${words.newOne} ${section.one}`}

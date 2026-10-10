@@ -653,9 +653,7 @@ export default function CloudHistory() {
       }}
     >
       <Box sx={{ p: 4, flexGrow: 1 }}>
-        <Typography variant="h3" component="h1">
-          Historial
-        </Typography>
+        <Typography variant="pageTitle">Historial</Typography>
         <Typography variant="body2" sx={{ mt: 1, mb: 4 }}>
           Las mediciones y los rellenos de tu organización.
         </Typography>

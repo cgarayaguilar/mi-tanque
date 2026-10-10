@@ -218,9 +218,7 @@ export default function SignIn() {
 
   return (
     <Box component="main" sx={{ p: 4, pb: 8 }}>
-      <Typography variant="h3" component="h1">
-        Entra a tu cuenta
-      </Typography>
+      <Typography variant="pageTitle">Entra a tu cuenta</Typography>
       <Typography variant="body2" sx={{ mt: 1, mb: 6 }}>
         Guarda tus tanques y mediciones en la nube y compártelos con tu equipo.
       </Typography>

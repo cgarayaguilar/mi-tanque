@@ -268,6 +268,10 @@ en cada push y PR.
   (conteos y avisos, con tests). Los módulos de Flota ya no son pestañas: `/flota/{módulo}` es su
   pantalla con "← Más" y su título (`Fleet` se monta de nuevo por módulo), y `/flota` lleva a
   `/mas`. Categorías de gasto abierta con `?desde=mas` vuelve a Más.
+- **Salidas y títulos (specs/0038):** Mi cuenta lleva "← Más" y la barra (`NavBar`), y "Elige tu
+  tanque" lleva "← Medición": ninguna pantalla queda sin salida. El título de cada pantalla es
+  `<Typography variant="pageTitle">` (un `h1` en Newsreader 600, token `pageTitle`); no uses
+  `h3` con `component="h1"`.
 - **Equipo propio o de un tercero (specs/0035):** camiones y remolques tienen `ownership`
   (`'own'`/`'third_party'`) y `ownerName` (solo de un tercero); lo de antes se lee como propio. El
   viaje copia `truckOwnership`/`trailerOwnership` al guardarse (`tripFromForm`); un viaje de antes

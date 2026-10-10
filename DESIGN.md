@@ -74,25 +74,27 @@ como gráfico cumple 3:1 sobre cualquier superficie. `success` como texto va sob
 | Familia               | Uso                                                        |
 | --------------------- | ---------------------------------------------------------- |
 | **Newsreader** 300    | Display: títulos de sección y de diálogo, nombre de la app |
+| **Newsreader** 600    | El título de cada pantalla (`pageTitle`, specs/0038)       |
 | **Inter** 400/500/600 | Todo lo demás                                              |
 
 **Adaptación — fuente display.** Waldenburg es de pago. El sustituto que propone el original, EB
 Garamond, no existe en peso 300 en Google Fonts; Newsreader sí, y es una serif editorial moderna.
 
-| Token              | Fuente     | Tamaño | Peso | Interlineado | Tracking | Uso en la app                                     |
-| ------------------ | ---------- | ------ | ---- | ------------ | -------- | ------------------------------------------------- |
-| `displayMd`        | Newsreader | 32     | 300  | 1.13         | -0.32    | Títulos grandes (MUI `h1`/`h2`)                   |
-| `displaySm`        | Newsreader | 24     | 300  | 1.2          | 0        | Nombre de la app, títulos de sección y de diálogo |
-| `titleMd`          | Inter      | 20     | 500  | 1.35         | 0        | Títulos de componente (MUI `h6`)                  |
-| `titleSm`          | Inter      | 18     | 500  | 1.44         | 0.18     | Títulos de tarjeta                                |
-| `bodyMd`           | Inter      | 16     | 400  | 1.5          | 0.16     | Texto base, campos                                |
-| `bodyStrong`       | Inter      | 16     | 500  | 1.5          | 0.16     | Etiquetas de campo, capacidad en el diagrama      |
-| `bodySm`           | Inter      | 15     | 400  | 1.47         | 0.15     | Mensajes y texto de apoyo                         |
-| `caption`          | Inter      | 14     | 400  | 1.5          | 0        | Detalles de tarjeta, fechas, metadatos            |
-| `captionUppercase` | Inter      | 12     | 600  | 1.4          | 0.96     | Etiquetas de cifras ("GALONES"), badges, cotas    |
-| `button`           | Inter      | 15     | 500  | 1            | 0        | Botones, pestañas, links                          |
-| `figureMd`         | Inter      | 20     | 600  | 1.35         | 0        | Cifras de resultados, galones del medidor         |
-| `figureSm`         | Inter      | 16     | 600  | 1.5          | 0        | Cifras del resumen y de cada medición             |
+| Token              | Fuente     | Tamaño | Peso | Interlineado | Tracking | Uso en la app                                                  |
+| ------------------ | ---------- | ------ | ---- | ------------ | -------- | -------------------------------------------------------------- |
+| `displayMd`        | Newsreader | 32     | 300  | 1.13         | -0.32    | Títulos grandes (MUI `h1`/`h2`)                                |
+| `displaySm`        | Newsreader | 24     | 300  | 1.2          | 0        | Nombre de la app, títulos de sección y de diálogo              |
+| `pageTitle`        | Newsreader | 24     | 600  | 1.2          | 0        | El título de cada pantalla (variante MUI `pageTitle`, un `h1`) |
+| `titleMd`          | Inter      | 20     | 500  | 1.35         | 0        | Títulos de componente (MUI `h6`)                               |
+| `titleSm`          | Inter      | 18     | 500  | 1.44         | 0.18     | Títulos de tarjeta                                             |
+| `bodyMd`           | Inter      | 16     | 400  | 1.5          | 0.16     | Texto base, campos                                             |
+| `bodyStrong`       | Inter      | 16     | 500  | 1.5          | 0.16     | Etiquetas de campo, capacidad en el diagrama                   |
+| `bodySm`           | Inter      | 15     | 400  | 1.47         | 0.15     | Mensajes y texto de apoyo                                      |
+| `caption`          | Inter      | 14     | 400  | 1.5          | 0        | Detalles de tarjeta, fechas, metadatos                         |
+| `captionUppercase` | Inter      | 12     | 600  | 1.4          | 0.96     | Etiquetas de cifras ("GALONES"), badges, cotas                 |
+| `button`           | Inter      | 15     | 500  | 1            | 0        | Botones, pestañas, links                                       |
+| `figureMd`         | Inter      | 20     | 600  | 1.35         | 0        | Cifras de resultados, galones del medidor                      |
+| `figureSm`         | Inter      | 16     | 600  | 1.5          | 0        | Cifras del resumen y de cada medición                          |
 
 - El display nunca va en negrita: 300 es la firma del sistema, para títulos.
 - **Adaptación — cifras.** Los datos (pulgadas, galones, litros) usan Inter 600 con dígitos
@@ -227,7 +229,10 @@ dos excepciones, porque no pueden leer los tokens:
 
 ## Hacer y no hacer
 
-- **Sí:** píldora `primary` para la acción principal; Newsreader 300 en títulos; Inter con tracking
-  ligero en el cuerpo; orbes pastel solo como atmósfera; tokens en todo.
-- **No:** un color de acción saturado; display en negrita; pasteles como relleno, texto o datos;
+- **Sí:** píldora `primary` para la acción principal; Newsreader 300 en títulos de sección y de
+  diálogo, y 600 en el título de cada pantalla (`pageTitle`, pedido del dueño por contraste,
+  specs/0038); Inter con tracking ligero en el cuerpo; orbes pastel solo como atmósfera; tokens en
+  todo.
+- **No:** un color de acción saturado; display en negrita fuera del título de la pantalla; pasteles
+  como relleno, texto o datos;
   esquinas rectas en botones; valores sueltos.

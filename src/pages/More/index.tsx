@@ -93,7 +93,7 @@ function MoreScreen() {
       }}
     >
       <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
-        <Typography variant="h3" component="h1" sx={{ mb: 5 }}>
+        <Typography variant="pageTitle" sx={{ mb: 5 }}>
           Más
         </Typography>
         {groups.map(group => (

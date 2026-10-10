@@ -79,9 +79,7 @@ export default function AddTank() {
 
   return (
     <Box component="main" sx={{ p: 4 }}>
-      <Typography variant="h3" component="h1">
-        Agrega tu tanque
-      </Typography>
+      <Typography variant="pageTitle">Agrega tu tanque</Typography>
       <Typography variant="body2" sx={{ mt: 1, mb: 6 }}>
         Encuentra las medidas en la placa del tanque o tómalas con una cinta
         métrica.

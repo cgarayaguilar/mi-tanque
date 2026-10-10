@@ -139,7 +139,7 @@ function TripEditorScreen() {
       >
         {isNew ? 'Viajes' : 'Viaje'}
       </Button>
-      <Typography variant="h3" component="h1" sx={{ mb: 6 }}>
+      <Typography variant="pageTitle" sx={{ mb: 6 }}>
         {isNew ? 'Nuevo viaje' : 'Editar viaje'}
       </Typography>
       {body()}

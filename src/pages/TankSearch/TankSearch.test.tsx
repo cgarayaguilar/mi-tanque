@@ -272,3 +272,13 @@ test('a factory "D" tank is chosen and measured by its capacity', async () => {
   // Full, it reads its capacity (specs/0015 RF-9)
   expect(tank && calculateReading(tank, 26).gallons).toBe('100.00')
 })
+
+// backend specs/0038 RF-2: a way back without choosing
+test('Medición goes back without choosing a tank', async () => {
+  renderTankSearch()
+  await screen.findByText('209 tanques')
+
+  fireEvent.click(screen.getByRole('button', { name: 'Medición' }))
+
+  expect(window.location.pathname).toBe('/')
+})

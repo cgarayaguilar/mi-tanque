@@ -306,7 +306,7 @@ function ExpensesScreen() {
     >
       <Box sx={{ px: 4, pt: 2, pb: 4, flexGrow: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4 }}>
-          <Typography variant="h3" component="h1" sx={{ flexGrow: 1 }}>
+          <Typography variant="pageTitle" sx={{ flexGrow: 1 }}>
             Gastos
           </Typography>
           {/* Text only: with "Agregar" it fits one row at 375 px (RNF-3) */}

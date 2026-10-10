@@ -592,7 +592,7 @@ function ExpenseScreen() {
       >
         {fromTrip ? 'Viaje' : 'Gastos'}
       </Button>
-      <Typography variant="h3" component="h1" sx={{ mb: 6 }}>
+      <Typography variant="pageTitle" sx={{ mb: 6 }}>
         {isNew ? 'Nuevo gasto' : 'Gasto'}
       </Typography>
       {body()}

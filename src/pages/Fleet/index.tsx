@@ -721,9 +721,7 @@ function FleetScreen() {
             mb: 4,
           }}
         >
-          <Typography variant="h3" component="h1">
-            {section.label}
-          </Typography>
+          <Typography variant="pageTitle">{section.label}</Typography>
           {canWrite && (
             <Button
               variant="contained"

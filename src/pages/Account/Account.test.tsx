@@ -191,3 +191,21 @@ test("shows Google's reCAPTCHA text (specs/0008 RF-12)", async () => {
     screen.getByRole('link', { name: 'Política de privacidad' })
   ).toHaveAttribute('href', 'https://policies.google.com/privacy')
 })
+
+// backend specs/0038 RF-1, CA-1: a way out of Mi cuenta
+test('Mi cuenta has a way back to Más, and the bar with Más marked', async () => {
+  renderAccount(account('owner'))
+
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Mi cuenta' })
+  ).toBeInTheDocument()
+  const bar = screen.getByRole('navigation', { name: 'Secciones' })
+  expect(within(bar).getByRole('link', { name: 'Más' })).toHaveAttribute(
+    'aria-current',
+    'page'
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Más' }))
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/mas')
+  })
+})

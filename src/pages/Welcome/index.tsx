@@ -95,9 +95,7 @@ function WelcomeForm() {
 
   return (
     <Box component="main" sx={{ p: 4, pb: 8 }}>
-      <Typography variant="h3" component="h1">
-        Te damos la bienvenida
-      </Typography>
+      <Typography variant="pageTitle">Te damos la bienvenida</Typography>
       <Typography variant="body2" sx={{ mt: 1, mb: 6 }}>
         Crea tu organización: ahí guardarás tus camiones, tanques y mediciones,
         y podrás invitar a tu equipo.

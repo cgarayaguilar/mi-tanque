@@ -440,9 +440,7 @@ function TripsScreen() {
             mb: 4,
           }}
         >
-          <Typography variant="h3" component="h1">
-            Viajes
-          </Typography>
+          <Typography variant="pageTitle">Viajes</Typography>
           {canWrite && (
             <Button
               variant="contained"

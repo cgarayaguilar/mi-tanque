@@ -213,9 +213,7 @@ function CategoriesScreen() {
           mb: 4,
         }}
       >
-        <Typography variant="h3" component="h1">
-          Categorías
-        </Typography>
+        <Typography variant="pageTitle">Categorías</Typography>
         {canWrite && (
           <Button
             variant="contained"
