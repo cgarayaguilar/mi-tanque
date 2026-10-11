@@ -155,6 +155,11 @@ en cada push y PR.
   menú con "Todas" y las opciones (buscador con más de 10) y, elegido, muestra el valor con una ×;
   `FilterToggle` es un filtro sí/no ("Archivados"). Los usan `TankCatalog` y Flota. En los tests,
   `filterBy(filtro, opción)` y `filterChip(filtro)` de `src/testing/filterBy`.
+  En Viajes, Gastos y Flota los filtros van en un **panel desde abajo** (`components/FilterSheet`,
+  specs/0039): a la vista solo "Filtros" (y en Viajes, Agrupar y Ordenar como chips). Cada filtro
+  se describe con `sheetFilter({…})`, que mantiene los tipos de la pantalla; con hasta 3 opciones
+  son botones y con más (o con grupos) una lista con buscador. En los tests, `filterBy` y
+  `filterOptions` abren el panel solos; `sheetFilterNames()` da los filtros que ofrece.
 - **Tanques del teléfono (specs/0019):** `Tank` (en `types.ts`) tiene forma, posición y las medidas
   de su forma (`diameter`, o `height` y `width`), como la flota. Lo guardado antes no tiene forma:
   `readTankDimensions` (`schemas/tank`) lo lee como cilindro acostado, sin reescribir nada; para

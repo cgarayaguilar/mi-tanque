@@ -14,6 +14,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import EmptyState from 'components/EmptyState'
 import FilterChip, { FilterBar } from 'components/FilterChip'
+import FilterSheet, { sheetFilter } from 'components/FilterSheet'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TripStatusChip from 'components/TripStatusChip'
@@ -474,76 +475,85 @@ function TripsScreen() {
           {periodText}
         </Button>
 
-        {/* One row of chips (specs/0017): the filters, always there once
-            the period has trips, then how to group and sort (specs/0030) */}
+        {/* One row: "Filtros", "Agrupar" and "Ordenar" (specs/0039), once
+            the period has trips */}
         {(trips.items.length > 0 || filtered) && (
           <Box sx={{ mb: 3 }}>
             <FilterBar>
-              <FilterChip
-                label="Estado"
-                allLabel="Todos"
-                options={STATUS_OPTIONS}
-                value={filters.status}
-                onChange={status => {
-                  setFilters({ status })
-                }}
-              />
-              <FilterChip
-                label="Cliente"
-                allLabel="Todos"
-                options={options.clients}
-                value={filters.clientId}
-                onChange={clientId => {
-                  setFilters({ clientId })
-                }}
-              />
-              <FilterChip
-                label="Camión"
-                allLabel="Todos"
-                options={options.trucks}
-                value={filters.truckId}
-                onChange={truckId => {
-                  setFilters({ truckId })
-                }}
-              />
-              <FilterChip
-                label="Conductor"
-                allLabel="Todos"
-                options={options.drivers}
-                value={filters.driverId}
-                onChange={driverId => {
-                  setFilters({ driverId })
-                }}
-              />
-              <FilterChip
-                label="Destino"
-                allLabel="Todos"
-                options={destinations}
-                value={filters.destination}
-                onChange={destination => {
-                  setFilters({ destination })
-                }}
-              />
-              {/* Own or of a third party (specs/0035 RF-6) */}
-              <FilterChip
-                label="Dueño del camión"
-                allLabel="Todos"
-                options={OWNERSHIP_OPTIONS}
-                value={filters.truckOwnership}
-                onChange={truckOwnership => {
-                  setFilters({ truckOwnership })
-                }}
-                named
-              />
-              <FilterChip
-                label="Dueño del remolque"
-                allLabel="Todos"
-                options={OWNERSHIP_OPTIONS}
-                value={filters.trailerOwnership}
-                onChange={trailerOwnership => {
-                  setFilters({ trailerOwnership })
-                }}
-                named
+              {/* The filters in a sheet; grouping and order stay in sight,
+                  they are not filters (specs/0039 RF-1) */}
+              <FilterSheet
+                resultLabel={
+                  shown.length === 1
+                    ? 'Ver 1 viaje'
+                    : `Ver ${String(shown.length)} viajes`
+                }
+                filters={[
+                  sheetFilter({
+                    label: 'Estado',
+                    allLabel: 'Todos',
+                    options: STATUS_OPTIONS,
+                    value: filters.status,
+                    onChange: status => {
+                      setFilters({ status })
+                    },
+                  }),
+                  sheetFilter({
+                    label: 'Cliente',
+                    allLabel: 'Todos',
+                    options: options.clients,
+                    value: filters.clientId,
+                    onChange: clientId => {
+                      setFilters({ clientId })
+                    },
+                  }),
+                  sheetFilter({
+                    label: 'Camión',
+                    allLabel: 'Todos',
+                    options: options.trucks,
+                    value: filters.truckId,
+                    onChange: truckId => {
+                      setFilters({ truckId })
+                    },
+                  }),
+                  sheetFilter({
+                    label: 'Conductor',
+                    allLabel: 'Todos',
+                    options: options.drivers,
+                    value: filters.driverId,
+                    onChange: driverId => {
+                      setFilters({ driverId })
+                    },
+                  }),
+                  sheetFilter({
+                    label: 'Destino',
+                    allLabel: 'Todos',
+                    options: destinations,
+                    value: filters.destination,
+                    onChange: destination => {
+                      setFilters({ destination })
+                    },
+                  }),
+                  // Own or of a third party (specs/0035 RF-6)
+                  sheetFilter({
+                    label: 'Dueño del camión',
+                    allLabel: 'Todos',
+                    options: OWNERSHIP_OPTIONS,
+                    value: filters.truckOwnership,
+                    onChange: truckOwnership => {
+                      setFilters({ truckOwnership })
+                    },
+                  }),
+                  sheetFilter({
+                    label: 'Dueño del remolque',
+                    allLabel: 'Todos',
+                    options: OWNERSHIP_OPTIONS,
+                    value: filters.trailerOwnership,
+                    onChange: trailerOwnership => {
+                      setFilters({ trailerOwnership })
+                    },
+                  }),
+                ]}
               />
               <FilterChip
                 label="Agrupar"

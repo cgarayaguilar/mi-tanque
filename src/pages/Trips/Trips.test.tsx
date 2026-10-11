@@ -26,8 +26,15 @@ import {
   trip,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
-import { filterBy, filterChip } from '../../testing/filterBy'
+import { choose, chosen } from '../../testing/choose'
+import {
+  closeFilters,
+  filterBy,
+  filterChip,
+  filtersButton,
+  openFilters,
+  sheetFilterNames,
+} from '../../testing/filterBy'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -279,22 +286,45 @@ describe('filter, group and sort', () => {
       .map(card => card.getAttribute('aria-label'))
 
   // CA-1
-  test('every filter is there; Destino and Camión add up', async () => {
+  // backend specs/0039 CA-1, CA-2
+  test('every filter is in the sheet; Destino and Camión add up', async () => {
     renderAt('/viajes')
     await screen.findByRole('list', { name: 'Viajes' })
 
-    // One truck in the period: its chip is there all the same
-    expect(filterChip('Camión')).toBeInTheDocument()
+    // In sight: Filtros, Agrupar and Ordenar; grouping is not a filter
+    const row = screen.getByRole('group', { name: 'Filtros' })
+    expect(
+      within(row)
+        .getAllByRole('button')
+        .map(button => button.getAttribute('aria-label'))
+    ).toEqual(['Filtros', 'Agrupar', 'Ordenar'])
+    // One truck in the period: its filter is there all the same
+    expect(await sheetFilterNames()).toEqual([
+      'Estado',
+      'Cliente',
+      'Camión',
+      'Conductor',
+      'Destino',
+      'Dueño del camión',
+      'Dueño del remolque',
+    ])
     // specs/0033 RF-1: each route under its client
-    fireEvent.click(filterChip('Destino'))
-    const menu = await screen.findByRole('menu', { name: 'Destino' })
-    expect(menu).toHaveTextContent(
+    const sheet = await openFilters()
+    fireEvent.mouseDown(
+      within(sheet).getByRole('combobox', { name: /^Destino/ })
+    )
+    expect(await screen.findByRole('listbox')).toHaveTextContent(
       /Fletes Ríos.*León → Tegucigalpa.*Transportes Pérez.*Managua → San José/
     )
-    fireEvent.click(
-      within(menu).getByRole('menuitemradio', { name: 'Managua → San José' })
-    )
+    fireEvent.click(screen.getByRole('option', { name: 'Managua → San José' }))
+    // Applied at once: the sheet counts what is left, and its button closes it
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Ver 2 viajes' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Filtros' })).toBeNull()
+    })
     await filterBy('Camión', 'Unidad 12')
+    expect(filtersButton()).toHaveAccessibleName('Filtros, 2 activos')
+    expect(filtersButton()).toHaveTextContent('Filtros · 2')
     expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))).toEqual([
       'Viaje Managua → San José, Programado',
       'Viaje Managua → San José, Cancelado',
@@ -371,7 +401,31 @@ describe('filter, group and sort', () => {
     expect(
       await screen.findByRole('region', { name: 'Unidad 12' })
     ).toHaveTextContent('1 viaje · C$27,500.00 NIO')
-    expect(filterChip('Destino')).toHaveTextContent('Managua → San José')
+    expect(filtersButton()).toHaveAccessibleName('Filtros, 1 activo')
+    expect(chosen('Destino', await openFilters())).toBe('Managua → San José')
+    await closeFilters()
+  })
+
+  // backend specs/0039 CA-2
+  test('Limpiar filtros takes them all away', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+    await filterBy('Cliente', 'Fletes Ríos')
+    await filterBy('Dueño del camión', 'Propio')
+    expect(filtersButton()).toHaveAccessibleName('Filtros, 2 activos')
+
+    const sheet = await openFilters()
+    fireEvent.click(
+      within(sheet).getByRole('button', { name: 'Limpiar filtros' })
+    )
+    expect(
+      within(sheet).getByRole('button', { name: 'Limpiar filtros' })
+    ).toBeDisabled()
+    await closeFilters()
+    expect(filtersButton()).toHaveAccessibleName('Filtros')
+    expect(cardsIn(screen.getByRole('list', { name: 'Viajes' }))).toHaveLength(
+      3
+    )
   })
 })
 

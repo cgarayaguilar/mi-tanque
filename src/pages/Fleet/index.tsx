@@ -61,7 +61,7 @@ import { formatNumber } from 'utils/formatNumber'
 import { OWNERSHIP_OPTIONS, ownershipLine } from 'utils/ownership'
 import { canWriteFleet } from 'utils/roles'
 import { useDistanceUnit } from 'hooks/useDistanceUnit'
-import FilterChip, { FilterBar, FilterToggle } from 'components/FilterChip'
+import FilterSheet, { sheetFilter } from 'components/FilterSheet'
 import { matchBrand, matchModel } from 'data/truckModels'
 import InsuranceChip from 'components/InsuranceChip'
 import {
@@ -753,66 +753,90 @@ function FleetScreen() {
           }}
         />
 
-        {/* One row of chips (specs/0017 RF-9) */}
+        {/* "Filtros" and its sheet (specs/0039); a chosen filter stays
+            offered to clear it (audit 0027) */}
         <Box sx={{ my: 3 }}>
-          <FilterBar>
-            {/* A chosen filter stays visible to clear it (audit 0027) */}
-            {section.collection === 'trucks' &&
-              (brandOptions.length > 1 || brand !== null) && (
-                <FilterChip
-                  label="Marca"
-                  allLabel="Todas"
-                  options={brandOptions.map(value => ({ value, label: value }))}
-                  value={brand}
-                  onChange={next => {
-                    setBrand(next)
-                    setModel(null)
-                  }}
-                />
-              )}
-            {section.collection === 'trucks' &&
+          <FilterSheet
+            resultLabel={
+              cards.length === 1
+                ? `Ver 1 ${section.one}`
+                : `Ver ${String(cards.length)} ${section.label.toLowerCase()}`
+            }
+            filters={[
+              ...(section.collection === 'trucks' &&
+              (brandOptions.length > 1 || brand !== null)
+                ? [
+                    sheetFilter({
+                      label: 'Marca',
+                      allLabel: 'Todas',
+                      options: brandOptions.map(value => ({
+                        value,
+                        label: value,
+                      })),
+                      value: brand,
+                      onChange: next => {
+                        setBrand(next)
+                        setModel(null)
+                      },
+                    }),
+                  ]
+                : []),
+              ...(section.collection === 'trucks' &&
               brand !== null &&
-              (modelOptions.length > 1 || model !== null) && (
-                <FilterChip
-                  label="Modelo"
-                  allLabel="Todos"
-                  options={modelOptions.map(value => ({
-                    value,
-                    label: value,
-                  }))}
-                  value={model}
-                  onChange={setModel}
-                />
-              )}
-            {(section.collection === 'trucks' ||
-              section.collection === 'trailers') &&
-              (section.collection === 'trucks' ? trucks : trailers).length >
-                0 && (
-                <FilterChip
-                  label="Dueño"
-                  allLabel="Todos"
-                  options={OWNERSHIP_OPTIONS}
-                  value={owner}
-                  onChange={setOwner}
-                  named
-                />
-              )}
-            {section.collection === 'rates' &&
-              (rateClientOptions.length > 1 || rateClient !== null) && (
-                <FilterChip
-                  label="Cliente"
-                  allLabel="Todos"
-                  options={rateClientOptions}
-                  value={rateClient}
-                  onChange={setRateClient}
-                />
-              )}
-            <FilterToggle
-              label="Archivados"
-              on={showArchived}
-              onChange={setShowArchived}
-            />
-          </FilterBar>
+              (modelOptions.length > 1 || model !== null)
+                ? [
+                    sheetFilter({
+                      label: 'Modelo',
+                      allLabel: 'Todos',
+                      options: modelOptions.map(value => ({
+                        value,
+                        label: value,
+                      })),
+                      value: model,
+                      onChange: setModel,
+                    }),
+                  ]
+                : []),
+              ...((section.collection === 'trucks' ||
+                section.collection === 'trailers') &&
+              (section.collection === 'trucks' ? trucks : trailers).length > 0
+                ? [
+                    sheetFilter({
+                      label: 'Dueño',
+                      allLabel: 'Todos',
+                      options: OWNERSHIP_OPTIONS,
+                      value: owner,
+                      onChange: setOwner,
+                    }),
+                  ]
+                : []),
+              ...(section.collection === 'rates' &&
+              (rateClientOptions.length > 1 || rateClient !== null)
+                ? [
+                    sheetFilter({
+                      label: 'Cliente',
+                      allLabel: 'Todos',
+                      options: rateClientOptions,
+                      value: rateClient,
+                      onChange: setRateClient,
+                    }),
+                  ]
+                : []),
+              // "Archivados" as a choice, in the section's gender (RF-6)
+              sheetFilter({
+                label: 'Mostrar',
+                options: [
+                  { value: 'active', label: `Activ${words.them}` },
+                  { value: 'archived', label: `Archivad${words.them}` },
+                ],
+                value: showArchived ? 'archived' : 'active',
+                defaultValue: 'active',
+                onChange: shown => {
+                  setShowArchived(shown === 'archived')
+                },
+              }),
+            ]}
+          />
         </Box>
 
         {renderList()}

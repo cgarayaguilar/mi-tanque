@@ -7,7 +7,11 @@ import {
 } from '@testing-library/react'
 import { addDays } from 'date-fns'
 import App from '../../App'
-import { filterBy } from '../../testing/filterBy'
+import {
+  filterBy,
+  filtersButton,
+  sheetFilterNames,
+} from '../../testing/filterBy'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { toPlainDate } from 'utils/plainDate'
@@ -301,9 +305,16 @@ test('trucks filter by brand, then model', async () => {
   renderAt('/flota/camiones')
   await screen.findByText('Unidad 16')
 
-  // One row of chips: no model until a brand is chosen (specs/0017 CA-4)
-  expect(screen.queryByRole('button', { name: /^Modelo/ })).toBeNull()
+  // No model until a brand is chosen (specs/0017 CA-4), in the sheet
+  // (specs/0039 CA-3)
+  expect(await sheetFilterNames()).toEqual(['Marca', 'Dueño', 'Mostrar'])
   await filterBy('Marca', 'Freightliner')
+  expect(await sheetFilterNames()).toEqual([
+    'Marca',
+    'Modelo',
+    'Dueño',
+    'Mostrar',
+  ])
   await waitFor(() => {
     expect(screen.queryByText('Unidad 16')).toBeNull()
   })
@@ -318,7 +329,8 @@ test('trucks filter by brand, then model', async () => {
 })
 
 // specs/0017 RF-9, RF-10, CA-4: archived ones are a chip of the same row
-test('the archived chip shows the archived ones, in every tab', async () => {
+// specs/0039 RF-6: "Archivados" is "Mostrar" in the sheet
+test('Mostrar: Archivados shows the archived ones, in every module', async () => {
   api.readFleet.mockResolvedValue({
     rates: [],
     drivers: [],
@@ -334,20 +346,16 @@ test('the archived chip shows the archived ones, in every tab', async () => {
   await screen.findByText('Unidad 12')
   expect(screen.queryByRole('checkbox', { name: 'Ver archivados' })).toBeNull()
 
-  const archived = screen.getByRole('button', { name: 'Archivados' })
-  expect(archived).toHaveAttribute('aria-pressed', 'false')
-  fireEvent.click(archived)
-  expect(archived).toHaveAttribute('aria-pressed', 'true')
+  expect(filtersButton()).toHaveAccessibleName('Filtros')
+  await filterBy('Mostrar', 'Archivados')
+  // Seeing the archived ones narrows the list: it counts
+  expect(filtersButton()).toHaveAccessibleName('Filtros, 1 activo')
   expect(await screen.findByText('Unidad 15')).toBeInTheDocument()
   expect(screen.queryByText('Unidad 12')).toBeNull()
 
   await openModule('Remolques')
-  const filters = await screen.findByRole('group', { name: 'Filtros' })
-  expect(
-    within(filters)
-      .getAllByRole('button')
-      .map(button => button.textContent)
-  ).toEqual(['Archivados'])
+  await screen.findByRole('heading', { name: 'Remolques' })
+  expect(await sheetFilterNames()).toEqual(['Mostrar'])
 })
 
 // backend specs/0022 CA-3, CA-4
@@ -410,14 +418,14 @@ describe('clients', () => {
     ).toBeInTheDocument()
   })
 
-  test('an archived one shows only with the chip', async () => {
+  test('an archived one shows only with Mostrar: Archivados', async () => {
     renderAt('/flota/clientes')
     await screen.findByRole('list', { name: 'Clientes' })
     expect(
       screen.queryByRole('button', { name: 'Cliente Fletes Ríos' })
     ).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archivados' }))
+    await filterBy('Mostrar', 'Archivados')
     expect(
       await screen.findByRole('button', { name: 'Cliente Fletes Ríos' })
     ).toBeInTheDocument()
@@ -492,7 +500,7 @@ describe('drivers', () => {
     renderAt('/flota/conductores')
     await screen.findByRole('list', { name: 'Conductores' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archivados' }))
+    await filterBy('Mostrar', 'Archivados')
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'Buscar conductores' }),
       {

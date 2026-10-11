@@ -14,7 +14,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import EmptyState from 'components/EmptyState'
-import FilterChip, { FilterBar } from 'components/FilterChip'
+import FilterSheet, { sheetFilter } from 'components/FilterSheet'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import {
@@ -350,35 +350,46 @@ function ExpensesScreen() {
           {periodText}
         </Button>
 
-        {/* One row of chips (specs/0017), with what the period has */}
+        {/* "Filtros" and its sheet (specs/0039), with what the period has */}
         <Box sx={{ mb: 3 }}>
-          <FilterBar>
-            {(options.categories.length > 1 || categoryId !== null) && (
-              <FilterChip
-                label="Categoría"
-                allLabel="Todas"
-                options={options.categories}
-                value={categoryId}
-                onChange={setCategoryId}
-              />
-            )}
-            <FilterChip
-              label="Corresponde a"
-              allLabel="Todos"
-              options={KIND_OPTIONS}
-              value={kind}
-              onChange={setKind}
-            />
-            {(options.trucks.length > 1 || truckId !== null) && (
-              <FilterChip
-                label="Camión"
-                allLabel="Todos"
-                options={options.trucks}
-                value={truckId}
-                onChange={setTruckId}
-              />
-            )}
-          </FilterBar>
+          <FilterSheet
+            resultLabel={
+              shown.length === 1
+                ? 'Ver 1 gasto'
+                : `Ver ${String(shown.length)} gastos`
+            }
+            filters={[
+              ...(options.categories.length > 1 || categoryId !== null
+                ? [
+                    sheetFilter({
+                      label: 'Categoría',
+                      allLabel: 'Todas',
+                      options: options.categories,
+                      value: categoryId,
+                      onChange: setCategoryId,
+                    }),
+                  ]
+                : []),
+              sheetFilter({
+                label: 'Corresponde a',
+                allLabel: 'Todos',
+                options: KIND_OPTIONS,
+                value: kind,
+                onChange: setKind,
+              }),
+              ...(options.trucks.length > 1 || truckId !== null
+                ? [
+                    sheetFilter({
+                      label: 'Camión',
+                      allLabel: 'Todos',
+                      options: options.trucks,
+                      value: truckId,
+                      onChange: setTruckId,
+                    }),
+                  ]
+                : []),
+            ]}
+          />
         </Box>
 
         {expenses.items.length > 0 && (

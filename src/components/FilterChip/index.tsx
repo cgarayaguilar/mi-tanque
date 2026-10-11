@@ -30,7 +30,7 @@ export interface FilterOption<T> {
 export const SEARCH_FROM = 10
 
 // The height of Material's Chip, so filters line up with the other chips
-const CHIP_HEIGHT = space.xl
+export const CHIP_HEIGHT = space.xl
 
 /** The chips of a list, side by side, wrapping instead of sliding (RF-6). */
 export function FilterBar({ children }: { children: ReactNode }) {

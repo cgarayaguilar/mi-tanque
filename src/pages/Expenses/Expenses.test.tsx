@@ -23,7 +23,7 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose } from '../../testing/choose'
-import { filterBy } from '../../testing/filterBy'
+import { filterBy, sheetFilterNames } from '../../testing/filterBy'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -203,6 +203,12 @@ describe('the list', () => {
     renderAt('/gastos')
     await screen.findByRole('list', { name: 'Gastos' })
 
+    // specs/0039 CA-3: the filters are in the sheet
+    expect(await sheetFilterNames()).toEqual([
+      'Categoría',
+      'Corresponde a',
+      'Camión',
+    ])
     await filterBy('Corresponde a', 'General')
     expect(
       screen.getByRole('status', { name: 'Totales de lo filtrado' })
