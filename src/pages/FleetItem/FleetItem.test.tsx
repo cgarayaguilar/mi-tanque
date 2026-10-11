@@ -22,6 +22,7 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose, chosen } from '../../testing/choose'
+import { saveDialog } from '../../testing/dialogs'
 import { filterBy, filterChip } from '../../testing/filterBy'
 
 const api = vi.hoisted(() => ({
@@ -1455,12 +1456,6 @@ describe('tanks from the equipment', () => {
   const typeIn = (dialog: HTMLElement, label: string, value: string) => {
     fireEvent.change(within(dialog).getByLabelText(label), {
       target: { value },
-    })
-  }
-  const saveDialog = async (dialog: HTMLElement) => {
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => {
-      expect(dialog).not.toBeInTheDocument()
     })
   }
 

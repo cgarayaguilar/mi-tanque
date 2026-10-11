@@ -27,6 +27,7 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose, chosen } from '../../testing/choose'
+import { saveDialog, waitForDialogToClose } from '../../testing/dialogs'
 import {
   closeFilters,
   filterBy,
@@ -113,14 +114,6 @@ const type = (
 const openDialog = async (button: string, title: string) => {
   fireEvent.click(await screen.findByRole('button', { name: button }))
   return screen.getByRole('dialog', { name: title })
-}
-
-/** Its "Guardar", which closes it once its values are valid. */
-const saveDialog = async (dialog: HTMLElement) => {
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-  await waitFor(() => {
-    expect(dialog).not.toBeInTheDocument()
-  })
 }
 
 /** "Quitar" in a card's ⋮ menu, confirmed (specs/0029 RF-5). */
@@ -616,9 +609,8 @@ describe('the form', () => {
         expect.objectContaining({ name: 'Acarreos del Norte' })
       )
     })
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull()
-    })
+    await waitForDialogToClose(dialog)
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Cliente' })).toHaveValue(
       'Acarreos del Norte'
     )
@@ -649,9 +641,8 @@ describe('creating from the lists', () => {
         expect.objectContaining({ name: 'Zoila Mena' })
       )
     })
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull()
-    })
+    await waitForDialogToClose(dialog)
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Conductor' })).toHaveValue(
       'Zoila Mena'
     )
@@ -724,9 +715,8 @@ describe('creating from the lists', () => {
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Guardar tarifa' })
     )
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull()
-    })
+    await waitForDialogToClose(dialog)
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Tarifa' })).toHaveValue(
       'Rivas - Managua - C$7,000.00'
     )
@@ -757,9 +747,7 @@ describe('creating from the lists', () => {
     fireEvent.click(
       within(clientDialog).getByRole('button', { name: 'Guardar cliente' })
     )
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Nuevo cliente' })).toBeNull()
-    })
+    await waitForDialogToClose(clientDialog)
     // Back on the rate, as it was, with its client
     expect(within(dialog).getByLabelText('Origen')).toHaveValue('Rivas')
     expect(
