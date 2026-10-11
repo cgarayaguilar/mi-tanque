@@ -6,6 +6,8 @@ import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { useTheme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import CloseIcon from '@mui/icons-material/Close'
 import TuneIcon from '@mui/icons-material/Tune'
 import { AutocompleteBase } from 'components/AutocompleteField'
@@ -16,11 +18,19 @@ import { radius, space } from 'theme/tokens'
 // The filters of a list in a sheet from below (backend specs/0039): one
 // button in sight, every filter inside
 
+/** The side sheet on a wider screen (specs/0039 RF-3). */
+const SIDE_WIDTH = 350
+
 /** Buttons up to this many options, "Todos" included (specs/0009 RF-2). */
 const BUTTONS_UP_TO = 3
 
 export interface SheetFilter {
   label: string
+  /**
+   * A list that can grow (clients, trucks, drivers): always a list with
+   * search, however few it has now (specs/0039 RF-4)
+   */
+  list?: boolean
   /** The option without a filter: "Todos". Without it, one is always on. */
   allLabel?: string
   options: readonly FilterOption<string>[]
@@ -36,6 +46,7 @@ export interface SheetFilter {
  */
 export const sheetFilter = <T extends string>(filter: {
   label: string
+  list?: boolean
   allLabel?: string
   options: readonly FilterOption<T>[]
   value: T | null
@@ -73,7 +84,7 @@ function FilterField({ filter, id }: { filter: SheetFilter; id: string }) {
   }
   // Grouped options keep their subtitles: always a list (specs/0033 RF-1)
   const grouped = filter.options.some(option => option.group !== undefined)
-  return !grouped && options.length <= BUTTONS_UP_TO ? (
+  return !filter.list && !grouped && options.length <= BUTTONS_UP_TO ? (
     <ChoiceButtonsBase
       id={id}
       label={filter.label}
@@ -108,6 +119,9 @@ export default function FilterSheet({
   resultLabel,
 }: FilterSheetProps) {
   const [open, setOpen] = useState(false)
+  // From below on a phone; on a wider screen, from the right (RF-3)
+  const theme = useTheme()
+  const phone = useMediaQuery(theme.breakpoints.down('sm'))
   const titleId = useId()
   const fieldId = useId()
   const active = filters.filter(isActive).length
@@ -149,7 +163,7 @@ export default function FilterSheet({
       </ButtonBase>
 
       <Drawer
-        anchor="bottom"
+        anchor={phone ? 'bottom' : 'right'}
         open={open}
         onClose={close}
         slotProps={{
@@ -157,11 +171,17 @@ export default function FilterSheet({
             role: 'dialog',
             'aria-labelledby': titleId,
             sx: {
-              maxHeight: '85dvh',
               display: 'flex',
               flexDirection: 'column',
-              borderTopLeftRadius: radius.xl,
-              borderTopRightRadius: radius.xl,
+              // Its fields scroll between a fixed title and fixed buttons
+              overflow: 'hidden',
+              ...(phone
+                ? {
+                    maxHeight: '85dvh',
+                    borderTopLeftRadius: radius.xl,
+                    borderTopRightRadius: radius.xl,
+                  }
+                : { width: '100%', maxWidth: SIDE_WIDTH }),
             },
           },
         }}
@@ -171,6 +191,7 @@ export default function FilterSheet({
             display: 'flex',
             alignItems: 'center',
             gap: 2,
+            flexShrink: 0,
             px: 4,
             pt: 3,
             pb: 2,
@@ -190,7 +211,16 @@ export default function FilterSheet({
         </Box>
         <Stack
           spacing={5}
-          sx={{ px: 4, py: 2, overflowY: 'auto', flexGrow: 1 }}
+          sx={{
+            px: 4,
+            py: 2,
+            // Without minHeight 0 a flex child does not shrink, and nothing
+            // scrolls: the buttons fell off the screen (owner, 2026-10-11)
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+          }}
         >
           {filters.map((filter, index) => (
             <FilterField
@@ -203,6 +233,7 @@ export default function FilterSheet({
         <Box
           sx={{
             display: 'flex',
+            flexShrink: 0,
             gap: 2,
             px: 4,
             pt: 3,

@@ -768,6 +768,7 @@ function FleetScreen() {
                 ? [
                     sheetFilter({
                       label: 'Marca',
+                      list: true,
                       allLabel: 'Todas',
                       options: brandOptions.map(value => ({
                         value,
@@ -787,6 +788,7 @@ function FleetScreen() {
                 ? [
                     sheetFilter({
                       label: 'Modelo',
+                      list: true,
                       allLabel: 'Todos',
                       options: modelOptions.map(value => ({
                         value,
@@ -815,6 +817,7 @@ function FleetScreen() {
                 ? [
                     sheetFilter({
                       label: 'Cliente',
+                      list: true,
                       allLabel: 'Todos',
                       options: rateClientOptions,
                       value: rateClient,

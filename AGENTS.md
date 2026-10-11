@@ -157,8 +157,10 @@ en cada push y PR.
   `filterBy(filtro, opción)` y `filterChip(filtro)` de `src/testing/filterBy`.
   En Viajes, Gastos y Flota los filtros van en un **panel desde abajo** (`components/FilterSheet`,
   specs/0039): a la vista solo "Filtros" (y en Viajes, Agrupar y Ordenar como chips). Cada filtro
-  se describe con `sheetFilter({…})`, que mantiene los tipos de la pantalla; con hasta 3 opciones
-  son botones y con más (o con grupos) una lista con buscador. En los tests, `filterBy` y
+  se describe con `sheetFilter({…})`, que mantiene los tipos de la pantalla; una lista que crece
+  (clientes, camiones, conductores, destinos, categorías, marcas) lleva `list: true` y es siempre
+  una lista con buscador; las opciones fijas de hasta 3 son botones. En teléfono el panel sale
+  desde abajo; en pantallas más anchas, desde la derecha, de 350 px. En los tests, `filterBy` y
   `filterOptions` abren el panel solos; `sheetFilterNames()` da los filtros que ofrece.
 - **Tanques del teléfono (specs/0019):** `Tank` (en `types.ts`) tiene forma, posición y las medidas
   de su forma (`diameter`, o `height` y `width`), como la flota. Lo guardado antes no tiene forma:

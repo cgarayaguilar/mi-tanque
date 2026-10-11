@@ -363,6 +363,7 @@ function ExpensesScreen() {
                 ? [
                     sheetFilter({
                       label: 'Categoría',
+                      list: true,
                       allLabel: 'Todas',
                       options: options.categories,
                       value: categoryId,
@@ -381,6 +382,7 @@ function ExpensesScreen() {
                 ? [
                     sheetFilter({
                       label: 'Camión',
+                      list: true,
                       allLabel: 'Todos',
                       options: options.trucks,
                       value: truckId,

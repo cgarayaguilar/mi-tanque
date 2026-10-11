@@ -500,6 +500,7 @@ function TripsScreen() {
                   }),
                   sheetFilter({
                     label: 'Cliente',
+                    list: true,
                     allLabel: 'Todos',
                     options: options.clients,
                     value: filters.clientId,
@@ -509,6 +510,7 @@ function TripsScreen() {
                   }),
                   sheetFilter({
                     label: 'Camión',
+                    list: true,
                     allLabel: 'Todos',
                     options: options.trucks,
                     value: filters.truckId,
@@ -518,6 +520,7 @@ function TripsScreen() {
                   }),
                   sheetFilter({
                     label: 'Conductor',
+                    list: true,
                     allLabel: 'Todos',
                     options: options.drivers,
                     value: filters.driverId,
@@ -527,6 +530,7 @@ function TripsScreen() {
                   }),
                   sheetFilter({
                     label: 'Destino',
+                    list: true,
                     allLabel: 'Todos',
                     options: destinations,
                     value: filters.destination,
