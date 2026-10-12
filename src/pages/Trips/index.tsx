@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'wouter'
+import { sileo } from 'sileo'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -9,12 +10,16 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import AltRouteIcon from '@mui/icons-material/AltRoute'
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import EmptyState from 'components/EmptyState'
 import FilterChip, { FilterBar } from 'components/FilterChip'
-import FilterSheet, { sheetFilter } from 'components/FilterSheet'
+import FilterSheet, {
+  appliedFilters,
+  sheetFilter,
+} from 'components/FilterSheet'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import TripStatusChip from 'components/TripStatusChip'
@@ -51,6 +56,8 @@ import {
 import { OWNERSHIP_OPTIONS, thirdParty, tripOwnership } from 'utils/ownership'
 import { tripTotals } from 'utils/tripTotals'
 import { RETRY_HINT } from 'utils/withTimeout'
+import { reportError } from 'utils/reportError'
+import { tripReport, tripReportFileName } from 'utils/tripReport'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -209,12 +216,14 @@ function TripGroupSection({
 
 function TripsScreen() {
   const [, navigate] = useLocation()
-  const orgId = useSessionStore(state => state.organization?.id ?? '')
+  const organization = useSessionStore(state => state.organization)
+  const orgId = organization?.id ?? ''
   const role = useSessionStore(selectActiveRole)
   const canWrite = canWriteFleet(role)
   const trips = useTripsStore()
   const loadFleet = useFleetStore(state => state.load)
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
   // Kept in the store: back from a trip, the list is as it was (RF-8)
   const { load, view, setFilters, setGrouping, setOrder } = trips
   const { filters, grouping, order } = view
@@ -311,10 +320,119 @@ function TripsScreen() {
     order
   )
   const groups = grouping && groupTrips(shown, grouping, order, names)
+  // The filters, for the sheet and for the PDF's heading (specs/0040 RF-3)
+  const sheetFilters = [
+    sheetFilter({
+      label: 'Estado',
+      allLabel: 'Todos',
+      options: STATUS_OPTIONS,
+      value: filters.status,
+      onChange: status => {
+        setFilters({ status })
+      },
+    }),
+    sheetFilter({
+      label: 'Cliente',
+      list: true,
+      allLabel: 'Todos',
+      options: options.clients,
+      value: filters.clientId,
+      onChange: clientId => {
+        setFilters({ clientId })
+      },
+    }),
+    sheetFilter({
+      label: 'Camión',
+      list: true,
+      allLabel: 'Todos',
+      options: options.trucks,
+      value: filters.truckId,
+      onChange: truckId => {
+        setFilters({ truckId })
+      },
+    }),
+    sheetFilter({
+      label: 'Conductor',
+      list: true,
+      allLabel: 'Todos',
+      options: options.drivers,
+      value: filters.driverId,
+      onChange: driverId => {
+        setFilters({ driverId })
+      },
+    }),
+    sheetFilter({
+      label: 'Destino',
+      list: true,
+      allLabel: 'Todos',
+      options: destinations,
+      value: filters.destination,
+      onChange: destination => {
+        setFilters({ destination })
+      },
+    }),
+    // Own or of a third party (specs/0035 RF-6)
+    sheetFilter({
+      label: 'Dueño del camión',
+      allLabel: 'Todos',
+      options: OWNERSHIP_OPTIONS,
+      value: filters.truckOwnership,
+      onChange: truckOwnership => {
+        setFilters({ truckOwnership })
+      },
+    }),
+    sheetFilter({
+      label: 'Dueño del remolque',
+      allLabel: 'Todos',
+      options: OWNERSHIP_OPTIONS,
+      value: filters.trailerOwnership,
+      onChange: trailerOwnership => {
+        setFilters({ trailerOwnership })
+      },
+    }),
+  ]
   const totals = tripTotals(shown)
   const filtered = Object.values(filters).some(value => value !== null)
   const open = (trip: Trip) => {
     navigate(`/viajes/${trip.id}`)
+  }
+
+  // What is on the screen, as a PDF (specs/0040 RF-2): no new read; the
+  // drawing loads only now
+  const exportPdf = () => {
+    const name = organization?.name ?? ''
+    const report = tripReport({
+      organization: name,
+      period: periodText,
+      trips: shown,
+      groups: groups || null,
+      filters: appliedFilters(sheetFilters),
+      grouping: grouping ? TRIP_GROUPING_LABELS[grouping] : null,
+      order: TRIP_ORDER_LABELS[order],
+      names,
+      ownershipOf: trip => tripOwnership(trip, { trucks, trailers }),
+      currency: organization?.defaultCurrency ?? 'USD',
+      now: new Date(),
+    })
+    setExporting(true)
+    import('services/tripPdf')
+      .then(({ downloadTripReport }) => {
+        downloadTripReport(report, tripReportFileName(period, name))
+        sileo.success({ title: 'PDF listo' })
+      })
+      .catch((error: unknown) => {
+        reportError(error, {
+          operation: 'exportTripsPdf',
+          trips: shown.length,
+        })
+        sileo.error({
+          title: 'No pudimos generar el PDF',
+          description: 'Vuelve a intentarlo.',
+        })
+      })
+      .finally(() => {
+        setExporting(false)
+      })
   }
 
   const renderList = () => {
@@ -442,17 +560,33 @@ function TripsScreen() {
           }}
         >
           <Typography variant="pageTitle">Viajes</Typography>
-          {canWrite && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                navigate('/viajes/nuevo')
-              }}
-            >
-              Agregar
-            </Button>
-          )}
+          <Stack direction="row" spacing={2}>
+            {/* For every role, with what the period has (specs/0040 RF-1) */}
+            {trips.items.length > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<PictureAsPdfOutlinedIcon />}
+                aria-label="Exportar viajes en PDF"
+                disabled={shown.length === 0}
+                loading={exporting}
+                loadingPosition="start"
+                onClick={exportPdf}
+              >
+                PDF
+              </Button>
+            )}
+            {canWrite && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  navigate('/viajes/nuevo')
+                }}
+              >
+                Agregar
+              </Button>
+            )}
+          </Stack>
         </Box>
 
         <Typography
@@ -488,76 +622,7 @@ function TripsScreen() {
                     ? 'Ver 1 viaje'
                     : `Ver ${String(shown.length)} viajes`
                 }
-                filters={[
-                  sheetFilter({
-                    label: 'Estado',
-                    allLabel: 'Todos',
-                    options: STATUS_OPTIONS,
-                    value: filters.status,
-                    onChange: status => {
-                      setFilters({ status })
-                    },
-                  }),
-                  sheetFilter({
-                    label: 'Cliente',
-                    list: true,
-                    allLabel: 'Todos',
-                    options: options.clients,
-                    value: filters.clientId,
-                    onChange: clientId => {
-                      setFilters({ clientId })
-                    },
-                  }),
-                  sheetFilter({
-                    label: 'Camión',
-                    list: true,
-                    allLabel: 'Todos',
-                    options: options.trucks,
-                    value: filters.truckId,
-                    onChange: truckId => {
-                      setFilters({ truckId })
-                    },
-                  }),
-                  sheetFilter({
-                    label: 'Conductor',
-                    list: true,
-                    allLabel: 'Todos',
-                    options: options.drivers,
-                    value: filters.driverId,
-                    onChange: driverId => {
-                      setFilters({ driverId })
-                    },
-                  }),
-                  sheetFilter({
-                    label: 'Destino',
-                    list: true,
-                    allLabel: 'Todos',
-                    options: destinations,
-                    value: filters.destination,
-                    onChange: destination => {
-                      setFilters({ destination })
-                    },
-                  }),
-                  // Own or of a third party (specs/0035 RF-6)
-                  sheetFilter({
-                    label: 'Dueño del camión',
-                    allLabel: 'Todos',
-                    options: OWNERSHIP_OPTIONS,
-                    value: filters.truckOwnership,
-                    onChange: truckOwnership => {
-                      setFilters({ truckOwnership })
-                    },
-                  }),
-                  sheetFilter({
-                    label: 'Dueño del remolque',
-                    allLabel: 'Todos',
-                    options: OWNERSHIP_OPTIONS,
-                    value: filters.trailerOwnership,
-                    onChange: trailerOwnership => {
-                      setFilters({ trailerOwnership })
-                    },
-                  }),
-                ]}
+                filters={sheetFilters}
               />
               <FilterChip
                 label="Agrupar"

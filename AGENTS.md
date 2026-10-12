@@ -296,6 +296,16 @@ en cada push y PR.
   viaje). La app nunca borra un archivo: borra el documento y el trigger del backend borra su
   archivo; al borrar el viaje, también sus documentos. Renombran o borran el Dueño, el
   Supervisor o quien lo subió (`canManageDocument`).
+- **Viajes en PDF (specs/0040):** el botón "PDF" de Viajes exporta lo que se ve (los viajes del
+  periodo con sus filtros, su agrupado y su orden), sin leer otra vez el servidor. El contenido lo
+  arma `tripReport` (`utils/tripReport`, pura, con tests): encabezado con lo aplicado
+  (`appliedFilters` de `components/FilterSheet`), filas, subtotales por grupo y total, cada
+  moneda aparte. Lo dibuja `services/tripPdf` con jsPDF y `jspdf-autotable` (carta horizontal,
+  encabezado de tabla en cada hoja, "Página N de M"), cargado con `import()` al tocar el botón.
+  La fuente estándar del PDF (Helvetica, WinAnsi) no trae "→" ni "₡": `pdfText` cambia la flecha
+  por "–" y quita lo que no tiene, y los montos van sin símbolo con el código de la moneda. El
+  PDF usa los colores claros de los tokens. `html2canvas` y `purify` (de jsPDF, sin usar) quedan
+  fuera del precache (`globIgnores` en `vite.config.mjs`).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,

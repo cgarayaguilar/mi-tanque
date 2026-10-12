@@ -10,6 +10,7 @@ import { sileo } from 'sileo'
 import App from '../../App'
 import TripForm from 'pages/TripEditor/TripForm'
 import type { TripDocument } from 'schemas/tripDocuments'
+import type { TripReport } from 'utils/tripReport'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
@@ -60,6 +61,9 @@ const documentsApi = vi.hoisted(() => ({
   PHOTO_TOO_BIG: 'trip-document-photo-too-big',
 }))
 vi.mock('services/tripDocuments', () => documentsApi)
+
+const pdfApi = vi.hoisted(() => ({ downloadTripReport: vi.fn() }))
+vi.mock('services/tripPdf', () => pdfApi)
 
 const tripsApi = vi.hoisted(() => ({
   readTripsInPeriod: vi.fn(),
@@ -1585,5 +1589,47 @@ describe('its documents', () => {
         { exact: false }
       )
     ).toBeInTheDocument()
+  })
+})
+
+// backend specs/0040
+describe('the PDF', () => {
+  // CA-1, CA-2: what the screen shows, with its filters, grouping and order
+  test('it takes what is shown, as it is shown', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+    await filterBy('Cliente', 'Transportes Pérez')
+    await filterBy('Agrupar', 'Camión')
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar viajes en PDF' })
+    )
+
+    await waitFor(() => {
+      expect(sileo.success).toHaveBeenCalledWith({ title: 'PDF listo' })
+    })
+    const [report, fileName] = pdfApi.downloadTripReport.mock.lastCall as [
+      TripReport,
+      string,
+    ]
+    expect(fileName).toMatch(/^solo-camioneros-viajes-.+_.+\.pdf$/)
+    expect(report.applied).toBe(
+      'Cliente: Transportes Pérez · Agrupado por Camión · Orden: Fecha, más reciente primero'
+    )
+    expect(report.sections.map(section => section.title)).toEqual(['Unidad 12'])
+    expect(report.sections[0]?.rows).toHaveLength(2)
+  })
+
+  test('a viewer exports too; nothing shown, nothing to export', async () => {
+    signIn('viewer')
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+    const button = screen.getByRole('button', {
+      name: 'Exportar viajes en PDF',
+    })
+    expect(button).toBeEnabled()
+
+    await filterBy('Estado', 'Terminado')
+    expect(button).toBeDisabled()
   })
 })

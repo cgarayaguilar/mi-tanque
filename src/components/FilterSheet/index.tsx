@@ -64,8 +64,20 @@ export const sheetFilter = <T extends string>(filter: {
 })
 
 /** Whether a filter narrows the list (RF-2). */
-const isActive = (filter: SheetFilter) =>
+export const isActive = (filter: SheetFilter) =>
   filter.value !== null && filter.value !== filter.defaultValue
+
+/** "Cliente: Walmart", one per filter on: what a report says (specs/0040). */
+export const appliedFilters = (filters: readonly SheetFilter[]) =>
+  filters
+    .filter(isActive)
+    .map(
+      filter =>
+        `${filter.label}: ${
+          filter.options.find(option => option.value === filter.value)?.label ??
+          String(filter.value)
+        }`
+    )
 
 // The "Todos" option of a field: '' is no filter
 const ALL = ''
