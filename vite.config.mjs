@@ -59,6 +59,9 @@ const pwa = VitePWA({
   },
   workbox: {
     globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+    // jsPDF's own HTML renderer, never used: the trips' PDF draws a table
+    // (backend specs/0040); every phone would download it for nothing
+    globIgnores: ['**/html2canvas-*.js', '**/purify.es-*.js'],
     // Firebase Auth's sign-in handler is proxied to Firebase (vercel.json):
     // it must reach the network, never the app shell
     navigateFallbackDenylist: [/^\/__\//],
