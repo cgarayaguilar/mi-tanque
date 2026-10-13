@@ -13,7 +13,6 @@ import {
   expenseToRow,
   refuelBaseKind,
   refuelExpenseChanges,
-  tripCarriesRefuel,
   tripIsAtHand,
   totalsByCategory,
   totalsByCurrency,
@@ -369,16 +368,6 @@ describe("a refuel's expense", () => {
     expect(refuelBaseKind(truckRefuel.equipment)).toBe('truck')
     expect(refuelBaseKind(trailerRefuel.equipment)).toBe('trailer')
     expect(refuelBaseKind({ kind: 'none', id: null })).toBe('general')
-  })
-
-  test('a trip takes it only if it carries its truck or trailer', () => {
-    expect(tripCarriesRefuel(trip(), truckRefuel.equipment)).toBe(true)
-    expect(
-      tripCarriesRefuel(trip({ truckId: 'truck-2' }), truckRefuel.equipment)
-    ).toBe(false)
-    expect(
-      tripCarriesRefuel(trip({ truckId: 'truck-2' }), trailerRefuel.equipment)
-    ).toBe(true)
   })
 
   test('the changes are its link and description, nothing else', () => {

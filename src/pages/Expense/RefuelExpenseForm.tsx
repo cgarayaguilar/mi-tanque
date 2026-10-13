@@ -1,9 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
 import { sileo } from 'sileo'
-import { format } from 'date-fns'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -11,21 +10,14 @@ import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
-import AutocompleteField from 'components/AutocompleteField'
-import ChoiceButtons from 'components/ChoiceButtons'
 import EmptyState from 'components/EmptyState'
 import PhotoField from 'components/PhotoField'
 import TextField from 'components/TextField'
-import { useTrip } from 'hooks/useTrip'
 import {
-  EXPENSE_KIND_LABELS,
   EXPENSE_LIMITS,
-  refuelBaseKind,
+  expenseLinkText,
   refuelExpenseChanges,
   refuelExpenseFormSchema,
-  tripCarriesRefuel,
-  TRIP_NOT_AT_HAND,
-  tripIsAtHand,
   type Expense,
   type RefuelExpenseFormValues,
   type RefuelOfExpense,
@@ -34,14 +26,11 @@ import { readRefuelOfExpense, updateRefuelExpense } from 'services/expenses'
 import { photoUrl } from 'services/fleet'
 import { useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
-import { recoverFromLostPermission, useSessionStore } from 'store/session'
-import { useTripsStore } from 'store/trips'
+import { recoverFromLostPermission } from 'store/session'
 import { formatMeasurementDate } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
 import { reportError } from 'utils/reportError'
 import { RETRY_HINT } from 'utils/withTimeout'
-import TripDialog from 'pages/TripEditor/TripDialog'
-import { tripOption, useTripChoices } from './useTripChoices'
 
 const FORM_ID = 'refuel-expense-form'
 
@@ -119,7 +108,6 @@ interface RefuelExpenseFormProps {
  */
 export default function RefuelExpenseForm({
   expense,
-  orgId,
   canWrite,
   backTo,
 }: RefuelExpenseFormProps) {
@@ -127,20 +115,11 @@ export default function RefuelExpenseForm({
   const { trucks, trailers } = useFleetStore()
   const categories = useExpensesStore(state => state.categories)
   const save = useExpensesStore(state => state.save)
-  const tripsKnown = useTripsStore(state => state.known)
-  const currency = useSessionStore(
-    state => state.organization?.defaultCurrency ?? 'USD'
-  )
-  // "+ Crear viaje", with its truck or trailer (specs/0031 RF-3)
-  const [newTrip, setNewTrip] = useState(false)
   const [loaded, retryRefuel] = useRefuelOfExpense(expense.refuelId)
   const refuel = loaded.status === 'ready' ? loaded.refuel : null
   const {
     register,
     handleSubmit,
-    control,
-    setError,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RefuelExpenseFormValues>({
     resolver: zodResolver(refuelExpenseFormSchema),
@@ -151,17 +130,6 @@ export default function RefuelExpenseForm({
     },
     disabled: !canWrite,
   })
-  const values = useWatch({ control })
-  const [ownTrip] = useTrip(expense.tripId)
-  const { choices, loading } = useTripChoices(
-    orgId,
-    values.kind === 'trip' ? format(expense.takenAt, 'yyyy-MM-dd') : null,
-    [
-      ownTrip.status === 'ready' ? ownTrip.trip : null,
-      // One just created here, whatever its date
-      values.tripId ? (tripsKnown[values.tripId] ?? null) : null,
-    ]
-  )
 
   if (loaded.status === 'loading') {
     return (
@@ -184,9 +152,6 @@ export default function RefuelExpenseForm({
   }
 
   const equipment = refuel.equipment
-  const baseKind = refuelBaseKind(equipment)
-  // Only the trips that carry its truck or trailer (RF-6)
-  const trips = choices.filter(trip => tripCarriesRefuel(trip, equipment))
   const equipmentName =
     (equipment.kind === 'truck' ? trucks : trailers).find(
       item => item.id === equipment.id
@@ -197,18 +162,12 @@ export default function RefuelExpenseForm({
     expense.categoryName
 
   const onSubmit = (values: RefuelExpenseFormValues) => {
-    const trip =
-      values.kind === 'trip'
-        ? (trips.find(item => item.id === values.tripId) ?? null)
-        : null
-    if (!tripIsAtHand(values, trip, expense)) {
-      setError('tripId', { message: TRIP_NOT_AT_HAND }, { shouldFocus: true })
-      return
-    }
+    // Only the description: the link stays as the refuel left it (specs/0042
+    // RF-5)
     const changes = refuelExpenseChanges(
       values,
       refuel,
-      trip,
+      null,
       equipmentName,
       expense
     )
@@ -256,42 +215,17 @@ export default function RefuelExpenseForm({
         }}
       >
         <Stack spacing={5}>
-          {/* A tank without equipment: its refuel stays general */}
-          {baseKind === 'general' ? (
-            <Line label="Corresponde a">{EXPENSE_KIND_LABELS.general}</Line>
-          ) : (
-            <ChoiceButtons
-              id="refuelExpenseKind"
-              label="Corresponde a"
-              options={[
-                { value: 'trip', label: EXPENSE_KIND_LABELS.trip },
-                { value: baseKind, label: EXPENSE_KIND_LABELS[baseKind] },
-              ]}
-              control={control}
-              name="kind"
-              disabled={!canWrite}
-            />
-          )}
-          {values.kind === 'trip' && (
-            <AutocompleteField
-              id="refuelExpenseTrip"
-              label="Viaje"
-              options={trips.map(tripOption)}
-              placeholder={loading ? 'Buscando viajes…' : 'Busca el viaje'}
-              hint={`Los de ${equipmentName ?? 'su equipo'} que empezaron hasta 30 días antes o después.`}
-              error={errors.tripId?.message}
-              control={control}
-              name="tripId"
-              disabled={!canWrite}
-              create={{
-                label: 'Crear viaje',
-                withText: false,
-                onCreate: () => {
-                  setNewTrip(true)
-                },
-              }}
-            />
-          )}
+          {/* Its trip is chosen in the refuel now (backend specs/0042 RF-5) */}
+          <Line label="Corresponde a">
+            {expenseLinkText(expense)}
+            <Typography
+              variant="caption"
+              component="span"
+              sx={{ display: 'block', color: 'text.secondary' }}
+            >
+              Se cambia en el relleno, en Historial.
+            </Typography>
+          </Line>
           <TextField
             id="refuelExpenseDescription"
             label="Descripción (opcional)"
@@ -323,30 +257,6 @@ export default function RefuelExpenseForm({
             loadUrl={photoUrl}
           />
         </Box>
-      )}
-      {newTrip && (
-        <TripDialog
-          orgId={orgId}
-          currency={currency}
-          preset={
-            equipment.kind === 'truck'
-              ? { truckId: equipment.id ?? '' }
-              : { trailerId: equipment.id ?? '' }
-          }
-          onSaved={trip => {
-            if (tripCarriesRefuel(trip, equipment)) {
-              setValue('tripId', trip.id, { shouldValidate: true })
-              return
-            }
-            sileo.warning({
-              title: 'Guardamos el viaje, pero este relleno no puede ir en él',
-              description: `El relleno es de ${equipmentName ?? 'otro equipo'}.`,
-            })
-          }}
-          onClose={() => {
-            setNewTrip(false)
-          }}
-        />
       )}
     </>
   )

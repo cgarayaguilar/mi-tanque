@@ -522,7 +522,14 @@ describe("a refuel's expense", () => {
     expect(card).toHaveTextContent('Relleno')
   })
 
-  test('only its link and description change, to a trip of its truck', async () => {
+  // backend specs/0042 RF-5, CA-5: its trip is chosen in the refuel
+  test('its link is shown, not changed; its description is', async () => {
+    expensesApi.readExpense.mockResolvedValue({
+      ...refuelExpense,
+      kind: 'trip',
+      tripId: 'trip-1',
+      tripRoute: 'Managua → San José',
+    })
     renderAt('/gastos/r1')
 
     expect(
@@ -534,25 +541,17 @@ describe("a refuel's expense", () => {
     expect(screen.getByText('C$4,500.00 NIO')).toBeInTheDocument()
     expect(screen.queryByLabelText('Monto')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Borrar' })).toBeNull()
-
-    await choose('Corresponde a', 'Viaje')
-    const field = screen.getByRole('combobox', { name: 'Viaje' })
-    fireEvent.mouseDown(field)
-    // The trip of another truck is not offered
+    expect(screen.getByText('Viaje Managua → San José')).toBeInTheDocument()
     expect(
-      (await screen.findAllByRole('option')).map(option => option.textContent)
-    ).toEqual([
-      // specs/0031 RF-3
-      '+ Crear viaje',
-      'mar 6 oct · Managua → San José · Transportes Pérez',
-    ])
-    fireEvent.click(
-      screen.getByRole('option', {
-        name: 'mar 6 oct · Managua → San José · Transportes Pérez',
-      })
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+      screen.getByText('Se cambia en el relleno, en Historial.')
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Corresponde a' })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: 'Viaje' })).toBeNull()
 
+    fireEvent.change(screen.getByLabelText('Descripción (opcional)'), {
+      target: { value: 'Diésel en Puma Km 7' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => {
       expect(expensesApi.updateRefuelExpense).toHaveBeenCalledWith('r1', {
         kind: 'trip',
@@ -560,39 +559,12 @@ describe("a refuel's expense", () => {
         tripRoute: 'Managua → San José',
         truckId: 'truck-1',
         truckName: 'Unidad 12',
-        trailerId: 'trailer-1',
-        trailerName: 'Caja 7',
-        description: 'Relleno de Tanque izquierdo',
+        trailerId: null,
+        trailerName: null,
+        description: 'Diésel en Puma Km 7',
       })
     })
     expect(sileo.success).toHaveBeenCalledWith({ title: 'Gasto guardado' })
-  })
-
-  test('back from a trip to its truck', async () => {
-    expensesApi.readExpense.mockResolvedValue({
-      ...refuelExpense,
-      kind: 'trip',
-      tripId: 'trip-1',
-      tripRoute: 'Managua → San José',
-    })
-    renderAt('/gastos/r1')
-    await screen.findByText(/Este gasto es de un relleno/)
-    await choose('Corresponde a', 'Camión')
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Guardar cambios' })
-    )
-    await waitFor(() => {
-      expect(expensesApi.updateRefuelExpense).toHaveBeenCalledWith(
-        'r1',
-        expect.objectContaining({
-          kind: 'truck',
-          tripId: null,
-          truckId: 'truck-1',
-          truckName: 'Unidad 12',
-          trailerId: null,
-        })
-      )
-    })
   })
 })
 
@@ -739,43 +711,6 @@ describe('creating its trip', () => {
       expect(screen.queryByRole('dialog')).toBeNull()
     })
     expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
-  })
-
-  // CA-5
-  test("a refuel's trip opens with its truck and is chosen", async () => {
-    expensesApi.readExpense.mockResolvedValue(
-      expense({
-        id: 'r1',
-        refuelId: 'r1',
-        kind: 'truck',
-        tripId: null,
-        tripRoute: null,
-        categoryId: 'org-a_fuel',
-        categoryName: 'Combustible',
-        amount: 4500,
-        takenAt: new Date(2026, 9, 6, 12),
-      })
-    )
-    expensesApi.readRefuelOfExpense.mockResolvedValue({
-      tankName: 'Tanque izquierdo',
-      equipment: { kind: 'truck', id: 'truck-2' },
-    })
-    renderAt('/gastos/r1')
-    await screen.findByRole('group', { name: 'Corresponde a' })
-    await choose('Corresponde a', 'Viaje')
-    const dialog = await openTripDialog()
-    expect(
-      within(dialog).getByRole('combobox', { name: 'Camión' })
-    ).toHaveValue('Unidad 15')
-    await fillTrip(dialog)
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Guardar viaje' })
-    )
-    await waitFor(() => {
-      expect(
-        screen.getByRole<HTMLInputElement>('combobox', { name: 'Viaje' }).value
-      ).toContain('Managua → León')
-    })
   })
 })
 

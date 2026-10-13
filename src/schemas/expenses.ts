@@ -446,14 +446,6 @@ export const refuelBaseKind = (
 ): ExpenseKind =>
   equipment.id && equipment.kind !== 'none' ? equipment.kind : 'general'
 
-/** Whether a trip carries the refuel's truck or trailer (RF-6). */
-export const tripCarriesRefuel = (
-  trip: Pick<Trip, 'truckId' | 'trailerId'>,
-  equipment: RefuelOfExpense['equipment']
-) =>
-  (equipment.kind === 'truck' && trip.truckId === equipment.id) ||
-  (equipment.kind === 'trailer' && trip.trailerId === equipment.id)
-
 export const refuelExpenseFormSchema = z
   .object({
     kind: z.enum(EXPENSE_KINDS),
