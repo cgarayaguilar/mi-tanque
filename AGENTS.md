@@ -215,10 +215,10 @@ en cada push y PR.
   (`expenseDateIssue`, como las reglas).
 - **Rellenos y su gasto (specs/0027):** cada relleno con cuenta tiene su gasto de Combustible,
   `expenses/{id del relleno}`, con `refuelId`; lo crea, actualiza y borra el trigger
-  `onRefuelExpense` del backend (al viaje En curso de su camión o remolque). La app escribe
-  `refuelId: null` en todo gasto suyo, nunca crea ni borra el de un relleno, y solo le cambia a qué
-  corresponde y la descripción: `pages/Expense/RefuelExpenseForm` (`refuelExpenseChanges`,
-  `tripCarriesRefuel`, `updateRefuelExpense`; el relleno se lee con `readRefuelOfExpense`). En
+  `onRefuelExpense` del backend (al viaje del relleno, specs/0042; uno de antes, al viaje En curso
+  de su camión o remolque). La app escribe `refuelId: null` en todo gasto suyo, nunca crea ni borra
+  el de un relleno, y solo le cambia la descripción: `pages/Expense/RefuelExpenseForm`
+  (`refuelExpenseChanges`, `updateRefuelExpense`; el relleno se lee con `readRefuelOfExpense`). En
   el formulario del viaje es una tarjeta con "Relleno", sin menú, que nunca se quita. Con cuenta, el
   relleno va en la moneda de la organización y `RefuelForm` no muestra selector (los importados
   del teléfono conservan la suya).
@@ -308,6 +308,18 @@ en cada push y PR.
   `?inline`: así todo monto lleva su símbolo (`moneyAmount` en las celdas, `moneyTotal` en los
   totales, también "₡") y las rutas su "→". `pdfText` quita lo que la fuente no tiene
   (`PDF_FONT_RANGES`). `html2canvas` y `purify` (de jsPDF, sin usar) quedan fuera del precache.
+- **Mediciones y rellenos de un viaje (specs/0042):** los dos tienen `tripId` y `tripRoute`
+  opcionales (`TripLink`, `schemas/tripLink`; lo de antes se lee como `null`). "Viaje (opcional)"
+  es `useTripLink` (`hooks/useTripLink`): ofrece los viajes de ±30 días (`useTripChoices`, ahora en
+  `hooks/`) que llevan el camión o remolque del tanque (`tripsForEquipment`) y trae elegido el En
+  curso (`tripInProgress`, `utils/tripOfEquipment`, la misma regla que el backend). Sin señal queda
+  "Sin viaje" y se guarda igual. En `RefuelList` (compartida con el modo sin cuenta) el campo
+  llega por `editTrip` (`TripLinkPicker`). Un relleno de antes no dice su viaje (`tripChosen`
+  falso): al corregirlo, el campo toma el de su gasto (`readExpense`), y si no se puede leer no se
+  muestra ni se cambia. El gasto del relleno sigue a su viaje por el trigger; "Corresponde a" ya no
+  se cambia en el gasto. El viaje muestra sus mediciones (`pages/Trip/TripMeasurements`,
+  `readTripMeasurements`); Historial dice "Viaje: …" y filtra por viaje (`tripId` en
+  `store/cloudHistory`, `store/cloudRefuels` y el CSV).
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
