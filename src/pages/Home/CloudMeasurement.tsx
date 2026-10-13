@@ -9,6 +9,8 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocation } from 'wouter'
+import { useTripLink } from 'hooks/useTripLink'
+import type { TripLink } from 'schemas/tripLink'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ListItemIcon from '@mui/material/ListItemIcon'
@@ -277,19 +279,29 @@ function TankCard({
 }
 
 function MeasureForm({
+  orgId,
   tank,
   truck,
   canSave,
   onSaved,
   save,
 }: {
+  orgId: string
   tank: FleetTank
   truck: Truck | null
   canSave: boolean
   onSaved: () => void
-  save: (tank: FleetTank, reading: CloudReading) => void
+  save: (tank: FleetTank, reading: CloudReading, trip: TripLink) => void
 }) {
   const [reading, setReading] = useState<CloudReading | null>(null)
+  // Its trip, the one in progress by default (backend specs/0042 RF-2)
+  const [now] = useState(() => new Date())
+  const trip = useTripLink({
+    id: 'measureTrip',
+    orgId,
+    equipment: tank.equipment,
+    at: now,
+  })
   const [, navigate] = useLocation()
   const maxInches = maxInchesFor(tank)
   const {
@@ -307,7 +319,7 @@ function MeasureForm({
     const next = readingFor(tank, parseDecimal(inches), efficienciesOf(truck))
     setReading(next)
     if (!canSave) return
-    save(tank, next)
+    save(tank, next, trip.link)
     onSaved()
   }
 
@@ -331,6 +343,7 @@ function MeasureForm({
           error={errors.inches?.message}
           registration={register('inches')}
         />
+        {canSave && trip.field}
         <Button type="submit" variant="contained" size="large" fullWidth>
           Calcular
         </Button>
@@ -562,6 +575,7 @@ export default function CloudMeasurement() {
             // A different tank is a new form: fresh values and limits
             <MeasureForm
               key={tank.id}
+              orgId={orgId}
               tank={tank}
               truck={truck}
               canSave={canWriteFleet(role)}

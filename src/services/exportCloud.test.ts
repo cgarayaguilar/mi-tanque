@@ -60,6 +60,7 @@ test('reads every page of the period and filter, 500 at a time (RF-8, CA-4)', as
     start: period.start,
     end: period.end,
     equipmentId: 'truck-1',
+    tripId: null,
     after: cursor,
     pageSize: 500,
   })

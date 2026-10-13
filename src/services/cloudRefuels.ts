@@ -25,6 +25,7 @@ import { loadFirebase, loadStorage } from 'services/firebase'
 import { photoUrl } from 'services/fleet'
 import type { RefuelValues } from 'types'
 import type { Position } from 'utils/getCurrentPosition'
+import type { TripLink } from 'schemas/tripLink'
 import { reportError } from 'utils/reportError'
 import { withTimeout } from 'utils/withTimeout'
 
@@ -35,7 +36,7 @@ export interface TruckTotals {
   truckGallonsAfter: number | null
 }
 
-export interface CloudRefuel extends RefuelValues, TruckTotals {
+export interface CloudRefuel extends RefuelValues, TruckTotals, TripLink {
   id: string
   orgId: string
   tankId: string
@@ -51,6 +52,11 @@ export interface CloudRefuel extends RefuelValues, TruckTotals {
   invoicePhotoPath: string | null
   odometerKm: number | null
   source: 'app' | 'import'
+  /**
+   * Whether it says its trip (specs/0042 RF-4), even as none. One from
+   * before does not: its trip is its expense's, set by the backend.
+   */
+  tripChosen: boolean
 }
 
 const unit = z.enum(['gallon', 'liter'])
@@ -100,6 +106,8 @@ const schema = z.object({
   invoicePhotoPath: z.nullable(z.string()),
   odometerKm: nullableNumber,
   source: z.enum(['app', 'import']),
+  tripId: z._default(z.nullable(z.string()), null),
+  tripRoute: z._default(z.nullable(z.string()), null),
 })
 
 const toDate = (value: unknown): Date | null =>
@@ -122,6 +130,7 @@ const toRefuel = (snapshot: QueryDocumentSnapshot): CloudRefuel | null => {
     takenAt,
     // Pending server timestamp on a local write: treat as just now
     createdAt: toDate(data.createdAt) ?? new Date(),
+    tripChosen: 'tripId' in data,
   }
 }
 
@@ -137,16 +146,19 @@ export interface NewCloudRefuel {
   values: RefuelValues
   totals: TruckTotals
   odometerKm: number | null
+  /** Its trip, or none: its expense follows it (specs/0042 RF-4). */
+  trip: TripLink
 }
 
 /** Written with the intent id as its id (ADR 0003); settles on the server. */
 export const createCloudRefuel = async (refuel: NewCloudRefuel) => {
   const { db } = await loadFirebase()
-  const { values, totals, takenAt, id, ...rest } = refuel
+  const { values, totals, takenAt, id, trip, ...rest } = refuel
   await setDoc(doc(db, 'refuels', id), {
     ...rest,
     ...values,
     ...totals,
+    ...trip,
     takenAt: Timestamp.fromDate(takenAt),
     location: null,
     place: null,
@@ -181,18 +193,24 @@ export interface RefuelEdit {
   values: RefuelValues
   totals: TruckTotals
   odometerKm: number | null
+  /**
+   * Its trip (specs/0042 RF-3); undefined leaves it as it is: a refuel from
+   * before whose expense could not be read keeps the backend's link.
+   */
+  trip?: TripLink | undefined
 }
 
 export const updateCloudRefuel = async (
   id: string,
   uid: string,
-  { values, totals, odometerKm }: RefuelEdit
+  { values, totals, odometerKm, trip }: RefuelEdit
 ) => {
   const { db } = await loadFirebase()
   await updateDoc(doc(db, 'refuels', id), {
     ...values,
     ...totals,
     odometerKm,
+    ...(trip && { tripId: trip.tripId, tripRoute: trip.tripRoute }),
     updatedAt: serverTimestamp(),
     updatedBy: uid,
   })
@@ -214,6 +232,8 @@ export const readRefuelsPage = async (options: {
   start: Date
   end: Date
   equipmentId: string | null
+  /** Only one trip's (specs/0042 RF-8); null for all. */
+  tripId?: string | null
   after: QueryDocumentSnapshot | null
   /** Pages of the history; exporting reads bigger ones (specs/0007). */
   pageSize?: number
@@ -224,6 +244,7 @@ export const readRefuelsPage = async (options: {
     ...(options.equipmentId
       ? [where('equipment.id', '==', options.equipmentId)]
       : []),
+    ...(options.tripId ? [where('tripId', '==', options.tripId)] : []),
     where('takenAt', '>=', Timestamp.fromDate(options.start)),
     where('takenAt', '<=', Timestamp.fromDate(options.end)),
     orderBy('takenAt', 'desc'),

@@ -8,6 +8,7 @@ import {
 import { sileo } from 'sileo'
 import App from '../../App'
 import { canChange } from 'pages/History/CloudHistory'
+import { tripOption } from 'hooks/useTripChoices'
 import { useCloudHistoryStore } from 'store/cloudHistory'
 import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
@@ -17,9 +18,10 @@ import {
   cloudMeasurement,
   tank,
   trailer,
+  trip,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
+import { choose, chosen } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -34,6 +36,10 @@ const historyApi = vi.hoisted(() => ({
   deleteCloudMeasurement: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/cloudMeasurements', () => historyApi)
+
+// The trips of the period, for the "Viaje" filter and the edit (specs/0042)
+const tripsApi = vi.hoisted(() => ({ readTripsInPeriod: vi.fn() }))
+vi.mock('services/trips', () => tripsApi)
 
 const HOUR = 3_600_000
 
@@ -82,6 +88,10 @@ beforeEach(() => {
       cloudMeasurement(),
     ],
     cursor: null,
+  })
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [trip()],
+    truncated: false,
   })
   signIn()
 })
@@ -479,4 +489,55 @@ test('a failed load offers to retry', async () => {
   expect(
     await screen.findByRole('article', { name: 'Tanque izquierdo' })
   ).toBeInTheDocument()
+})
+
+describe('its trip (backend specs/0042)', () => {
+  const onTrip = () =>
+    cloudMeasurement({ tripId: 'trip-1', tripRoute: 'Managua → San José' })
+
+  test('the card says its trip; the filter reads only that trip (RF-7, RF-8)', async () => {
+    historyApi.readHistoryPage.mockResolvedValue({
+      items: [onTrip()],
+      cursor: null,
+    })
+    renderHistory()
+    const card = await screen.findByRole('article', {
+      name: 'Tanque izquierdo',
+    })
+    expect(await within(card).findByRole('listitem')).toHaveTextContent(
+      'Viaje: Managua → San José'
+    )
+
+    await choose('Viaje', tripOption(trip()).label)
+    await waitFor(() => {
+      expect(historyApi.readHistoryPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tripId: 'trip-1', after: null })
+      )
+    })
+  })
+
+  test('correcting it opens with its trip, and can leave it without one (RF-3)', async () => {
+    historyApi.readHistoryPage.mockResolvedValue({
+      items: [onTrip()],
+      cursor: null,
+    })
+    renderHistory()
+    await openOptions('Editar')
+    const dialog = screen.getByRole('dialog', { name: 'Corregir medición' })
+    await waitFor(() => {
+      expect(chosen('Viaje (opcional)', dialog)).toContain('Managua → San José')
+    })
+    await choose('Viaje (opcional)', 'Sin viaje', dialog)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => {
+      expect(historyApi.updateCloudMeasurement).toHaveBeenCalledWith(
+        'm-1',
+        'luis',
+        expect.objectContaining({
+          trip: { tripId: null, tripRoute: null },
+        })
+      )
+    })
+  })
 })

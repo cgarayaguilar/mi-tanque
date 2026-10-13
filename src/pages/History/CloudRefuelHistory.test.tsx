@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react'
 import { sileo } from 'sileo'
 import App from '../../App'
+import { tripOption } from 'hooks/useTripChoices'
 import type { CloudRefuel } from 'services/cloudRefuels'
 import { useCloudHistoryStore } from 'store/cloudHistory'
 import { useCloudRefuelsStore } from 'store/cloudRefuels'
@@ -15,12 +16,14 @@ import { useSessionStore } from 'store/session'
 import type { Role } from 'utils/roles'
 import {
   accountWithRole,
+  expense,
   ORG_ID,
   tank,
   trailer,
+  trip,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
+import { choose, chosen } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -43,7 +46,15 @@ const refuelsApi = vi.hoisted(() => ({
 }))
 vi.mock('services/cloudRefuels', () => refuelsApi)
 
+// "Viaje (opcional)" when correcting, and the trip of a refuel from before,
+// read from its expense (backend specs/0042 RF-3)
+const tripsApi = vi.hoisted(() => ({ readTripsInPeriod: vi.fn() }))
+vi.mock('services/trips', () => tripsApi)
+const expensesApi = vi.hoisted(() => ({ readExpense: vi.fn() }))
+vi.mock('services/expenses', () => expensesApi)
+
 const DAY = 24 * 60 * 60 * 1000
+const LEON = trip({ id: 'trip-2', origin: 'León', destination: 'Tegucigalpa' })
 
 const refuel = (overrides: Partial<CloudRefuel> = {}): CloudRefuel => ({
   id: 'r1',
@@ -78,6 +89,9 @@ const refuel = (overrides: Partial<CloudRefuel> = {}): CloudRefuel => ({
   invoicePhotoPath: null,
   odometerKm: 101000,
   source: 'app',
+  tripId: null,
+  tripRoute: null,
+  tripChosen: true,
   ...overrides,
 })
 
@@ -123,6 +137,11 @@ beforeEach(() => {
     ],
     cursor: null,
   })
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [trip(), LEON],
+    truncated: false,
+  })
+  expensesApi.readExpense.mockResolvedValue(null)
   signIn()
 })
 
@@ -240,4 +259,100 @@ test('the invoice opens from the row (RF-6)', async () => {
   expect(refuelsApi.invoiceUrl).toHaveBeenCalledWith(
     'orgs/org-a/refuels/r1/invoice.jpg'
   )
+})
+
+describe('its trip (backend specs/0042)', () => {
+  const editFirst = async () => {
+    const [options] = await screen.findAllByRole('button', {
+      name: /Opciones del relleno/,
+    })
+    fireEvent.click(options as HTMLElement)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }))
+    return screen.getByRole('dialog', { name: 'Corregir relleno' })
+  }
+
+  const save = (dialog: HTMLElement) => {
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+  }
+
+  test('the row says its trip; correcting it moves it to another (RF-3, RF-7)', async () => {
+    refuelsApi.readRefuelsPage.mockResolvedValue({
+      items: [refuel({ tripId: 'trip-1', tripRoute: 'Managua → San José' })],
+      cursor: null,
+    })
+    await openRefuels()
+    expect(
+      await screen.findByText('Viaje: Managua → San José', { exact: false })
+    ).toBeInTheDocument()
+
+    const dialog = await editFirst()
+    await waitFor(() => {
+      expect(chosen('Viaje (opcional)', dialog)).toContain('Managua → San José')
+    })
+    await choose('Viaje (opcional)', tripOption(LEON).label, dialog)
+    save(dialog)
+
+    await waitFor(() => {
+      expect(refuelsApi.updateCloudRefuel).toHaveBeenCalledWith(
+        'r1',
+        'luis',
+        expect.objectContaining({
+          trip: { tripId: 'trip-2', tripRoute: 'León → Tegucigalpa' },
+        })
+      )
+    })
+  })
+
+  test('one from before opens with the trip of its expense', async () => {
+    refuelsApi.readRefuelsPage.mockResolvedValue({
+      items: [refuel({ tripChosen: false })],
+      cursor: null,
+    })
+    expensesApi.readExpense.mockResolvedValue(
+      expense({ id: 'r1', refuelId: 'r1' })
+    )
+    await openRefuels()
+    const dialog = await editFirst()
+    await waitFor(() => {
+      expect(chosen('Viaje (opcional)', dialog)).toContain('Managua → San José')
+    })
+    expect(expensesApi.readExpense).toHaveBeenCalledWith('r1')
+    save(dialog)
+
+    await waitFor(() => {
+      expect(refuelsApi.updateCloudRefuel).toHaveBeenCalledWith(
+        'r1',
+        'luis',
+        expect.objectContaining({
+          trip: { tripId: 'trip-1', tripRoute: 'Managua → San José' },
+        })
+      )
+    })
+  })
+
+  test('one from before whose expense cannot be read keeps its trip as it is', async () => {
+    refuelsApi.readRefuelsPage.mockResolvedValue({
+      items: [refuel({ tripChosen: false })],
+      cursor: null,
+    })
+    expensesApi.readExpense.mockRejectedValue(new Error('offline'))
+    await openRefuels()
+    const dialog = await editFirst()
+    await waitFor(() => {
+      expect(expensesApi.readExpense).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(within(dialog).queryByLabelText(/^Viaje/)).toBeNull()
+    })
+    save(dialog)
+
+    await waitFor(() => {
+      expect(refuelsApi.updateCloudRefuel).toHaveBeenCalled()
+    })
+    expect(refuelsApi.updateCloudRefuel).toHaveBeenCalledWith(
+      'r1',
+      'luis',
+      expect.objectContaining({ trip: undefined })
+    )
+  })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
@@ -22,6 +22,7 @@ import type { Currency } from 'schemas/account'
 import { KM_PER_MILE } from 'schemas/fleet'
 import { moneyTotal, unitPrices } from 'utils/formatMoney'
 import type { RefuelFormValues } from 'schemas/refuelForm'
+import type { TripLink } from 'schemas/tripLink'
 import { radius } from 'theme/tokens'
 import type { RefuelValues } from 'types'
 import { formatMeasurementDate } from 'utils/formatDate'
@@ -41,6 +42,8 @@ export interface RefuelItem extends RefuelValues {
   userName: string | null
   place: string | null
   odometerKm: number | null
+  /** Its trip's route, with an account (backend specs/0042 RF-7). */
+  trip?: string | null
   /** Loads the invoice's URL; null without one (RF-6). */
   invoice: (() => Promise<string>) | null
 }
@@ -265,6 +268,11 @@ function RefuelRow({
         >
           <time dateTime={item.takenAt.toISOString()}>{date}</time>
           {item.userName && ` · ${item.userName}`}
+          {item.trip && (
+            <Box component="span" sx={{ display: 'block' }}>
+              Viaje: {item.trip}
+            </Box>
+          )}
         </Typography>
         <Typography variant="subtitle2" component="span">
           {moneyTotal(item.currency, item.total)}
@@ -379,6 +387,7 @@ export default function RefuelList({
   onEdit,
   onDelete,
   organizationCurrency,
+  editTrip,
 }: {
   items: readonly RefuelItem[]
   canChange: (item: RefuelItem) => boolean
@@ -386,10 +395,20 @@ export default function RefuelList({
   organizationCurrency?: Currency | undefined
   /** The tank of a refuel, for its edit form; null if it is gone. */
   contextFor: (item: RefuelItem) => RefuelTankContext | null
-  onEdit: (item: RefuelItem, result: RefuelResult) => void
+  onEdit: (item: RefuelItem, result: RefuelResult, trip?: TripLink) => void
   onDelete: (item: RefuelItem) => void
+  /**
+   * With an account, "Viaje (opcional)" when correcting (backend specs/0042
+   * RF-3); it reports the trip chosen.
+   */
+  editTrip?: (
+    item: RefuelItem,
+    onChange: (trip: TripLink | undefined) => void
+  ) => ReactNode
 }) {
   const [editing, setEditing] = useState<RefuelItem | null>(null)
+  // The trip chosen while correcting; undefined leaves it as it is
+  const [editedTrip, setEditedTrip] = useState<TripLink | undefined>()
   const [deleting, setDeleting] = useState<RefuelItem | null>(null)
   const context = editing ? contextFor(editing) : null
 
@@ -411,6 +430,7 @@ export default function RefuelList({
             item={item}
             editable={canChange(item) && contextFor(item) !== null}
             onEdit={() => {
+              setEditedTrip(undefined)
               setEditing(item)
             }}
             onDelete={() => {
@@ -446,9 +466,11 @@ export default function RefuelList({
                 canSave
                 initial={toFormValues(editing, context.odometer?.unit ?? 'km')}
                 submitLabel="Guardar"
+                tripField={editTrip?.(editing, setEditedTrip)}
                 onSave={result => {
-                  onEdit(editing, result)
+                  onEdit(editing, result, editedTrip)
                   setEditing(null)
+                  setEditedTrip(undefined)
                 }}
               />
             </Stack>

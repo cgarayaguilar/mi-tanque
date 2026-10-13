@@ -12,6 +12,8 @@ export interface RefuelsQuery {
   orgId: string
   period: Period
   equipmentId: string | null
+  /** Only one trip's (backend specs/0042 RF-8). */
+  tripId?: string | null
 }
 
 interface CloudRefuelsState {
@@ -30,12 +32,13 @@ interface CloudRefuelsState {
   reset: () => void
 }
 
-const keyOf = ({ orgId, period, equipmentId }: RefuelsQuery) =>
+const keyOf = ({ orgId, period, equipmentId, tripId }: RefuelsQuery) =>
   [
     orgId,
     String(period.start.getTime()),
     String(period.end.getTime()),
     equipmentId ?? '',
+    tripId ?? '',
   ].join('|')
 
 const EMPTY = { items: [] as CloudRefuel[], cursor: null, loadingMore: false }
@@ -66,6 +69,7 @@ export const useCloudRefuelsStore = create<CloudRefuelsState>()((set, get) => ({
         start: query.period.start,
         end: query.period.end,
         equipmentId: query.equipmentId,
+        tripId: query.tripId ?? null,
         after: null,
       })
       if (request !== latestRequest) return
@@ -90,6 +94,7 @@ export const useCloudRefuelsStore = create<CloudRefuelsState>()((set, get) => ({
         start: query.period.start,
         end: query.period.end,
         equipmentId: query.equipmentId,
+        tripId: query.tripId ?? null,
         after: cursor,
       })
       if (request !== latestRequest) return
@@ -105,10 +110,19 @@ export const useCloudRefuelsStore = create<CloudRefuelsState>()((set, get) => ({
     }
   },
 
-  applyEdit: (id, { values, totals, odometerKm }) => {
+  applyEdit: (id, { values, totals, odometerKm, trip }) => {
     set(state => ({
       items: state.items.map(item =>
-        item.id === id ? { ...item, ...values, ...totals, odometerKm } : item
+        item.id === id
+          ? {
+              ...item,
+              ...values,
+              ...totals,
+              odometerKm,
+              // It says its trip now (specs/0042 RF-4)
+              ...(trip && { ...trip, tripChosen: true }),
+            }
+          : item
       ),
     }))
   },

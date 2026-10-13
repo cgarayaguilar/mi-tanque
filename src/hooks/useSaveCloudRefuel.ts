@@ -9,6 +9,7 @@ import {
 } from 'services/cloudRefuels'
 import { enqueueInvoice, processInvoiceQueue } from 'services/invoiceQueue'
 import type { FleetTank } from 'schemas/fleet'
+import type { TripLink } from 'schemas/tripLink'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import { reportError } from 'utils/reportError'
@@ -32,7 +33,12 @@ export const useSaveCloudRefuel = (
   const [intentId, setIntentId] = useState(() => crypto.randomUUID())
   const savingRef = useRef(false)
 
-  return (tank: FleetTank, result: RefuelResult, totals: TruckTotals) => {
+  return (
+    tank: FleetTank,
+    result: RefuelResult,
+    totals: TruckTotals,
+    trip: TripLink
+  ) => {
     if (savingRef.current || !user || !orgId) return
     savingRef.current = true
     const id = intentId
@@ -54,6 +60,7 @@ export const useSaveCloudRefuel = (
       values: result.values,
       totals,
       odometerKm: result.odometerKm,
+      trip,
     }).catch((error: unknown) => {
       reportError(error, { operation: 'createCloudRefuel' })
       if (recoverFromLostPermission(error)) return

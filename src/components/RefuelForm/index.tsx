@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
@@ -69,6 +69,8 @@ interface RefuelFormProps {
   initial?: RefuelFormValues
   submitLabel: string
   onSave: (result: RefuelResult) => void
+  /** With an account, "Viaje (opcional)" (backend specs/0042 RF-2). */
+  tripField?: ReactNode
 }
 
 // The field and its unit buttons share a row; the buttons get enough room
@@ -123,6 +125,7 @@ export default function RefuelForm({
   canSave,
   initial,
   submitLabel,
+  tripField,
   onSave,
 }: RefuelFormProps) {
   const stationsId = useId()
@@ -498,6 +501,8 @@ export default function RefuelForm({
           />
         </MoreDetails>
       )}
+
+      {canSave && tripField}
 
       <Button
         type="submit"

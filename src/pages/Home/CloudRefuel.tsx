@@ -3,6 +3,7 @@ import RefuelForm from 'components/RefuelForm'
 import RefuelSummary from 'components/RefuelSummary'
 import { useLoad } from 'hooks/useLoad'
 import { useSaveCloudRefuel } from 'hooks/useSaveCloudRefuel'
+import { useTripLink } from 'hooks/useTripLink'
 import type { FleetTank, Truck } from 'schemas/fleet'
 import { readStations } from 'services/cloudRefuels'
 import { selectActiveRole, useSessionStore } from 'store/session'
@@ -39,6 +40,14 @@ export default function CloudRefuel({
   const distanceUnit = useFormDistanceUnit()
   const save = useSaveCloudRefuel(equipmentName)
   const [saved, setSaved] = useState<RefuelValues | null>(null)
+  // Its trip, the one in progress by default (backend specs/0042 RF-2)
+  const [now] = useState(() => new Date())
+  const trip = useTripLink({
+    id: 'refuelTrip',
+    orgId,
+    equipment: tank.equipment,
+    at: now,
+  })
   const stations = useLoad(orgId, () =>
     readStations(orgId).catch((error: unknown) => {
       // Suggestions only: the form works without them
@@ -80,6 +89,7 @@ export default function CloudRefuel({
         allowsPhoto
         canSave={canWriteFleet(role)}
         submitLabel="Guardar relleno"
+        tripField={trip.field}
         onSave={result => {
           const totals = onTruck
             ? truckTotals(
@@ -87,7 +97,7 @@ export default function CloudRefuel({
                 otherTanks.map(other => other.lastMeasurement?.gallons ?? null)
               )
             : { truckGallonsBefore: null, truckGallonsAfter: null }
-          save(tank, result, totals)
+          save(tank, result, totals, trip.link)
           setSaved(result.values)
         }}
       />

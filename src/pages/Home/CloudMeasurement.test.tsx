@@ -18,9 +18,10 @@ import {
   ORG_ID,
   tank,
   trailer,
+  trip,
   truck,
 } from '../../testing/fleetFixtures'
-import { choose } from '../../testing/choose'
+import { choose, chosen } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -36,6 +37,10 @@ const measurementsApi = vi.hoisted(() => ({
   addMeasurementLocation: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('services/cloudMeasurements', () => measurementsApi)
+
+// The trips offered in "Viaje (opcional)" (backend specs/0042 RF-2)
+const tripsApi = vi.hoisted(() => ({ readTripsInPeriod: vi.fn() }))
+vi.mock('services/trips', () => tripsApi)
 
 // Reloading the account after a refused write (specs/0005 RF-12)
 const sessionApi = vi.hoisted(() => ({ readAccount: vi.fn() }))
@@ -127,6 +132,10 @@ beforeEach(() => {
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [LEFT, RIGHT, REEFER, LOOSE],
+  })
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [],
+    truncated: false,
   })
   mockGeolocation()
   signIn()
@@ -491,4 +500,84 @@ test('a viewer is not offered to create equipment', async () => {
   expect(
     (await screen.findAllByRole('option')).map(option => option.textContent)
   ).not.toContain('+ Crear camión')
+})
+
+describe('its trip (backend specs/0042)', () => {
+  const started = () => new Date(Date.now() - 2 * 60 * 60 * 1000)
+
+  beforeEach(() => {
+    tripsApi.readTripsInPeriod.mockResolvedValue({
+      items: [
+        trip({ status: 'in_progress', startAt: started() }),
+        // Another truck's: not offered
+        trip({
+          id: 'trip-2',
+          origin: 'León',
+          destination: 'Tegucigalpa',
+          status: 'in_progress',
+          startAt: started(),
+          truckId: 'truck-9',
+          trailerId: null,
+        }),
+      ],
+      truncated: false,
+    })
+  })
+
+  test("the truck's trip in progress comes chosen, and is saved (CA-1)", async () => {
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    await waitFor(() => {
+      expect(chosen('Viaje (opcional)')).toContain('Managua → San José')
+    })
+    measure('12')
+
+    await waitFor(() => {
+      expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trip: { tripId: 'trip-1', tripRoute: 'Managua → San José' },
+        })
+      )
+    })
+  })
+
+  test('"Sin viaje" saves it without one; another truck\'s trip is not offered', async () => {
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    await waitFor(() => {
+      expect(chosen('Viaje (opcional)')).toContain('Managua → San José')
+    })
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: /^Viaje/ }))
+    expect(
+      screen.queryByRole('option', { name: /Tegucigalpa/ })
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'Sin viaje' }))
+    measure('12')
+
+    await waitFor(() => {
+      expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trip: { tripId: null, tripRoute: null },
+        })
+      )
+    })
+  })
+
+  test('without the trips (no signal) it saves without one', async () => {
+    tripsApi.readTripsInPeriod.mockRejectedValue(new Error('offline'))
+    renderHome()
+    await pickTank('Tanque izquierdo')
+    await waitFor(() => {
+      expect(tripsApi.readTripsInPeriod).toHaveBeenCalled()
+    })
+    measure('12')
+
+    await waitFor(() => {
+      expect(measurementsApi.createCloudMeasurement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trip: { tripId: null, tripRoute: null },
+        })
+      )
+    })
+  })
 })

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { sileo } from 'sileo'
 import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
@@ -6,6 +6,9 @@ import Stack from '@mui/material/Stack'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import EmptyState from 'components/EmptyState'
+import TripLinkPicker from 'components/TripLinkPicker'
+import { NO_TRIP, type TripLink } from 'schemas/tripLink'
+import { readExpense } from 'services/expenses'
 import RefuelList, {
   RefuelPeriodSummary,
   type RefuelItem,
@@ -54,10 +57,13 @@ const placeText = (refuel: CloudRefuel): string | null => {
 export default function CloudRefuelHistory({
   period,
   equipmentId,
+  tripId,
   onChangePeriod,
 }: {
   period: Period
   equipmentId: string | null
+  /** Only one trip's (backend specs/0042 RF-8). */
+  tripId: string | null
   onChangePeriod: () => void
 }) {
   const orgId = useSessionStore(state => state.organization?.id ?? '')
@@ -80,8 +86,9 @@ export default function CloudRefuelHistory({
       orgId,
       period: { start: new Date(startMs), end: new Date(endMs) },
       equipmentId,
+      tripId,
     })
-  }, [orgId, startMs, endMs, equipmentId, load])
+  }, [orgId, startMs, endMs, equipmentId, tripId, load])
 
   if (refuels.status === 'error' && refuels.items.length === 0) {
     return (
@@ -93,7 +100,7 @@ export default function CloudRefuelHistory({
         action={{
           label: 'Reintentar',
           onClick: () =>
-            void load({ orgId, period, equipmentId }, { force: true }),
+            void load({ orgId, period, equipmentId, tripId }, { force: true }),
         }}
       />
     )
@@ -120,7 +127,7 @@ export default function CloudRefuelHistory({
         headingLevel="h2"
         icon={<LocalGasStationIcon />}
         title="Sin rellenos en este periodo"
-        description="Registra uno en Medición → Rellenar, o elige otro periodo u otro equipo."
+        description="Registra uno en Medición → Rellenar, o elige otro periodo, equipo o viaje."
         action={{ label: 'Cambiar periodo', onClick: onChangePeriod }}
       />
     )
@@ -133,6 +140,7 @@ export default function CloudRefuelHistory({
       ...refuel,
       equipmentName: refuel.equipment.name,
       place: placeText(refuel),
+      trip: refuel.tripRoute,
       invoice: path ? () => invoiceUrl(path) : null,
     }
   })
@@ -193,7 +201,19 @@ export default function CloudRefuelHistory({
               : null,
           }
         }}
-        onEdit={(item, { values, odometerKm }) => {
+        editTrip={(item, onChange) => {
+          const refuel = byId.get(item.id)
+          const tank = tanks.find(candidate => candidate.id === refuel?.tankId)
+          return refuel ? (
+            <RefuelTrip
+              refuel={refuel}
+              orgId={orgId}
+              equipment={tank?.equipment ?? refuel.equipment}
+              onChange={onChange}
+            />
+          ) : null
+        }}
+        onEdit={(item, { values, odometerKm }, trip) => {
           const refuel = byId.get(item.id)
           if (!refuel || !uid) return
           // The truck's other tanks did not change: keep their share (RF-9)
@@ -212,6 +232,7 @@ export default function CloudRefuelHistory({
             values,
             totals,
             odometerKm: tank && truckOf(tank) ? odometerKm : refuel.odometerKm,
+            trip,
           }
           refuels.applyEdit(refuel.id, edit)
           updateCloudRefuel(refuel.id, uid, edit).catch((error: unknown) => {
@@ -254,5 +275,65 @@ export default function CloudRefuelHistory({
         </Button>
       )}
     </Stack>
+  )
+}
+
+/**
+ * A refuel's trip when correcting it (backend specs/0042 RF-3). One from
+ * before says none: its trip is its expense's, read first. If the expense
+ * cannot be read, the field stays out and the correction keeps the link.
+ */
+function RefuelTrip({
+  refuel,
+  orgId,
+  equipment,
+  onChange,
+}: {
+  refuel: CloudRefuel
+  orgId: string
+  equipment: CloudRefuel['equipment'] | FleetTank['equipment']
+  onChange: (trip: TripLink | undefined) => void
+}) {
+  const [fromExpense, setFromExpense] = useState<TripLink | null | undefined>(
+    refuel.tripChosen ? null : undefined
+  )
+  useEffect(() => {
+    if (refuel.tripChosen) return
+    let current = true
+    readExpense(refuel.id)
+      .then(expense => {
+        if (current)
+          setFromExpense(
+            expense?.kind === 'trip'
+              ? { tripId: expense.tripId, tripRoute: expense.tripRoute }
+              : NO_TRIP
+          )
+      })
+      .catch((error: unknown) => {
+        reportError(error, { operation: 'readRefuelExpenseTrip' })
+        if (current) setFromExpense(null)
+      })
+    return () => {
+      current = false
+    }
+  }, [refuel.id, refuel.tripChosen])
+
+  if (!refuel.tripChosen && fromExpense === undefined)
+    return <Skeleton variant="rounded" height={56} />
+  // From before, and its expense could not be read: left as it is
+  if (!refuel.tripChosen && fromExpense === null) return null
+  return (
+    <TripLinkPicker
+      id="editRefuelTrip"
+      orgId={orgId}
+      equipment={equipment}
+      at={refuel.takenAt}
+      saved={
+        refuel.tripChosen
+          ? { tripId: refuel.tripId, tripRoute: refuel.tripRoute }
+          : (fromExpense ?? NO_TRIP)
+      }
+      onChange={onChange}
+    />
   )
 }

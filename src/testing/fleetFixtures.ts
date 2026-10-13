@@ -117,6 +117,8 @@ export const cloudMeasurement = (
   estimateEmpty: null,
   odometerKm: 120500,
   source: 'app',
+  tripId: null,
+  tripRoute: null,
   ...overrides,
 })
 

@@ -19,6 +19,8 @@ interface CloudHistoryState {
   /** null until chosen: the last week through today (like the basic mode). */
   chosenPeriod: Period | null
   equipmentId: string | null
+  /** Only one trip's (backend specs/0042 RF-8). */
+  tripId: string | null
   items: CloudMeasurement[]
   cursor: QueryDocumentSnapshot | null
   status: CloudHistoryStatus
@@ -27,6 +29,7 @@ interface CloudHistoryState {
   loadMore: () => Promise<void>
   choosePeriod: (period: Period) => Promise<void>
   chooseEquipment: (equipmentId: string | null) => Promise<void>
+  chooseTrip: (tripId: string | null) => Promise<void>
   /** Shows an edit at once; the write is the caller's (offline, ADR 0003). */
   applyEdit: (id: string, edit: MeasurementEdit) => void
   remove: (id: string) => void
@@ -49,7 +52,7 @@ let latestRequest = 0
 
 export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
   const fetchFirstPage = async () => {
-    const { orgId, equipmentId } = get()
+    const { orgId, equipmentId, tripId } = get()
     if (!orgId) return
     const request = ++latestRequest
     if (get().status !== 'ready') set({ status: 'loading' })
@@ -62,6 +65,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
         start,
         end,
         equipmentId,
+        tripId,
         after: null,
       })
       if (request !== latestRequest) return
@@ -77,6 +81,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
     orgId: null,
     chosenPeriod: null,
     equipmentId: null,
+    tripId: null,
     status: 'idle',
     ...EMPTY,
 
@@ -86,6 +91,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
           orgId,
           chosenPeriod: null,
           equipmentId: null,
+          tripId: null,
           ...EMPTY,
           status: 'loading',
         })
@@ -94,7 +100,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
     },
 
     loadMore: async () => {
-      const { orgId, cursor, equipmentId, loadingMore } = get()
+      const { orgId, cursor, equipmentId, tripId, loadingMore } = get()
       if (!orgId || !cursor || loadingMore) return
       const request = latestRequest
       set({ loadingMore: true })
@@ -107,6 +113,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
           start,
           end,
           equipmentId,
+          tripId,
           after: cursor,
         })
         if (request !== latestRequest) return
@@ -132,10 +139,15 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
       return fetchFirstPage()
     },
 
-    applyEdit: (id, { reading, ...rest }) => {
+    chooseTrip: tripId => {
+      set({ tripId, ...EMPTY, status: 'loading' })
+      return fetchFirstPage()
+    },
+
+    applyEdit: (id, { reading, trip, ...rest }) => {
       set(state => ({
         items: state.items.map(item =>
-          item.id === id ? { ...item, ...rest, ...reading } : item
+          item.id === id ? { ...item, ...rest, ...reading, ...trip } : item
         ),
       }))
     },
@@ -150,6 +162,7 @@ export const useCloudHistoryStore = create<CloudHistoryState>()((set, get) => {
         orgId: null,
         chosenPeriod: null,
         equipmentId: null,
+        tripId: null,
         status: 'idle',
         ...EMPTY,
       })

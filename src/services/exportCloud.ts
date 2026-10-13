@@ -70,12 +70,15 @@ export const exportCloudHistory = async ({
   orgId,
   orgName,
   equipmentId,
+  tripId = null,
 }: {
   kind: ExportKind
   period: Period
   orgId: string
   orgName: string
   equipmentId: string | null
+  /** Only one trip's, as the history shows (backend specs/0042 RF-8). */
+  tripId?: string | null
 }): Promise<ExportResult> => {
   // Offline, the cache could hold part of the period: never a partial file
   if (!navigator.onLine) throw new ExportOfflineError()
@@ -84,6 +87,7 @@ export const exportCloudHistory = async ({
     start: period.start,
     end: period.end,
     equipmentId,
+    tripId,
     after,
     pageSize: PAGE_SIZE,
   })

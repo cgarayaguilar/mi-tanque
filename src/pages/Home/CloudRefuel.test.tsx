@@ -9,8 +9,10 @@ import {
   ORG_ID,
   tank,
   trailer,
+  trip,
   truck,
 } from '../../testing/fleetFixtures'
+import { chosen } from '../../testing/choose'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -24,6 +26,10 @@ const refuelsApi = vi.hoisted(() => ({
   readStations: vi.fn(() => Promise.resolve(['Puma Km 7', 'Uno Masaya'])),
 }))
 vi.mock('services/cloudRefuels', () => refuelsApi)
+
+// The trips offered in "Viaje (opcional)" (backend specs/0042 RF-2)
+const tripsApi = vi.hoisted(() => ({ readTripsInPeriod: vi.fn() }))
+vi.mock('services/trips', () => tripsApi)
 
 const queue = vi.hoisted(() => ({
   enqueueInvoice: vi.fn(() => Promise.resolve()),
@@ -92,6 +98,10 @@ beforeEach(() => {
     trucks: [truck()],
     trailers: [trailer()],
     tanks: [LEFT, RIGHT],
+  })
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [],
+    truncated: false,
   })
   signIn()
 })
@@ -223,4 +233,41 @@ test('Lectura cannot register refuels', async () => {
   expect(
     screen.getByText('Con tu rol de Lectura no puedes registrar rellenos.')
   ).toBeInTheDocument()
+})
+
+// backend specs/0042 RF-2, CA-2
+test("the truck's trip in progress comes chosen; another of it can be chosen", async () => {
+  const hoursAgo = (hours: number) =>
+    new Date(Date.now() - hours * 60 * 60 * 1000)
+  tripsApi.readTripsInPeriod.mockResolvedValue({
+    items: [
+      trip({ status: 'in_progress', startAt: hoursAgo(2) }),
+      trip({
+        id: 'trip-2',
+        origin: 'León',
+        destination: 'Tegucigalpa',
+        status: 'done',
+        startAt: hoursAgo(30),
+        endAt: hoursAgo(20),
+      }),
+    ],
+    truncated: false,
+  })
+  await openRefuel()
+  await waitFor(() => {
+    expect(chosen('Viaje (opcional)')).toContain('Managua → San José')
+  })
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: /^Viaje/ }))
+  fireEvent.click(screen.getByRole('option', { name: /León → Tegucigalpa/ }))
+  type('Cantidad echada', '50')
+  type('Precio', '30')
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar relleno' }))
+
+  await waitFor(() => {
+    expect(refuelsApi.createCloudRefuel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trip: { tripId: 'trip-2', tripRoute: 'León → Tegucigalpa' },
+      })
+    )
+  })
 })

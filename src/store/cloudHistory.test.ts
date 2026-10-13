@@ -34,6 +34,7 @@ test('loads the last week of the organization by default (RF-10, RF-11)', async 
     start,
     end,
     equipmentId: null,
+    tripId: null,
     after: null,
   })
   expect(start.getHours()).toBe(0)
@@ -96,6 +97,7 @@ test('an edit and a removal show at once', async () => {
       estimateEmpty: null,
     },
     odometerKm: null,
+    trip: { tripId: 'trip-1', tripRoute: 'Managua → León' },
   })
   useCloudHistoryStore.getState().remove('b')
 
@@ -129,4 +131,15 @@ test('a failed load is reported as an error state', async () => {
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   await useCloudHistoryStore.getState().load(ORG_ID)
   expect(useCloudHistoryStore.getState().status).toBe('error')
+})
+
+// backend specs/0042 RF-8: only one trip's
+test('choosing a trip reads only its measurements', async () => {
+  await useCloudHistoryStore.getState().load(ORG_ID)
+  await useCloudHistoryStore.getState().chooseTrip('trip-1')
+
+  expect(api.readHistoryPage).toHaveBeenLastCalledWith(
+    expect.objectContaining({ tripId: 'trip-1', after: null })
+  )
+  expect(useCloudHistoryStore.getState().tripId).toBe('trip-1')
 })

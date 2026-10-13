@@ -21,6 +21,7 @@ import * as z from 'zod/mini'
 import { loadFirebase } from 'services/firebase'
 import type { Position } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
+import type { TripLink } from 'schemas/tripLink'
 import { reportError } from 'utils/reportError'
 import { withTimeout } from 'utils/withTimeout'
 
@@ -39,7 +40,7 @@ export interface Place {
   city: string | null
 }
 
-export interface CloudMeasurement extends CloudReading {
+export interface CloudMeasurement extends CloudReading, TripLink {
   id: string
   orgId: string
   tankId: string
@@ -99,6 +100,9 @@ const schema = z.object({
   estimateEmpty: z._default(z.nullable(estimateSchema), null),
   odometerKm: z.nullable(z.number()),
   source: z.enum(['app', 'import']),
+  // Measurements from before specs/0042 have no trip
+  tripId: z._default(z.nullable(z.string()), null),
+  tripRoute: z._default(z.nullable(z.string()), null),
 })
 
 const toMeasurement = (
@@ -134,6 +138,8 @@ export interface NewCloudMeasurement {
   takenAt: Date
   reading: CloudReading
   odometerKm: number | null
+  /** Its trip, or none (specs/0042 RF-2). */
+  trip: TripLink
 }
 
 /**
@@ -144,10 +150,11 @@ export const createCloudMeasurement = async (
   measurement: NewCloudMeasurement
 ) => {
   const { db } = await loadFirebase()
-  const { reading, takenAt, id, ...rest } = measurement
+  const { reading, takenAt, id, trip, ...rest } = measurement
   await setDoc(doc(db, 'measurements', id), {
     ...rest,
     ...reading,
+    ...trip,
     takenAt: Timestamp.fromDate(takenAt),
     location: null,
     place: null,
@@ -184,17 +191,19 @@ export interface MeasurementEdit {
   equipment: MeasurementEquipment
   reading: CloudReading
   odometerKm: number | null
+  trip: TripLink
 }
 
 export const updateCloudMeasurement = async (
   id: string,
   uid: string,
-  { reading, ...rest }: MeasurementEdit
+  { reading, trip, ...rest }: MeasurementEdit
 ) => {
   const { db } = await loadFirebase()
   await updateDoc(doc(db, 'measurements', id), {
     ...rest,
     ...reading,
+    ...trip,
     updatedAt: serverTimestamp(),
     updatedBy: uid,
   })
@@ -217,6 +226,8 @@ export const readHistoryPage = async (options: {
   start: Date
   end: Date
   equipmentId: string | null
+  /** Only one trip's (specs/0042 RF-8); null for all. */
+  tripId?: string | null
   after: QueryDocumentSnapshot | null
   /** Pages of the history; exporting reads bigger ones (specs/0007). */
   pageSize?: number
@@ -227,6 +238,7 @@ export const readHistoryPage = async (options: {
     ...(options.equipmentId
       ? [where('equipment.id', '==', options.equipmentId)]
       : []),
+    ...(options.tripId ? [where('tripId', '==', options.tripId)] : []),
     where('takenAt', '>=', Timestamp.fromDate(options.start)),
     where('takenAt', '<=', Timestamp.fromDate(options.end)),
     orderBy('takenAt', 'desc'),
@@ -245,4 +257,27 @@ export const readHistoryPage = async (options: {
     cursor:
       snapshot.size === (options.pageSize ?? HISTORY_PAGE_SIZE) ? last : null,
   }
+}
+
+/** A trip's measurements, oldest first (specs/0042 RF-6). */
+export const readTripMeasurements = async (
+  orgId: string,
+  tripId: string
+): Promise<CloudMeasurement[]> => {
+  const { db } = await loadFirebase()
+  // Equalities only: no composite index needed
+  const snapshot = await withTimeout(
+    getDocs(
+      query(
+        collection(db, 'measurements'),
+        where('orgId', '==', orgId),
+        where('tripId', '==', tripId)
+      )
+    ),
+    'readTripMeasurements'
+  )
+  return snapshot.docs
+    .map(toMeasurement)
+    .filter((item): item is CloudMeasurement => item !== null)
+    .sort((a, b) => a.takenAt.getTime() - b.takenAt.getTime())
 }

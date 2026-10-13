@@ -1,5 +1,9 @@
 import { lazy, Suspense, useEffect, useId, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTripLink } from 'hooks/useTripLink'
+import { tripOption } from 'hooks/useTripChoices'
+import type { Trip } from 'schemas/trips'
+import { readTripsInPeriod } from 'services/trips'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sileo } from 'sileo'
 import Box from '@mui/material/Box'
@@ -144,6 +148,12 @@ function MeasurementRow({
             {formatMeasurementDate(measurement.takenAt)}
           </time>{' '}
           · {measurement.userName}
+          {/* Its trip, if it has one (backend specs/0042 RF-7) */}
+          {measurement.tripRoute && (
+            <Box component="span" sx={{ display: 'block' }}>
+              Viaje: {measurement.tripRoute}
+            </Box>
+          )}
         </Typography>
         <Typography
           variant="caption"
@@ -383,8 +393,17 @@ function EditDialog({
   const { trucks, trailers, tanks } = useFleetStore()
   const applyEdit = useCloudHistoryStore(state => state.applyEdit)
   const uid = useSessionStore(state => state.user?.uid ?? '')
+  const orgId = useSessionStore(state => state.organization?.id ?? '')
   const [tankId, setTankId] = useState(measurement.tankId)
   const tank = tanks.find(item => item.id === tankId)
+  // Its trip, changed here too (backend specs/0042 RF-3)
+  const trip = useTripLink({
+    id: 'editTrip',
+    orgId,
+    equipment: tank?.equipment ?? { kind: 'none', id: null },
+    at: measurement.takenAt,
+    saved: { tripId: measurement.tripId, tripRoute: measurement.tripRoute },
+  })
   const options = tanks.filter(
     item => !item.archived || item.id === measurement.tankId
   )
@@ -439,6 +458,7 @@ function EditDialog({
           : tank.id === measurement.tankId
             ? measurement.odometerKm
             : null,
+      trip: trip.link,
     }
     applyEdit(measurement.id, edit)
     updateCloudMeasurement(measurement.id, uid, edit).catch(
@@ -505,6 +525,7 @@ function EditDialog({
               registration={register('odometer')}
             />
           )}
+          {trip.field}
         </Box>
       </DialogContent>
       <DialogActions>
@@ -515,6 +536,29 @@ function EditDialog({
       </DialogActions>
     </Dialog>
   )
+}
+
+/** The trips that start in the period, for "Viaje" (backend specs/0042 RF-8). */
+const usePeriodTrips = (orgId: string, startMs: number, endMs: number) => {
+  const key = `${orgId}|${String(startMs)}|${String(endMs)}`
+  const [read, setRead] = useState<{ key: string; trips: Trip[] } | null>(null)
+  useEffect(() => {
+    if (!orgId) return
+    let current = true
+    readTripsInPeriod(orgId, new Date(startMs), new Date(endMs))
+      .then(page => {
+        if (current) setRead({ key, trips: page.items })
+      })
+      .catch((error: unknown) => {
+        // The filter only: the history works without it
+        reportError(error, { operation: 'readHistoryTrips' })
+        if (current) setRead({ key, trips: [] })
+      })
+    return () => {
+      current = false
+    }
+  }, [orgId, startMs, endMs, key])
+  return read?.key === key ? read.trips : []
 }
 
 /** History with a session (backend specs/0004 RF-10–RF-14). */
@@ -539,6 +583,11 @@ export default function CloudHistory() {
 
   const period = periodOf(history)
   const periodText = formatPeriod(period)
+  const periodTrips = usePeriodTrips(
+    orgId,
+    period.start.getTime(),
+    period.end.getTime()
+  )
   const groups = useMemo(() => groupByTank(history.items), [history.items])
 
   const equipmentOptions = [
@@ -601,7 +650,7 @@ export default function CloudHistory() {
           headingLevel="h2"
           icon={<HistoryIcon />}
           title="Sin mediciones en este periodo"
-          description="Elige otro periodo u otro equipo, o haz una medición."
+          description="Elige otro periodo, equipo o viaje, o haz una medición."
           action={{
             label: 'Cambiar periodo',
             onClick: () => {
@@ -689,12 +738,13 @@ export default function CloudHistory() {
                   orgId,
                   orgName,
                   equipmentId: history.equipmentId,
+                  tripId: history.tripId,
                 })
               )
             }
           />
         </Box>
-        <Box sx={{ mb: 6 }}>
+        <Stack spacing={4} sx={{ mb: 6 }}>
           <AutocompleteBase
             id="historyEquipment"
             label="Equipo"
@@ -704,7 +754,24 @@ export default function CloudHistory() {
               void history.chooseEquipment(value || null)
             }}
           />
-        </Box>
+          {/* Only one trip's (backend specs/0042 RF-8) */}
+          <AutocompleteBase
+            id="historyTrip"
+            label="Viaje"
+            options={[
+              { value: '', label: 'Todos los viajes' },
+              ...periodTrips.map(tripOption),
+              ...(history.tripId &&
+              !periodTrips.some(trip => trip.id === history.tripId)
+                ? [{ value: history.tripId, label: 'Viaje elegido' }]
+                : []),
+            ]}
+            value={history.tripId ?? ''}
+            onChange={value => {
+              void history.chooseTrip(value || null)
+            }}
+          />
+        </Stack>
 
         <HistoryTabs tab={tab} onChange={setTab} />
         {tab === 'measurements' ? (
@@ -713,6 +780,7 @@ export default function CloudHistory() {
           <CloudRefuelHistory
             period={period}
             equipmentId={history.equipmentId}
+            tripId={history.tripId}
             onChangePeriod={() => {
               setPickerIsOpen(true)
             }}

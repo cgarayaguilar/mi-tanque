@@ -6,6 +6,7 @@ import {
   type MeasurementEquipment,
 } from 'services/cloudMeasurements'
 import type { FleetTank } from 'schemas/fleet'
+import { NO_TRIP, type TripLink } from 'schemas/tripLink'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { getCurrentPosition } from 'utils/getCurrentPosition'
 import type { CloudReading } from 'utils/measurementMath'
@@ -33,7 +34,7 @@ export const useSaveCloudMeasurement = (
   const savingRef = useRef(false)
   const repeated = useRef(createRepeatGuard()).current
 
-  return (tank: FleetTank, reading: CloudReading) => {
+  return (tank: FleetTank, reading: CloudReading, trip: TripLink = NO_TRIP) => {
     if (savingRef.current || !user || !orgId) return
     // Regression: a second tap saved a second measurement
     if (repeated(`${tank.id}|${String(reading.inches)}`)) return
@@ -58,6 +59,7 @@ export const useSaveCloudMeasurement = (
       // Not asked when measuring (it took room and was rarely typed): it can
       // be added later by editing the measurement in the history
       odometerKm: null,
+      trip,
     }).catch((error: unknown) => {
       reportError(error, { operation: 'createCloudMeasurement' })
       if (recoverFromLostPermission(error)) return
