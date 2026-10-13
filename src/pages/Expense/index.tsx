@@ -65,7 +65,7 @@ import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 import RefuelExpenseForm from './RefuelExpenseForm'
 import TripDialog from 'pages/TripEditor/TripDialog'
-import { tripOption, useTripChoices } from './useTripChoices'
+import { tripOption, useTripChoices } from 'hooks/useTripChoices'
 
 const FORM_ID = 'expense-form'
 
