@@ -8,6 +8,7 @@ import type { Expense } from 'schemas/expenses'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { currentMonth } from 'store/trips'
 import type { Period } from 'types'
+import { NO_EXPENSE_FILTERS, type ExpenseFilters } from 'utils/expenseFilters'
 import { toWholeDays } from 'utils/period'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
@@ -32,6 +33,12 @@ interface ExpensesState {
   status: ExpensesStatus
   /** Every expense seen or saved here, by id: its screen finds it at once. */
   known: Record<string, Expense>
+  /**
+   * The list's filters, kept while the app is open: back from an expense,
+   * the list is as it was (specs/0043 RF-12).
+   */
+  view: ExpenseFilters
+  setFilters: (filters: Partial<ExpenseFilters>) => void
   /** Reads the categories; an organization with none gets the presets. */
   loadCategories: (orgId: string) => Promise<void>
   load: (orgId: string) => Promise<void>
@@ -71,6 +78,8 @@ const EMPTY = {
   truncated: false,
   status: 'idle' as const,
   known: {},
+  // Another organization starts without filters (RF-12)
+  view: NO_EXPENSE_FILTERS,
 }
 
 // Only the latest read writes (another period or organization)
@@ -144,6 +153,10 @@ export const useExpensesStore = create<ExpensesState>()((set, get) => {
 
   return {
     ...EMPTY,
+
+    setFilters: filters => {
+      set(state => ({ view: { ...state.view, ...filters } }))
+    },
 
     loadCategories: orgId => {
       if (categoriesInFlight?.orgId === orgId) return categoriesInFlight.done

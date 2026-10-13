@@ -12,6 +12,7 @@ import { useFleetStore } from 'store/fleet'
 import { useSessionStore } from 'store/session'
 import { useTripsStore } from 'store/trips'
 import type { Role } from 'utils/roles'
+import type { Expense } from 'schemas/expenses'
 import {
   accountWithRole,
   client,
@@ -23,7 +24,14 @@ import {
   truck,
 } from '../../testing/fleetFixtures'
 import { choose } from '../../testing/choose'
-import { filterBy, sheetFilterNames } from '../../testing/filterBy'
+import {
+  closeFilters,
+  filterBy,
+  filtersButton,
+  openFilters,
+  sheetFilterNames,
+} from '../../testing/filterBy'
+import { tripOption } from 'hooks/useTripChoices'
 
 const fleetApi = vi.hoisted(() => ({
   readFleet: vi.fn(),
@@ -37,6 +45,8 @@ vi.mock('services/fleet', () => fleetApi)
 const tripsApi = vi.hoisted(() => ({
   readTripsInPeriod: vi.fn(),
   readTrip: vi.fn(),
+  // The trips of the period's expenses, for their filters (specs/0043)
+  readTripsByIds: vi.fn(),
   // "+ Crear viaje" (specs/0031 RF-3)
   newTripId: vi.fn(() => 'new-trip'),
   saveTripWithExpenses: vi.fn(() => Promise.resolve()),
@@ -96,6 +106,7 @@ beforeEach(() => {
     truncated: false,
   })
   tripsApi.readTrip.mockResolvedValue(trip())
+  tripsApi.readTripsByIds.mockResolvedValue([trip()])
   expensesApi.readCategories.mockResolvedValue(presetCategories())
   expensesApi.readExpensesInPeriod.mockResolvedValue({
     items: [
@@ -152,6 +163,181 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+/** The totals of what is shown, once the list is filtered. */
+const filteredTotals = () =>
+  screen.getByRole('status', { name: 'Totales de lo filtrado' })
+
+// backend specs/0043
+describe('more filters', () => {
+  test('several categories: any of them, as one filter (CA-1)', async () => {
+    renderAt('/gastos')
+    await screen.findByRole('list', { name: 'Gastos' })
+    const sheet = await openFilters()
+    const field = within(sheet).getByRole('combobox', { name: 'Categorías' })
+    fireEvent.mouseDown(field)
+    fireEvent.click(screen.getByRole('option', { name: 'Peajes' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Parqueo' }))
+    expect(
+      within(sheet).getByRole('button', { name: 'Ver 2 gastos' })
+    ).toBeInTheDocument()
+    await closeFilters()
+
+    expect(filteredTotals()).toHaveTextContent('2 gastos · C$2,150.00 NIO')
+    expect(filtersButton()).toHaveAccessibleName('Filtros, 1 activo')
+  })
+
+  test('a trip leaves only its expenses (CA-2)', async () => {
+    renderAt('/gastos')
+    await screen.findByRole('list', { name: 'Gastos' })
+    await filterBy('Viaje', tripOption(trip()).label)
+
+    expect(filteredTotals()).toHaveTextContent('1 gasto · C$1,850.00 NIO')
+    expect(tripsApi.readTripsByIds).toHaveBeenCalledWith('org-a', ['trip-1'])
+  })
+
+  describe('a driver (CA-3)', () => {
+    beforeEach(() => {
+      expensesApi.readExpensesInPeriod.mockResolvedValue({
+        items: [
+          // Of the trip Pedro drove, without naming him
+          expense({ id: 'e1', amount: 1850 }),
+          expense({
+            id: 'e5',
+            kind: 'general',
+            tripId: null,
+            tripRoute: null,
+            truckId: null,
+            truckName: null,
+            trailerId: null,
+            trailerName: null,
+            amount: 400,
+            driverId: 'driver-1',
+            driverName: 'Pedro Ruiz',
+          }),
+          expense({
+            id: 'e6',
+            kind: 'general',
+            tripId: null,
+            tripRoute: null,
+            truckId: null,
+            truckName: null,
+            trailerId: null,
+            trailerName: null,
+            amount: 900,
+          }),
+        ],
+        truncated: false,
+      })
+    })
+
+    test("theirs, and their trips' expenses", async () => {
+      renderAt('/gastos')
+      await screen.findByRole('list', { name: 'Gastos' })
+      await filterBy('Conductor', 'Pedro Ruiz')
+
+      expect(filteredTotals()).toHaveTextContent('2 gastos · C$2,250.00 NIO')
+    })
+
+    test('without signal for the trips, only theirs, and it says so', async () => {
+      tripsApi.readTripsByIds.mockRejectedValue(new Error('offline'))
+      renderAt('/gastos')
+      await screen.findByRole('list', { name: 'Gastos' })
+      const sheet = await openFilters()
+      expect(
+        await within(sheet).findByText(
+          'Sin señal: solo los gastos donde se eligió el conductor.'
+        )
+      ).toBeInTheDocument()
+      await closeFilters()
+      await filterBy('Conductor', 'Pedro Ruiz')
+
+      expect(filteredTotals()).toHaveTextContent('1 gasto · C$400.00 NIO')
+    })
+  })
+
+  test("without a receipt: a refuel's invoice counts as one (CA-4)", async () => {
+    // The period as read in beforeEach, its fuel from a refuel with invoice
+    const listed = (await expensesApi.readExpensesInPeriod()) as {
+      items: Expense[]
+      truncated: boolean
+    }
+    expensesApi.readExpensesInPeriod.mockResolvedValue({
+      ...listed,
+      items: listed.items.map(item =>
+        item.id === 'e2'
+          ? { ...item, refuelId: 'r1', receiptPhotoPath: 'orgs/org-a/r1.jpg' }
+          : item
+      ),
+    })
+    renderAt('/gastos')
+    await screen.findByRole('list', { name: 'Gastos' })
+    await filterBy('Comprobante', 'Sin comprobante')
+    expect(filteredTotals()).toHaveTextContent('3 gastos · C$17,150.00 NIO')
+
+    await filterBy('Comprobante', 'Con comprobante')
+    expect(filteredTotals()).toHaveTextContent('1 gasto · C$25,000.00 NIO')
+  })
+
+  test('the amount: greater, between, and a wrong range (CA-5)', async () => {
+    renderAt('/gastos')
+    await screen.findByRole('list', { name: 'Gastos' })
+    const sheet = await openFilters()
+    const amount = within(sheet).getByRole('group', { name: 'Monto' })
+    await choose('Condición', 'Mayor a', amount)
+    fireEvent.change(within(amount).getByLabelText('Monto'), {
+      target: { value: '1,850' },
+    })
+    expect(
+      within(sheet).getByRole('button', { name: 'Ver 2 gastos' })
+    ).toBeInTheDocument()
+
+    await choose('Condición', 'Entre', amount)
+    fireEvent.change(within(amount).getByLabelText('Desde'), {
+      target: { value: '300' },
+    })
+    fireEvent.change(within(amount).getByLabelText('Hasta'), {
+      target: { value: '1,850' },
+    })
+    expect(
+      within(sheet).getByRole('button', { name: 'Ver 2 gastos' })
+    ).toBeInTheDocument()
+
+    // "Hasta" below "Desde": said, and nothing filtered
+    fireEvent.change(within(amount).getByLabelText('Hasta'), {
+      target: { value: '100' },
+    })
+    expect(
+      within(amount).getByText('Tiene que ser igual o mayor que "Desde"')
+    ).toBeInTheDocument()
+    expect(
+      within(sheet).getByRole('button', { name: 'Ver 4 gastos' })
+    ).toBeInTheDocument()
+  })
+
+  test('back from an expense, the filters are still on (CA-6)', async () => {
+    renderAt('/gastos')
+    await screen.findByRole('list', { name: 'Gastos' })
+    await filterBy('Corresponde a', 'General')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Gasto de Parqueo, C$300.00 NIO' })
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Gastos' }))
+
+    expect(
+      await screen.findByRole('status', { name: 'Totales de lo filtrado' })
+    ).toHaveTextContent('1 gasto · C$300.00 NIO')
+    expect(filtersButton()).toHaveAccessibleName('Filtros, 1 activo')
+  })
+
+  test('another organization starts without them (RF-12)', () => {
+    useExpensesStore.getState().setFilters({ receipt: 'with' })
+    useSessionStore.setState({
+      organization: { id: 'org-b', name: 'Otra', defaultCurrency: 'NIO' },
+    })
+    expect(useExpensesStore.getState().view.receipt).toBeNull()
+  })
+})
+
 // backend specs/0026 RF-8
 test('with a session the bar has Gastos, active on its page', async () => {
   renderAt('/gastos')
@@ -205,9 +391,14 @@ describe('the list', () => {
 
     // specs/0039 CA-3: the filters are in the sheet
     expect(await sheetFilterNames()).toEqual([
-      'Categoría',
+      'Categorías',
       'Corresponde a',
       'Camión',
+      // backend specs/0043
+      'Viaje',
+      'Conductor',
+      'Comprobante',
+      'Monto',
     ])
     await filterBy('Corresponde a', 'General')
     expect(

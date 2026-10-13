@@ -156,6 +156,28 @@ export const readTrip = async (id: string): Promise<Trip | null> => {
   return data ? toTrip(snapshot.id, data) : null
 }
 
+// Trips read at once by readTripsByIds: few at a time, so a long list does
+// not open a hundred reads together
+const TRIPS_AT_ONCE = 10
+
+/**
+ * Some trips by id (the ones of a period's expenses, backend specs/0043
+ * RF-5); one that is gone or of another organization is left out.
+ */
+export const readTripsByIds = async (
+  orgId: string,
+  ids: readonly string[]
+): Promise<Trip[]> => {
+  const trips: Trip[] = []
+  for (let index = 0; index < ids.length; index += TRIPS_AT_ONCE) {
+    const read = await Promise.all(
+      ids.slice(index, index + TRIPS_AT_ONCE).map(id => readTrip(id))
+    )
+    for (const trip of read) if (trip?.orgId === orgId) trips.push(trip)
+  }
+  return trips
+}
+
 /**
  * The id of a new trip, made when its form opens: saving again writes the
  * same document (ADR 0003).

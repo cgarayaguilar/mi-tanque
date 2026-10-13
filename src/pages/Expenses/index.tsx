@@ -14,7 +14,10 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import EmptyState from 'components/EmptyState'
-import FilterSheet, { sheetFilter } from 'components/FilterSheet'
+import FilterSheet, {
+  sheetFilter,
+  type AnySheetFilter,
+} from 'components/FilterSheet'
 import NavBar from 'components/NavBar'
 import SessionGate from 'components/SessionGate'
 import {
@@ -26,12 +29,24 @@ import {
   type Expense,
   type ExpenseKind,
 } from 'schemas/expenses'
+import { tripOption } from 'hooks/useTripChoices'
+import { useExpenseTrips } from 'hooks/useExpenseTrips'
 import { expensesPeriodOf, useExpensesStore } from 'store/expenses'
 import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { layout, radius, softShadow, typeScale } from 'theme/tokens'
+import {
+  driverOptions,
+  expenseFiltersOn,
+  filterExpenses,
+  NO_EXPENSE_FILTERS,
+  RECEIPT_LABELS,
+  tripIdsOf,
+  tripOptions,
+  type ReceiptFilter,
+} from 'utils/expenseFilters'
 import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
-import { moneyTotal } from 'utils/formatMoney'
+import { currencySymbol, moneyTotal } from 'utils/formatMoney'
 import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 
@@ -42,6 +57,24 @@ const KIND_OPTIONS = EXPENSE_KINDS.map(kind => ({
   label: EXPENSE_KIND_LABELS[kind],
 }))
 
+const RECEIPT_OPTIONS = (['with', 'without'] as const).map(receipt => ({
+  value: receipt,
+  label: RECEIPT_LABELS[receipt],
+}))
+
+/**
+ * The options, plus the one chosen if the period no longer has it: it stays
+ * chosen, with its name (backend specs/0043 RF-12).
+ */
+const withChosen = <T extends string>(
+  options: { value: T; label: string }[],
+  chosen: T | null,
+  label: (value: T) => string
+) =>
+  chosen === null || options.some(option => option.value === chosen)
+    ? options
+    : [...options, { value: chosen, label: label(chosen) }]
+
 /** The names in a period's expenses, once each, for a filter's options. */
 const optionsOf = (pairs: [string, string][]) =>
   [...new Map(pairs)]
@@ -51,16 +84,18 @@ const optionsOf = (pairs: [string, string][]) =>
 /** The names shown are the current ones; the saved copy if it is gone. */
 const useCurrentNames = () => {
   const categories = useExpensesStore(state => state.categories)
-  const { trucks, trailers } = useFleetStore()
+  const { trucks, trailers, drivers } = useFleetStore()
   return useMemo(() => {
     const byId = (items: readonly { id: string; name: string }[]) =>
       new Map(items.map(item => [item.id, item.name]))
     const category = byId(categories)
     const truck = byId(trucks)
     const trailer = byId(trailers)
+    const driver = byId(drivers)
     return {
       category: (id: string) => category.get(id) ?? null,
       truck: (id: string) => truck.get(id) ?? null,
+      driver: (id: string) => driver.get(id) ?? null,
       link: (expense: Expense) =>
         expenseLinkText({
           ...expense,
@@ -72,7 +107,7 @@ const useCurrentNames = () => {
             expense.trailerName,
         }),
     }
-  }, [categories, trucks, trailers])
+  }, [categories, trucks, trailers, drivers])
 }
 
 function ExpenseCard({
@@ -156,11 +191,14 @@ function ExpensesScreen() {
   const expenses = useExpensesStore()
   const loadFleet = useFleetStore(state => state.load)
   const names = useCurrentNames()
+  const currency = useSessionStore(
+    state => state.organization?.defaultCurrency ?? 'NIO'
+  )
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [kind, setKind] = useState<ExpenseKind | null>(null)
-  const [truckId, setTruckId] = useState<string | null>(null)
-  const { load, loadCategories } = expenses
+  // Kept in the store: back from an expense they are on (specs/0043 RF-12)
+  const { view, setFilters, load, loadCategories } = expenses
+  const tripIds = useMemo(() => tripIdsOf(expenses.items), [expenses.items])
+  const trips = useExpenseTrips(orgId, tripIds)
 
   useEffect(() => {
     if (!orgId) return
@@ -194,25 +232,141 @@ function ExpensesScreen() {
             : []
         )
       ),
+      // backend specs/0043 RF-4, RF-5
+      trips: tripOptions(
+        expenses.items,
+        trips.tripOf,
+        trip => tripOption(trip).label
+      ),
+      drivers: driverOptions(expenses.items, trips.tripOf, names.driver),
     }),
-    [expenses.items, names]
+    [expenses.items, names, trips.tripOf]
   )
 
-  const shown = expenses.items.filter(
-    expense =>
-      (categoryId === null || expense.categoryId === categoryId) &&
-      (kind === null || expense.kind === kind) &&
-      (truckId === null || expense.truckId === truckId)
-  )
-  const filtered = categoryId !== null || kind !== null || truckId !== null
+  const shown = filterExpenses(expenses.items, view, trips.tripOf)
+  const filtered = expenseFiltersOn(view)
   const total = totalsByCurrency(shown)
   const byCategory = totalsByCategory(shown, names.category)
 
   const clearFilters = () => {
-    setCategoryId(null)
-    setKind(null)
-    setTruckId(null)
+    setFilters(NO_EXPENSE_FILTERS)
   }
+
+  // In the sheet, in this order (specs/0043); a list shows with something
+  // to choose, or chosen (RF-11)
+  const categoryOptions = [
+    ...options.categories,
+    ...view.categoryIds
+      .filter(id => !options.categories.some(option => option.value === id))
+      .map(id => ({ value: id, label: names.category(id) ?? 'Categoría' })),
+  ]
+  const truckOptions = withChosen(
+    options.trucks,
+    view.truckId,
+    id => names.truck(id) ?? 'Camión'
+  )
+  const tripChoices = withChosen(options.trips, view.tripId, id => {
+    const trip = trips.tripOf(id)
+    return trip ? tripOption(trip).label : 'Viaje'
+  })
+  const driverChoices = withChosen(
+    options.drivers,
+    view.driverId,
+    id => names.driver(id) ?? 'Conductor'
+  )
+  const filters: AnySheetFilter[] = [
+    ...(categoryOptions.length > 0
+      ? [
+          {
+            kind: 'many' as const,
+            label: 'Categorías',
+            allLabel: 'Todas',
+            options: categoryOptions,
+            values: view.categoryIds,
+            onChange: (categoryIds: string[]) => {
+              setFilters({ categoryIds })
+            },
+          },
+        ]
+      : []),
+    sheetFilter({
+      label: 'Corresponde a',
+      allLabel: 'Todos',
+      options: KIND_OPTIONS,
+      value: view.kind,
+      onChange: (kind: ExpenseKind | null) => {
+        setFilters({ kind })
+      },
+    }),
+    ...(truckOptions.length > 0
+      ? [
+          sheetFilter({
+            label: 'Camión',
+            list: true,
+            allLabel: 'Todos',
+            options: truckOptions,
+            value: view.truckId,
+            onChange: truckId => {
+              setFilters({ truckId })
+            },
+          }),
+        ]
+      : []),
+    ...(tripChoices.length > 0
+      ? [
+          sheetFilter({
+            label: 'Viaje',
+            list: true,
+            allLabel: 'Todos',
+            options: tripChoices,
+            value: view.tripId,
+            onChange: tripId => {
+              setFilters({ tripId })
+            },
+          }),
+        ]
+      : []),
+    ...(driverChoices.length > 0
+      ? [
+          {
+            ...sheetFilter({
+              label: 'Conductor',
+              list: true,
+              allLabel: 'Todos',
+              options: driverChoices,
+              value: view.driverId,
+              onChange: driverId => {
+                setFilters({ driverId })
+              },
+            }),
+            // Its trips' expenses need the trips (RF-5)
+            hint:
+              trips.status === 'error'
+                ? 'Sin señal: solo los gastos donde se eligió el conductor.'
+                : undefined,
+          },
+        ]
+      : []),
+    sheetFilter({
+      label: 'Comprobante',
+      allLabel: 'Todos',
+      options: RECEIPT_OPTIONS,
+      value: view.receipt,
+      onChange: (receipt: ReceiptFilter | null) => {
+        setFilters({ receipt })
+      },
+    }),
+    {
+      kind: 'amount',
+      label: 'Monto',
+      symbol: currencySymbol(currency),
+      money: amount => moneyTotal(currency, amount),
+      value: view.amount,
+      onChange: amount => {
+        setFilters({ amount })
+      },
+    },
+  ]
 
   const renderList = () => {
     if (expenses.status === 'error' && expenses.items.length === 0) {
@@ -358,39 +512,7 @@ function ExpensesScreen() {
                 ? 'Ver 1 gasto'
                 : `Ver ${String(shown.length)} gastos`
             }
-            filters={[
-              ...(options.categories.length > 1 || categoryId !== null
-                ? [
-                    sheetFilter({
-                      label: 'Categoría',
-                      list: true,
-                      allLabel: 'Todas',
-                      options: options.categories,
-                      value: categoryId,
-                      onChange: setCategoryId,
-                    }),
-                  ]
-                : []),
-              sheetFilter({
-                label: 'Corresponde a',
-                allLabel: 'Todos',
-                options: KIND_OPTIONS,
-                value: kind,
-                onChange: setKind,
-              }),
-              ...(options.trucks.length > 1 || truckId !== null
-                ? [
-                    sheetFilter({
-                      label: 'Camión',
-                      list: true,
-                      allLabel: 'Todos',
-                      options: options.trucks,
-                      value: truckId,
-                      onChange: setTruckId,
-                    }),
-                  ]
-                : []),
-            ]}
+            filters={filters}
           />
         </Box>
 
