@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -19,6 +20,8 @@ import type { Role } from 'utils/roles'
 import {
   accountWithRole,
   client,
+  cloudMeasurement,
+  ORG_ID,
   driver,
   expense,
   presetCategories,
@@ -61,6 +64,10 @@ const documentsApi = vi.hoisted(() => ({
   PHOTO_TOO_BIG: 'trip-document-photo-too-big',
 }))
 vi.mock('services/tripDocuments', () => documentsApi)
+
+// The trip's measurements (backend specs/0042 RF-6)
+const measurementsApi = vi.hoisted(() => ({ readTripMeasurements: vi.fn() }))
+vi.mock('services/cloudMeasurements', () => measurementsApi)
 
 const pdfApi = vi.hoisted(() => ({ downloadTripReport: vi.fn() }))
 vi.mock('services/tripPdf', () => pdfApi)
@@ -187,6 +194,7 @@ beforeEach(() => {
   })
   tripsApi.readTrip.mockResolvedValue(null)
   documentsApi.readTripDocuments.mockResolvedValue([])
+  measurementsApi.readTripMeasurements.mockResolvedValue([])
   signIn()
 })
 
@@ -807,6 +815,46 @@ describe('the trip', () => {
     expect(income).toHaveTextContent('Precio del viajeC$25,000.00 NIO')
     expect(income).toHaveTextContent('Parada en LeónC$2,500.00 NIO')
     expect(income).toHaveTextContent('TotalC$27,500.00 NIO')
+  })
+
+  // backend specs/0042 RF-6, CA-3
+  test('its measurements are listed; without any, it says so', async () => {
+    measurementsApi.readTripMeasurements.mockResolvedValue([
+      cloudMeasurement({
+        tripId: 'trip-1',
+        tripRoute: 'Managua → San José',
+        takenAt: new Date(2026, 9, 6, 9, 30),
+      }),
+      cloudMeasurement({
+        id: 'm-2',
+        tankName: 'Tanque derecho',
+        gallons: 40,
+        fillPercent: 40,
+        tripId: 'trip-1',
+        tripRoute: 'Managua → San José',
+        takenAt: new Date(2026, 9, 7, 7, 0),
+      }),
+    ])
+    tripsApi.readTrip.mockResolvedValue(trip())
+    renderAt('/viajes/trip-1')
+    const section = await screen.findByRole('region', {
+      name: 'Mediciones (2)',
+    })
+    expect(measurementsApi.readTripMeasurements).toHaveBeenCalledWith(
+      ORG_ID,
+      'trip-1'
+    )
+    const rows = within(section).getAllByRole('listitem')
+    expect(rows[0]).toHaveTextContent('Tanque izquierdo · Unidad 12')
+    expect(rows[0]).toHaveTextContent('70.5 gal · 52 %')
+    expect(rows[1]).toHaveTextContent('Tanque derecho · Unidad 12')
+
+    cleanup()
+    measurementsApi.readTripMeasurements.mockResolvedValue([])
+    renderAt('/viajes/trip-1')
+    expect(
+      await screen.findByText('Aún no hay mediciones en este viaje.')
+    ).toBeInTheDocument()
   })
 
   test('deleting asks first, then the trip goes', async () => {

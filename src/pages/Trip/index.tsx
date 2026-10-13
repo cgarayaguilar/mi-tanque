@@ -42,6 +42,7 @@ import { canWriteFleet } from 'utils/roles'
 import { RETRY_HINT } from 'utils/withTimeout'
 import { thirdParty, tripOwnership } from 'utils/ownership'
 import TripDocuments from './TripDocuments'
+import TripMeasurements from './TripMeasurements'
 
 // The backend's moves take a second or two; after this, a reload shows them
 const REFRESH_MS = 2500
@@ -432,6 +433,11 @@ function TripDetails({ trip }: { trip: Trip }) {
           </Box>
         </Stack>
       </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      {/* Its measurements (specs/0042 RF-6); its refuels are in Gastos */}
+      <TripMeasurements orgId={orgId} tripId={trip.id} />
 
       <Divider sx={{ my: 6 }} />
 
