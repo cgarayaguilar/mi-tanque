@@ -320,6 +320,14 @@ en cada push y PR.
   se cambia en el gasto. El viaje muestra sus mediciones (`pages/Trip/TripMeasurements`,
   `readTripMeasurements`); Historial dice "Viaje: …" y filtra por viaje (`tripId` en
   `store/cloudHistory`, `store/cloudRefuels` y el CSV).
+- **Filtros de Gastos (specs/0043):** la lógica es pura, en `utils/expenseFilters`
+  (`filterExpenses`, `tripOptions`, `driverOptions`) y `utils/amountQuery` (Mayor a, Menor a, Igual
+  a al centavo, Entre con los dos extremos; lo escrito se guarda como texto). Los filtros viven en
+  `view` de `store/expenses` (se conservan al volver de un gasto y se reinician con la
+  organización). Conductor cuenta también los gastos de los viajes que manejó: los viajes que no
+  se conocen se leen por id (`useExpenseTrips`, `readTripsByIds`). `FilterSheet` acepta además
+  `kind: 'many'` (varias opciones, con casillas y chips) y `kind: 'amount'`; un filtro de varias
+  cuenta como uno.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
