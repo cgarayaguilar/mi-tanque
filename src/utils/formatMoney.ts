@@ -8,6 +8,14 @@ import { formatNumber } from 'utils/formatNumber'
 export const currencySymbol = (currency: Currency) =>
   CURRENCY_DETAILS[currency].symbol
 
+/**
+ * An amount with its symbol, without the code: "C$25,000.00"; below zero,
+ * "-C$2,000.00". For a table's cells, whose column says the currency
+ * (backend specs/0041 RF-7).
+ */
+export const moneyAmount = (currency: Currency, amount: number) =>
+  `${amount < 0 ? '-' : ''}${currencySymbol(currency)}${formatNumber(Math.abs(amount), 2)}`
+
 /** A total: "C$9,274.26 NIO"; below zero, "-C$300.00 NIO" (a loss). */
 export const moneyTotal = (currency: Currency, amount: number) =>
   `${amount < 0 ? '-' : ''}${currencySymbol(currency)}${formatNumber(Math.abs(amount), 2)} ${currency}`

@@ -1,18 +1,17 @@
 import { jsPDF } from 'jspdf'
 import { autoTable, type CellHookData, type RowInput } from 'jspdf-autotable'
+import interRegular from 'assets/fonts/Inter-Regular.subset.ttf?inline'
+import interSemiBold from 'assets/fonts/Inter-SemiBold.subset.ttf?inline'
 import { colorTokens } from 'theme/tokens'
-import {
-  FIRST_MONEY_COLUMN,
-  type ReportRow,
-  type TripReport,
-} from 'utils/tripReport'
+import type { ReportRow, TripReport } from 'utils/tripReport'
 
 // Draws the trips' PDF (backend specs/0040 RF-7). Loaded with import() when
 // "PDF" is tapped: jsPDF never reaches the index chunk (RNF-1)
 
 /** Half an inch, in points (RF-7). */
 const MARGIN = 36
-const PROFIT_COLUMN = FIRST_MONEY_COLUMN + 2
+/** Inter, the app's font: it has "₡" and "→" (backend specs/0041 RF-8). */
+const FONT = 'Inter'
 // Printed on white paper: the light colors, whatever the screen's mode
 const color = colorTokens.light
 
@@ -23,6 +22,13 @@ export const drawTripReport = (report: TripReport) => {
     unit: 'pt',
     format: 'letter',
   })
+  // Cut to what a Spanish PDF uses (src/assets/fonts/README.md); inlined
+  // as data URLs in this lazy chunk
+  const base64 = (dataUrl: string) => dataUrl.slice(dataUrl.indexOf(',') + 1)
+  doc.addFileToVFS('Inter-Regular.ttf', base64(interRegular))
+  doc.addFont('Inter-Regular.ttf', FONT, 'normal')
+  doc.addFileToVFS('Inter-SemiBold.ttf', base64(interSemiBold))
+  doc.addFont('Inter-SemiBold.ttf', FONT, 'bold')
   const width = doc.internal.pageSize.getWidth()
   const height = doc.internal.pageSize.getHeight()
   let y = MARGIN
@@ -34,7 +40,7 @@ export const drawTripReport = (report: TripReport) => {
     textColor: string,
     gap: number
   ) => {
-    doc.setFont('helvetica', style)
+    doc.setFont(FONT, style)
     doc.setFontSize(size)
     doc.setTextColor(textColor)
     const lines = doc.splitTextToSize(text, width - 2 * MARGIN) as string[]
@@ -79,8 +85,7 @@ export const drawTripReport = (report: TripReport) => {
   }
 
   const paint = (data: CellHookData) => {
-    if (data.column.index >= FIRST_MONEY_COLUMN)
-      data.cell.styles.halign = 'right'
+    if (data.column.index >= report.moneyFrom) data.cell.styles.halign = 'right'
     const row =
       data.section === 'body'
         ? meta[data.row.index]
@@ -89,7 +94,7 @@ export const drawTripReport = (report: TripReport) => {
           : null
     if (!row) return
     if (row.cancelled) data.cell.styles.textColor = color.muted
-    if (row.losing && data.column.index === PROFIT_COLUMN)
+    if (row.losing && data.column.index === report.profitColumn)
       data.cell.styles.textColor = color.error
   }
 
@@ -103,7 +108,7 @@ export const drawTripReport = (report: TripReport) => {
     showFoot: 'lastPage',
     margin: { top: MARGIN, right: MARGIN, bottom: MARGIN + 12, left: MARGIN },
     styles: {
-      font: 'helvetica',
+      font: FONT,
       fontSize: 8,
       cellPadding: 4,
       // A long name breaks into lines, never cut (RF-7)
@@ -114,13 +119,20 @@ export const drawTripReport = (report: TripReport) => {
     },
     headStyles: { fillColor: color.primary, textColor: color.onPrimary },
     footStyles: { fillColor: color.surfaceStrong, textColor: color.ink },
-    columnStyles: { 0: { cellWidth: 56 }, 5: { cellWidth: 56 } },
+    // Short columns stay narrow; names take the rest
+    columnStyles: Object.fromEntries(
+      report.head.flatMap((column, index) =>
+        ['N.º', 'Fecha', 'Estado'].includes(column)
+          ? [[index, { cellWidth: column === 'N.º' ? 40 : 56 }]]
+          : []
+      )
+    ),
     didParseCell: paint,
   })
 
   // "Solo Camioneros · Página 2 de 5" at the foot of each page (RF-7)
   const pages = doc.getNumberOfPages()
-  doc.setFont('helvetica', 'normal')
+  doc.setFont(FONT, 'normal')
   doc.setFontSize(8)
   doc.setTextColor(color.muted)
   for (let page = 1; page <= pages; page++) {
