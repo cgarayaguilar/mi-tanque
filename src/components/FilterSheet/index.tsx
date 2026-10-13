@@ -1,9 +1,18 @@
 import { useId, useState } from 'react'
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
+import Checkbox from '@mui/material/Checkbox'
 import Drawer from '@mui/material/Drawer'
+import FormControl from '@mui/material/FormControl'
+import FormHelperText from '@mui/material/FormHelperText'
+import FormLabel from '@mui/material/FormLabel'
 import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import MenuItem from '@mui/material/MenuItem'
+import OutlinedInput from '@mui/material/OutlinedInput'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
@@ -14,6 +23,15 @@ import { AutocompleteBase } from 'components/AutocompleteField'
 import { ChoiceButtonsBase } from 'components/ChoiceButtons'
 import { CHIP_HEIGHT, type FilterOption } from 'components/FilterChip'
 import { radius, space } from 'theme/tokens'
+import {
+  AMOUNT_OP_LABELS,
+  AMOUNT_OPS,
+  ANY_AMOUNT,
+  amountIssues,
+  amountMatcher,
+  amountText,
+  type AmountQuery,
+} from 'utils/amountQuery'
 
 // The filters of a list in a sheet from below (backend specs/0039): one
 // button in sight, every filter inside
@@ -25,6 +43,7 @@ const SIDE_WIDTH = 350
 const BUTTONS_UP_TO = 3
 
 export interface SheetFilter {
+  kind?: 'one'
   label: string
   /**
    * A list that can grow (clients, trucks, drivers): always a list with
@@ -38,7 +57,37 @@ export interface SheetFilter {
   onChange: (value: string | null) => void
   /** Without `allLabel`, the value that filters nothing (RF-6). */
   defaultValue?: string
+  /** Under the field: why it filters less than it says (specs/0043 RF-5). */
+  hint?: string | undefined
 }
+
+/**
+ * Several values of a growing list (specs/0043 RF-1): a list with search
+ * where they are checked; none filters nothing.
+ */
+export interface ManySheetFilter {
+  kind: 'many'
+  label: string
+  /** Shown when none is chosen: "Todas". */
+  allLabel: string
+  options: readonly FilterOption<string>[]
+  values: readonly string[]
+  onChange: (values: string[]) => void
+}
+
+/** An amount: a condition and one or two amounts (specs/0043 RF-7). */
+export interface AmountSheetFilter {
+  kind: 'amount'
+  label: string
+  /** The organization's currency symbol, in the fields: "C$". */
+  symbol: string
+  /** "C$1,000.00 NIO": an amount as the active filter says it. */
+  money: (amount: number) => string
+  value: AmountQuery
+  onChange: (value: AmountQuery) => void
+}
+
+export type AnySheetFilter = SheetFilter | ManySheetFilter | AmountSheetFilter
 
 /**
  * A filter of some values: what is chosen in the sheet is always one of its
@@ -63,21 +112,53 @@ export const sheetFilter = <T extends string>(filter: {
   },
 })
 
-/** Whether a filter narrows the list (RF-2). */
-export const isActive = (filter: SheetFilter) =>
-  filter.value !== null && filter.value !== filter.defaultValue
+/**
+ * Whether a filter narrows the list (RF-2): several values count as one
+ * (specs/0043 RF-8), and an amount only once it is valid.
+ */
+export const isActive = (filter: AnySheetFilter) => {
+  switch (filter.kind) {
+    case 'many':
+      return filter.values.length > 0
+    case 'amount':
+      return amountMatcher(filter.value) !== null
+    default:
+      return filter.value !== null && filter.value !== filter.defaultValue
+  }
+}
 
 /** "Cliente: Walmart", one per filter on: what a report says (specs/0040). */
-export const appliedFilters = (filters: readonly SheetFilter[]) =>
-  filters
-    .filter(isActive)
-    .map(
-      filter =>
-        `${filter.label}: ${
+export const appliedFilters = (filters: readonly AnySheetFilter[]) =>
+  filters.filter(isActive).map(filter => {
+    switch (filter.kind) {
+      case 'many':
+        return `${filter.label}: ${filter.options
+          .filter(option => filter.values.includes(option.value))
+          .map(option => option.label)
+          .join(', ')}`
+      case 'amount':
+        return `${filter.label}: ${amountText(filter.value, filter.money) ?? ''}`
+      default:
+        return `${filter.label}: ${
           filter.options.find(option => option.value === filter.value)?.label ??
           String(filter.value)
         }`
-    )
+    }
+  })
+
+/** A filter as it was before any was chosen. */
+const cleared = (filter: AnySheetFilter) => {
+  switch (filter.kind) {
+    case 'many':
+      filter.onChange([])
+      return
+    case 'amount':
+      filter.onChange(ANY_AMOUNT)
+      return
+    default:
+      filter.onChange(filter.defaultValue ?? null)
+  }
+}
 
 // The "Todos" option of a field: '' is no filter
 const ALL = ''
@@ -111,13 +192,219 @@ function FilterField({ filter, id }: { filter: SheetFilter; id: string }) {
       options={options}
       value={value}
       onChange={change}
+      hint={filter.hint}
     />
   )
 }
 
+type ManyOption = FilterOption<string>
+const searchMany = createFilterOptions<ManyOption>({
+  stringify: option => option.label,
+})
+
+/** Several values, checked in a list with search (specs/0043 RF-1). */
+function ManyField({ filter, id }: { filter: ManySheetFilter; id: string }) {
+  const chosen = filter.options.filter(option =>
+    filter.values.includes(option.value)
+  )
+  return (
+    <FormControl fullWidth>
+      <FormLabel htmlFor={id}>{filter.label}</FormLabel>
+      <Autocomplete<ManyOption, true>
+        id={id}
+        multiple
+        disableCloseOnSelect
+        options={filter.options}
+        value={chosen}
+        filterOptions={searchMany}
+        getOptionLabel={option => option.label}
+        getOptionKey={option => option.value}
+        isOptionEqualToValue={(option, value) => option.value === value.value}
+        onChange={(_, next) => {
+          filter.onChange(next.map(option => option.value))
+        }}
+        noOptionsText="Sin resultados"
+        openText="Abrir"
+        closeText="Cerrar"
+        clearText="Quitar todas"
+        renderOption={({ key, ...props }, option, { selected }) => (
+          <Box component="li" key={key} {...props} sx={{ gap: 1 }}>
+            <Checkbox
+              checked={selected}
+              size="small"
+              tabIndex={-1}
+              disableRipple
+              sx={{ p: 0.5 }}
+              slotProps={{ input: { 'aria-hidden': true } }}
+            />
+            {option.label}
+          </Box>
+        )}
+        slotProps={{
+          chip: { size: 'small' },
+        }}
+        renderInput={params => (
+          <OutlinedInput
+            {...params.InputProps}
+            fullWidth
+            placeholder={chosen.length === 0 ? filter.allLabel : undefined}
+            inputProps={{ ...params.inputProps, id }}
+          />
+        )}
+      />
+    </FormControl>
+  )
+}
+
+/** One amount typed in the sheet, with the currency's symbol. */
+function AmountInput({
+  id,
+  label,
+  symbol,
+  value,
+  error,
+  onChange,
+}: {
+  id: string
+  label: string
+  symbol: string
+  value: string
+  error: string | undefined
+  onChange: (value: string) => void
+}) {
+  const helpId = `${id}-help`
+  return (
+    <FormControl fullWidth error={error !== undefined}>
+      <FormLabel htmlFor={id}>{label}</FormLabel>
+      <OutlinedInput
+        id={id}
+        value={value}
+        placeholder="0.00"
+        onChange={event => {
+          onChange(event.target.value)
+        }}
+        startAdornment={
+          <InputAdornment position="start">{symbol}</InputAdornment>
+        }
+        slotProps={{
+          input: {
+            inputMode: 'decimal',
+            autoComplete: 'off',
+            'aria-describedby': error === undefined ? undefined : helpId,
+          },
+        }}
+      />
+      {error !== undefined && (
+        <FormHelperText id={helpId}>{error}</FormHelperText>
+      )}
+    </FormControl>
+  )
+}
+
+/**
+ * "Monto": a condition from Material's menu, then one amount, or "Desde"
+ * and "Hasta" (specs/0043 RF-7). A wrong amount says so and filters
+ * nothing.
+ */
+function AmountField({
+  filter,
+  id,
+}: {
+  filter: AmountSheetFilter
+  id: string
+}) {
+  const { value } = filter
+  const issues = amountIssues(value)
+  const labelId = `${id}-label`
+  const change = (next: Partial<AmountQuery>) => {
+    filter.onChange({ ...value, ...next })
+  }
+  return (
+    <Box role="group" aria-labelledby={labelId}>
+      {/* Drawn as every field's label: it names the group */}
+      <FormLabel id={labelId} component="p">
+        {filter.label}
+      </FormLabel>
+      <Stack spacing={3}>
+        <Select
+          id={`${id}-op`}
+          value={value.op}
+          input={<OutlinedInput />}
+          inputProps={{ 'aria-label': 'Condición' }}
+          SelectDisplayProps={{ 'aria-label': 'Condición' }}
+          onChange={event => {
+            const op = event.target.value
+            change(op === 'any' ? ANY_AMOUNT : { op })
+          }}
+        >
+          {AMOUNT_OPS.map(op => (
+            <MenuItem key={op} value={op}>
+              {AMOUNT_OP_LABELS[op]}
+            </MenuItem>
+          ))}
+        </Select>
+        {value.op === 'between' ? (
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <AmountInput
+              id={`${id}-from`}
+              label="Desde"
+              symbol={filter.symbol}
+              value={value.from}
+              error={issues.from}
+              onChange={from => {
+                change({ from })
+              }}
+            />
+            <AmountInput
+              id={`${id}-to`}
+              label="Hasta"
+              symbol={filter.symbol}
+              value={value.to}
+              error={issues.to}
+              onChange={to => {
+                change({ to })
+              }}
+            />
+          </Box>
+        ) : (
+          value.op !== 'any' && (
+            <AmountInput
+              id={`${id}-from`}
+              label="Monto"
+              symbol={filter.symbol}
+              value={value.from}
+              error={issues.from}
+              onChange={from => {
+                change({ from })
+              }}
+            />
+          )
+        )}
+      </Stack>
+    </Box>
+  )
+}
+
+function AnyFilterField({
+  filter,
+  id,
+}: {
+  filter: AnySheetFilter
+  id: string
+}) {
+  switch (filter.kind) {
+    case 'many':
+      return <ManyField filter={filter} id={id} />
+    case 'amount':
+      return <AmountField filter={filter} id={id} />
+    default:
+      return <FilterField filter={filter} id={id} />
+  }
+}
+
 interface FilterSheetProps {
   /** The filters that apply now, in order (RF-4). */
-  filters: readonly SheetFilter[]
+  filters: readonly AnySheetFilter[]
   /** "Ver 12 viajes": what is left with the filters on (RF-3). */
   resultLabel: string
 }
@@ -235,7 +522,7 @@ export default function FilterSheet({
           }}
         >
           {filters.map((filter, index) => (
-            <FilterField
+            <AnyFilterField
               key={filter.label}
               filter={filter}
               id={`${fieldId}-${String(index)}`}
@@ -255,11 +542,21 @@ export default function FilterSheet({
           }}
         >
           <Button
-            disabled={active === 0}
+            disabled={
+              active === 0 &&
+              !filters.some(
+                filter => filter.kind === 'amount' && filter.value.op !== 'any'
+              )
+            }
             onClick={() => {
-              for (const filter of filters)
-                if (isActive(filter))
-                  filter.onChange(filter.defaultValue ?? null)
+              for (const filter of filters) {
+                // An amount not yet valid goes too (specs/0043 RF-9)
+                if (
+                  isActive(filter) ||
+                  (filter.kind === 'amount' && filter.value.op !== 'any')
+                )
+                  cleared(filter)
+              }
             }}
           >
             Limpiar filtros

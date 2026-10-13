@@ -97,14 +97,15 @@ export const filterOptions = async (
 export const sheetFilterNames = async (scope: HTMLElement = document.body) => {
   const sheet = await openFilters(scope)
   // In the order shown: buttons are a group, a list is a combobox
-  const names = [
-    ...sheet.querySelectorAll('[role="group"], [role="combobox"]'),
-  ].map(field =>
-    field instanceof HTMLInputElement
-      ? (field.labels?.[0]?.textContent ?? null)
-      : document.getElementById(field.getAttribute('aria-labelledby') ?? '')
-          ?.textContent
-  )
+  // A field inside another, as the amount's condition, is part of it
+  const names = [...sheet.querySelectorAll('[role="group"], [role="combobox"]')]
+    .filter(field => !field.parentElement?.closest('[role="group"]'))
+    .map(field =>
+      field instanceof HTMLInputElement
+        ? (field.labels?.[0]?.textContent ?? null)
+        : document.getElementById(field.getAttribute('aria-labelledby') ?? '')
+            ?.textContent
+    )
   await closeFilters()
   return names
 }
