@@ -1592,32 +1592,54 @@ describe('its documents', () => {
   })
 })
 
-// backend specs/0040
+// backend specs/0040, 0041
 describe('the PDF', () => {
-  // CA-1, CA-2: what the screen shows, with its filters, grouping and order
-  test('it takes what is shown, as it is shown', async () => {
+  const exportAs = async (option: string) => {
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar viajes en PDF' })
+    )
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: new RegExp(`^${option}`) })
+    )
+    await waitFor(() => {
+      expect(sileo.success).toHaveBeenCalledWith({ title: 'PDF listo' })
+    })
+    return pdfApi.downloadTripReport.mock.lastCall as [TripReport, string]
+  }
+
+  // 0040 CA-1, CA-2: what the screen shows, with its filters, grouping and order
+  test('the internal report takes what is shown, as it is shown', async () => {
     renderAt('/viajes')
     await screen.findByRole('list', { name: 'Viajes' })
     await filterBy('Cliente', 'Transportes Pérez')
     await filterBy('Agrupar', 'Camión')
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Exportar viajes en PDF' })
-    )
+    const [report, fileName] = await exportAs('Reporte interno')
 
-    await waitFor(() => {
-      expect(sileo.success).toHaveBeenCalledWith({ title: 'PDF listo' })
-    })
-    const [report, fileName] = pdfApi.downloadTripReport.mock.lastCall as [
-      TripReport,
-      string,
-    ]
     expect(fileName).toMatch(/^solo-camioneros-viajes-.+_.+\.pdf$/)
     expect(report.applied).toBe(
       'Cliente: Transportes Pérez · Agrupado por Camión · Orden: Fecha, más reciente primero'
     )
     expect(report.sections.map(section => section.title)).toEqual(['Unidad 12'])
     expect(report.sections[0]?.rows).toHaveLength(2)
+  })
+
+  // 0041 CA-1, CA-2
+  test('the support for the client: its client, one table, no cancelled', async () => {
+    renderAt('/viajes')
+    await screen.findByRole('list', { name: 'Viajes' })
+    await filterBy('Cliente', 'Transportes Pérez')
+    await filterBy('Agrupar', 'Camión')
+
+    const [report, fileName] = await exportAs('Soporte para el cliente')
+
+    expect(fileName).toMatch(/^solo-camioneros-soporte-viajes-.+\.pdf$/)
+    expect(report.title).toBe('Soporte de viajes')
+    expect(report.applied).toBe('Cliente: Transportes Pérez')
+    expect(report.sections).toHaveLength(1)
+    // trip-3 is cancelled: left out
+    expect(report.sections[0]?.rows).toHaveLength(1)
+    expect(report.head).not.toContain('Gastos (NIO)')
   })
 
   test('a viewer exports too; nothing shown, nothing to export', async () => {

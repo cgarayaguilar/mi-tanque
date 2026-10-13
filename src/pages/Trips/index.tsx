@@ -4,6 +4,9 @@ import { sileo } from 'sileo'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ListItemText from '@mui/material/ListItemText'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import ButtonBase from '@mui/material/ButtonBase'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
@@ -57,7 +60,12 @@ import { OWNERSHIP_OPTIONS, thirdParty, tripOwnership } from 'utils/ownership'
 import { tripTotals } from 'utils/tripTotals'
 import { RETRY_HINT } from 'utils/withTimeout'
 import { reportError } from 'utils/reportError'
-import { tripReport, tripReportFileName } from 'utils/tripReport'
+import {
+  tripReport,
+  tripReportFileName,
+  type TripPlates,
+  type TripReportKind,
+} from 'utils/tripReport'
 
 const DateModal = lazy(() => import('components/DateModal'))
 
@@ -224,6 +232,7 @@ function TripsScreen() {
   const loadFleet = useFleetStore(state => state.load)
   const [pickerIsOpen, setPickerIsOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [pdfMenu, setPdfMenu] = useState<HTMLElement | null>(null)
   // Kept in the store: back from a trip, the list is as it was (RF-8)
   const { load, view, setFilters, setGrouping, setOrder } = trips
   const { filters, grouping, order } = view
@@ -399,17 +408,33 @@ function TripsScreen() {
 
   // What is on the screen, as a PDF (specs/0040 RF-2): no new read; the
   // drawing loads only now
-  const exportPdf = () => {
+  // The truck's and trailer's plates today, or their names (0041 RF-2)
+  const plates: TripPlates = {
+    truck: (id, saved) =>
+      trucks.find(truck => truck.id === id)?.plate ?? names.truck(id, saved),
+    trailer: (id, saved) =>
+      trailers.find(trailer => trailer.id === id)?.plate ??
+      names.trailer(id, saved),
+  }
+
+  const exportPdf = (kind: TripReportKind) => {
+    setPdfMenu(null)
     const name = organization?.name ?? ''
     const report = tripReport({
+      kind,
       organization: name,
       period: periodText,
       trips: shown,
       groups: groups || null,
       filters: appliedFilters(sheetFilters),
+      client: filters.clientId
+        ? (options.clients.find(client => client.value === filters.clientId)
+            ?.label ?? null)
+        : null,
       grouping: grouping ? TRIP_GROUPING_LABELS[grouping] : null,
       order: TRIP_ORDER_LABELS[order],
       names,
+      plates,
       ownershipOf: trip => tripOwnership(trip, { trucks, trailers }),
       currency: organization?.defaultCurrency ?? 'USD',
       now: new Date(),
@@ -417,12 +442,13 @@ function TripsScreen() {
     setExporting(true)
     import('services/tripPdf')
       .then(({ downloadTripReport }) => {
-        downloadTripReport(report, tripReportFileName(period, name))
+        downloadTripReport(report, tripReportFileName(kind, period, name))
         sileo.success({ title: 'PDF listo' })
       })
       .catch((error: unknown) => {
         reportError(error, {
           operation: 'exportTripsPdf',
+          kind,
           trips: shown.length,
         })
         sileo.error({
@@ -567,14 +593,48 @@ function TripsScreen() {
                 variant="outlined"
                 startIcon={<PictureAsPdfOutlinedIcon />}
                 aria-label="Exportar viajes en PDF"
+                aria-haspopup="menu"
                 disabled={shown.length === 0}
                 loading={exporting}
                 loadingPosition="start"
-                onClick={exportPdf}
+                onClick={event => {
+                  setPdfMenu(event.currentTarget)
+                }}
               >
                 PDF
               </Button>
             )}
+            {/* For the office or for the client's invoice (0041 RF-1) */}
+            <Menu
+              anchorEl={pdfMenu}
+              open={pdfMenu !== null}
+              onClose={() => {
+                setPdfMenu(null)
+              }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              <MenuItem
+                onClick={() => {
+                  exportPdf('internal')
+                }}
+              >
+                <ListItemText
+                  primary="Reporte interno"
+                  secondary="Con gastos y utilidad"
+                />
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  exportPdf('client')
+                }}
+              >
+                <ListItemText
+                  primary="Soporte para el cliente"
+                  secondary="Solo viajes e ingresos"
+                />
+              </MenuItem>
+            </Menu>
             {canWrite && (
               <Button
                 variant="contained"

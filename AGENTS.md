@@ -296,16 +296,18 @@ en cada push y PR.
   viaje). La app nunca borra un archivo: borra el documento y el trigger del backend borra su
   archivo; al borrar el viaje, también sus documentos. Renombran o borran el Dueño, el
   Supervisor o quien lo subió (`canManageDocument`).
-- **Viajes en PDF (specs/0040):** el botón "PDF" de Viajes exporta lo que se ve (los viajes del
-  periodo con sus filtros, su agrupado y su orden), sin leer otra vez el servidor. El contenido lo
-  arma `tripReport` (`utils/tripReport`, pura, con tests): encabezado con lo aplicado
-  (`appliedFilters` de `components/FilterSheet`), filas, subtotales por grupo y total, cada
-  moneda aparte. Lo dibuja `services/tripPdf` con jsPDF y `jspdf-autotable` (carta horizontal,
-  encabezado de tabla en cada hoja, "Página N de M"), cargado con `import()` al tocar el botón.
-  La fuente estándar del PDF (Helvetica, WinAnsi) no trae "→" ni "₡": `pdfText` cambia la flecha
-  por "–" y quita lo que no tiene, y los montos van sin símbolo con el código de la moneda. El
-  PDF usa los colores claros de los tokens. `html2canvas` y `purify` (de jsPDF, sin usar) quedan
-  fuera del precache (`globIgnores` en `vite.config.mjs`).
+- **Viajes en PDF (specs/0040, 0041):** el botón "PDF" de Viajes abre un menú: **Reporte interno**
+  (con gastos y utilidad) o **Soporte para el cliente** (sin cancelados, sin gastos ni utilidad, una
+  sola tabla con Precio, Otros ingresos y Total, y "N.º" si algún viaje lo tiene). Exporta lo que se
+  ve, sin leer otra vez el servidor. El contenido lo arma `tripReport` (`utils/tripReport`, pura,
+  con tests) según su `kind`; el encabezado del interno usa `appliedFilters` de
+  `components/FilterSheet`. Camión y remolque van con su placa de hoy en la flota (o su nombre).
+  Lo dibuja `services/tripPdf` con jsPDF y `jspdf-autotable` (carta horizontal, encabezado de
+  tabla en cada hoja, "Página N de M"), cargado con `import()` al tocar una opción. La fuente es
+  **Inter recortada** (`src/assets/fonts`, con su licencia y el comando del recorte), incluida con
+  `?inline`: así todo monto lleva su símbolo (`moneyAmount` en las celdas, `moneyTotal` en los
+  totales, también "₡") y las rutas su "→". `pdfText` quita lo que la fuente no tiene
+  (`PDF_FONT_RANGES`). `html2canvas` y `purify` (de jsPDF, sin usar) quedan fuera del precache.
 - **Seguro (specs/0011):** `insuranceExpiresOn` de camiones y remolques es una fecha sin hora,
   `'AAAA-MM-DD'` (`utils/plainDate`); el aviso sale de `insuranceNotice` (`utils/insurance`).
 - **Avisos y modales (§8.8):** todo aviso al usuario es un toast de **Sileo** (`sileo.success`,
