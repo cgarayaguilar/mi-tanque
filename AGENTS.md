@@ -369,8 +369,12 @@ en cada push y PR.
   `npm run build && npm run preview`. Tras un deploy, las apps instaladas muestran el aviso de nueva
   versión.
 - **El calendario del periodo** (`components/DateModal`) es el `StaticDateRangePicker` de **MUI X
-  Pro**. La licencia se lee de `VITE_MUI_X_LICENSE_KEY` (Vercel y `.env.local`; nunca en el repo).
-  Sin ella funciona igual, pero muestra una marca de agua; en los tests es lo esperado.
+  Pro**. Sus siete periodos rápidos (semana de lunes a domingo, meses, 30 días, 3 y 6 meses) son
+  puros, en `utils/periodShortcuts`; sin `allowFuture` terminan hoy, y Viajes lo pasa para sus
+  viajes programados. Toda lista abre con los últimos 30 días (`defaultPeriod`, specs/0044). En el
+  teléfono ocupa la pantalla, con los periodos en dos columnas. La licencia se lee de
+  `VITE_MUI_X_LICENSE_KEY` (Vercel y `.env.local`; nunca en el repo). Sin ella funciona igual,
+  pero muestra una marca de agua; en los tests es lo esperado.
 - **MUI está fijado en la 7** (`@mui/material`, `@mui/icons-material` y MUI X): la licencia de MUI X
   Pro cubre la v7, y MUI X v7 solo acepta `@mui/material` 5–7. Con una clave de otra versión mayor
   sale "License key version mismatch" y la marca de agua. No los subas sin una licencia nueva.
