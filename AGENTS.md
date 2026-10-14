@@ -191,8 +191,11 @@ en cada push y PR.
   `store/trips` (con `import()`, lee todo el periodo hasta 1000 y recuerda los viajes por id en
   `known`). El formulario es `pages/TripEditor/TripForm`; la conversión, `tripFromForm` en
   `schemas/trips` (copia la tarifa; al editar con la misma tarifa conserva su copia y su moneda).
-  Semana y mes: `utils/tripPeriod` (lunes a domingo, hora del teléfono). Fecha y hora:
-  `components/DateTimeField` y `utils/dateTimeValue`. **Las reglas no revisan cada extra** (Firestore
+  Semana y mes: `utils/tripPeriod` (lunes a domingo, hora del teléfono). Las fechas del viaje
+  son **solo días** (specs/0045): `DateField` en el formulario y `tripDates` en `schemas/trips`
+  (inicio a las 00:00, fin opcional en todo estado, hasta el último instante de su día); se
+  muestran con `formatTripDate`. Los gastos siguen con fecha y hora (`components/DateTimeField` y
+  `utils/dateTimeValue`). **Las reglas no revisan cada extra** (Firestore
   evalúa como máximo 1000 expresiones por regla): la app los valida al escribir y al leer
   (`toExtras` en `services/trips`). El test "ten extras, two drivers…" de `tripRules` es la guardia
   de ese límite: cualquier campo nuevo del viaje tiene que mantenerlo en verde.
