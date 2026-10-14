@@ -7,6 +7,7 @@ import {
   tripToForm,
   type TripContext,
   type TripFormValues,
+  tripDates,
 } from 'schemas/trips'
 import {
   client,
@@ -67,18 +68,11 @@ describe('the form', () => {
     [{ rateId: '' }, 'rateId', 'Elige la tarifa'],
     [{ truckId: '' }, 'truckId', 'Elige el camión'],
     [{ driverId: '' }, 'driverId', 'Elige el conductor'],
-    [{ startAt: '' }, 'startAt', 'Escribe la fecha y hora de inicio'],
-    [
-      { status: 'done' as const },
-      'endAt',
-      'Para terminarlo, pon la fecha y hora de fin',
-    ],
-    [
-      { endAt: '2026-10-05T08:00' },
-      'endAt',
-      'El fin no puede ser antes del inicio',
-    ],
-    [{ endAt: 'invalid' }, 'endAt', 'Escribe una fecha y hora válidas'],
+    // Only days (backend specs/0045 RF-2)
+    [{ startAt: '' }, 'startAt', 'Elige la fecha de inicio'],
+    [{ startAt: 'invalid' }, 'startAt', 'Escribe una fecha válida'],
+    [{ endAt: '2026-10-05' }, 'endAt', 'El fin no puede ser antes del inicio'],
+    [{ endAt: 'invalid' }, 'endAt', 'Escribe una fecha válida'],
     [
       { extras: [{ description: '', amount: '0' }] },
       'extras.0.description',
@@ -94,6 +88,12 @@ describe('the form', () => {
       field,
       message,
     ])
+  })
+
+  // backend specs/0045 RF-2, CA-2: done without its end, or ending its first day
+  test('the end is optional, done too, and may be its first day', () => {
+    expect(messages({ ...fromRate, status: 'done' })).toEqual([])
+    expect(messages({ ...fromRate, endAt: '2026-10-06' })).toEqual([])
   })
 
   test('a manual trip needs its route and price; one driver twice is not two', () => {
@@ -118,7 +118,8 @@ describe('the fields written', () => {
   test('from a rate: its route and price copied, the names, the period', () => {
     expect(tripFromForm(fromRate, context)).toEqual({
       status: 'scheduled',
-      startAt: new Date(2026, 9, 6, 8, 0),
+      // Its day from 00:00 (specs/0045 RF-3)
+      startAt: new Date(2026, 9, 6),
       endAt: null,
       year: 2026,
       month: 10,
@@ -217,8 +218,7 @@ test("a trip's start within the rules' bounds", () => {
   )
   expect(tripStartIssue(new Date(2027, 9, 1), now)).toBeNull()
   expect(
-    tripFormSchema.safeParse({ ...fromRate, startAt: '0026-10-08T10:00' })
-      .success
+    tripFormSchema.safeParse({ ...fromRate, startAt: '0026-10-08' }).success
   ).toBe(false)
 })
 
@@ -237,4 +237,20 @@ test('places are saved without doubled spaces', () => {
       context
     )
   ).toMatchObject({ origin: 'León Viejo' })
+})
+
+// backend specs/0045 RF-3, CA-1: the start from 00:00, the end to its last instant
+test("a trip's days: the start at 00:00, the end through its last instant", () => {
+  expect(tripDates({ startAt: '2026-10-06', endAt: '2026-10-08' })).toEqual({
+    startAt: new Date(2026, 9, 6),
+    endAt: new Date(2026, 9, 8, 23, 59, 59, 999),
+  })
+  expect(tripDates({ startAt: '2026-10-06', endAt: '' })).toEqual({
+    startAt: new Date(2026, 9, 6),
+    endAt: null,
+  })
+  expect(tripDates({ startAt: '2026-02-31', endAt: 'invalid' })).toEqual({
+    startAt: null,
+    endAt: null,
+  })
 })

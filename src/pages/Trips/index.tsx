@@ -37,7 +37,7 @@ import { useFleetStore } from 'store/fleet'
 import { selectActiveRole, useSessionStore } from 'store/session'
 import { tripsPeriodOf, useTripsStore } from 'store/trips'
 import { layout, radius, softShadow, typeScale } from 'theme/tokens'
-import { formatMeasurementDate, formatPeriod } from 'utils/formatDate'
+import { formatPeriod, formatTripDate } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
 import { canWriteFleet } from 'utils/roles'
 import {
@@ -141,7 +141,7 @@ function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
         {moneyTotal(trip.currency, tripIncome(trip))}
       </Typography>
       {[
-        formatMeasurementDate(trip.startAt),
+        formatTripDate(trip.startAt),
         nameOf(clients, trip.clientId, trip.clientName),
         [
           thirdParty(nameOf(trucks, trip.truckId, trip.truckName), owned.truck),

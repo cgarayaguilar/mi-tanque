@@ -1,3 +1,4 @@
+import { endOfDay, startOfDay } from 'date-fns'
 // zod/mini: same validation as zod with a fraction of the bundle (§5.8)
 import * as z from 'zod/mini'
 import type { Currency } from 'schemas/account'
@@ -5,7 +6,8 @@ import type { Client } from 'schemas/clients'
 import type { Driver } from 'schemas/drivers'
 import type { Ownership, Trailer, Truck } from 'schemas/fleet'
 import type { Rate } from 'schemas/rates'
-import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
+import { fromDateTimeValue } from 'utils/dateTimeValue'
+import { fromPlainDate, toPlainDate } from 'utils/plainDate'
 import { formatEditable } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
 import { tripPeriod, type TripPeriod } from 'utils/tripPeriod'
@@ -117,6 +119,20 @@ export const tripStartIssue = (
 /** The rules take an expense up to a day ahead (backend specs/0026 RF-2). */
 export const isTooLate = (date: Date, now = new Date()) =>
   date.getTime() > now.getTime() + DAY_MS
+
+/**
+ * A trip's days as written: the start at 00:00 of its day and the end at
+ * the last instant of its own, so the whole last day counts (backend
+ * specs/0045 RF-3). Null for a date missing or not real.
+ */
+export const tripDates = (values: { startAt: string; endAt: string }) => {
+  const start = fromPlainDate(values.startAt)
+  const end = values.endAt ? fromPlainDate(values.endAt) : null
+  return {
+    startAt: start ? startOfDay(start) : null,
+    endAt: end ? endOfDay(end) : null,
+  }
+}
 
 /** What is wrong with an expense's typed date, or null (specs/0026). */
 export const expenseDateIssue = (value: string): string | null => {
@@ -254,17 +270,15 @@ export const tripFormSchema = z
       if (!values.driverId) issue(['driverId'], 'Elige el conductor')
       if (values.secondDriverId && values.secondDriverId === values.driverId)
         issue(['secondDriverId'], 'Elige otro conductor')
-      const start = fromDateTimeValue(values.startAt)
-      if (!start) issue(['startAt'], 'Escribe la fecha y hora de inicio')
+      // Dates without time; the end is optional, done too (specs/0045)
+      const { startAt: start, endAt: end } = tripDates(values)
+      if (!values.startAt) issue(['startAt'], 'Elige la fecha de inicio')
+      else if (!start) issue(['startAt'], 'Escribe una fecha válida')
       const startIssue = start ? tripStartIssue(start) : null
       if (startIssue) issue(['startAt'], startIssue)
-      const end = values.endAt ? fromDateTimeValue(values.endAt) : null
-      if (values.endAt && !end)
-        issue(['endAt'], 'Escribe una fecha y hora válidas')
+      if (values.endAt && !end) issue(['endAt'], 'Escribe una fecha válida')
       if (start && end && end < start)
         issue(['endAt'], 'El fin no puede ser antes del inicio')
-      if (values.status === 'done' && !values.endAt)
-        issue(['endAt'], 'Para terminarlo, pon la fecha y hora de fin')
     })
   )
 
@@ -309,8 +323,9 @@ export const tripFromForm = (
     : values.mode === 'rate'
       ? (context.rates.find(item => item.id === values.rateId) ?? null)
       : null
-  const startAt = fromDateTimeValue(values.startAt) ?? new Date()
-  const endAt = values.endAt ? fromDateTimeValue(values.endAt) : null
+  const dates = tripDates(values)
+  const startAt = dates.startAt ?? startOfDay(new Date())
+  const { endAt } = dates
   const secondDriverId = values.secondDriverId || null
   const trailerId = values.trailerId || null
   return {
@@ -373,7 +388,7 @@ export const EMPTY_TRIP_FORM = (now: Date): TripFormValues => ({
   trailerId: '',
   driverId: '',
   secondDriverId: '',
-  startAt: toDateTimeValue(now),
+  startAt: toPlainDate(now),
   endAt: '',
   tripNumber: '',
   description: '',
@@ -398,8 +413,8 @@ export const tripToForm = (trip: Trip): TripFormValues => ({
   trailerId: trip.trailerId ?? '',
   driverId: trip.driverId,
   secondDriverId: trip.secondDriverId ?? '',
-  startAt: toDateTimeValue(trip.startAt),
-  endAt: trip.endAt ? toDateTimeValue(trip.endAt) : '',
+  startAt: toPlainDate(trip.startAt),
+  endAt: trip.endAt ? toPlainDate(trip.endAt) : '',
   tripNumber: trip.tripNumber ?? '',
   description: trip.description ?? '',
   notes: trip.notes ?? '',

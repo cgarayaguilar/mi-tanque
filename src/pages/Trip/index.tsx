@@ -36,6 +36,7 @@ import {
   useSessionStore,
 } from 'store/session'
 import { useTripsStore } from 'store/trips'
+import { formatTripDate } from 'utils/formatDate'
 import { moneyTotal } from 'utils/formatMoney'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
@@ -49,9 +50,6 @@ const REFRESH_MS = 2500
 const MAX_REFRESHES = 4
 
 /** "lun 6 oct 2026, 08:00" */
-const tripDateTime = (date: Date) =>
-  format(date, 'EEE d MMM yyyy, HH:mm', { locale: es })
-
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Box>
@@ -261,9 +259,10 @@ function TripDetails({ trip }: { trip: Trip }) {
       </Stack>
 
       <Stack spacing={4}>
-        <Row label="Inicio">{tripDateTime(trip.startAt)}</Row>
+        {/* Only the days (specs/0045 RF-5) */}
+        <Row label="Inicio">{formatTripDate(trip.startAt)}</Row>
         <Row label="Fin">
-          {trip.endAt ? tripDateTime(trip.endAt) : 'Sin terminar'}
+          {trip.endAt ? formatTripDate(trip.endAt) : 'Sin fecha'}
         </Row>
         <Row label="Periodo">
           Semana {trip.weekLabel} · {trip.monthLabel}

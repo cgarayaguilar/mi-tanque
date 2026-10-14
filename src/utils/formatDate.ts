@@ -8,6 +8,10 @@ export const formatPeriod = ({ start, end }: Period): string =>
     ? `${format(start, 'd MMM', { locale: es })} – ${format(end, 'd MMM yyyy', { locale: es })}`
     : `${format(start, 'd MMM yyyy', { locale: es })} – ${format(end, 'd MMM yyyy', { locale: es })}`
 
+/** "mar 6 oct 2026": a trip's day, without time (backend specs/0045 RF-5). */
+export const formatTripDate = (date: Date): string =>
+  format(date, 'EEE d MMM yyyy', { locale: es })
+
 /** "mar 30 sep, 14:05" */
 export const formatMeasurementDate = (date: Date): string =>
   format(date, 'EEE d MMM, HH:mm', { locale: es })

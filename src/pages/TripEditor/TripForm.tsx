@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { set as setTime } from 'date-fns'
 import {
   useFieldArray,
   useForm,
@@ -17,7 +18,7 @@ import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import AutocompleteField from 'components/AutocompleteField'
 import ChoiceButtons from 'components/ChoiceButtons'
-import DateTimeField from 'components/DateTimeField'
+import DateField from 'components/DateField'
 import FormSection from 'components/FormSection'
 import MoreDetails, {
   countFilled,
@@ -59,6 +60,7 @@ import { useFleetStore } from 'store/fleet'
 import { recoverFromLostPermission, useSessionStore } from 'store/session'
 import { useTripsStore } from 'store/trips'
 import { fromDateTimeValue, toDateTimeValue } from 'utils/dateTimeValue'
+import { fromPlainDate } from 'utils/plainDate'
 import { currencySymbol, moneyTotal } from 'utils/formatMoney'
 import { formatEditable } from 'utils/formatNumber'
 import { parseDecimal } from 'utils/parseDecimal'
@@ -302,12 +304,17 @@ export default function TripForm({
   // A new expense's date is the trip's start, or now if it starts later
   // (0026 RF-12)
   const newExpenseRow = (): ExpenseRowValues => {
-    const start = fromDateTimeValue(getValues('startAt'))
+    // The trip has only its day (specs/0045): that day, at this time
+    const now = new Date()
+    const day = fromPlainDate(getValues('startAt'))
+    const start = day
+      ? setTime(day, { hours: now.getHours(), minutes: now.getMinutes() })
+      : null
     return {
       id: newExpenseId(),
       categoryId: '',
       amount: '',
-      takenAt: toDateTimeValue(start && !isTooLate(start) ? start : new Date()),
+      takenAt: toDateTimeValue(start && !isTooLate(start) ? start : now),
       description: '',
       driverId: '',
     }
@@ -753,21 +760,20 @@ export default function TripForm({
           hint="¿Cuándo?"
           issues={sectionIssues(2)}
         >
-          <DateTimeField
+          {/* Only the days, no time (specs/0045 RF-1) */}
+          <DateField
             id="tripStartAt"
             label="Inicio"
             control={control}
             name="startAt"
             error={errors.startAt?.message}
           />
-          <DateTimeField
+          <DateField
             id="tripEndAt"
             label="Fin (opcional)"
-            hint="Para marcarlo Terminado."
             control={control}
             name="endAt"
             error={errors.endAt?.message}
-            clearable
           />
           <SelectField
             id="tripStatus"

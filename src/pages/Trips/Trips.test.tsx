@@ -544,7 +544,8 @@ describe('the form', () => {
   })
 
   // CA-2, CA-4
-  test('a manual trip with two drivers; done needs its end', async () => {
+  // backend specs/0045 CA-2: done without its end is saved
+  test('a manual trip with two drivers, done without its end', async () => {
     renderAt('/viajes/nuevo')
 
     await choose('Cliente', 'Fletes Ríos')
@@ -559,13 +560,6 @@ describe('the form', () => {
     await choose('Segundo conductor', 'Marta Gómez')
     await choose('Estado', 'Terminado')
     fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
-    expect(
-      await screen.findByText('Para terminarlo, pon la fecha y hora de fin')
-    ).toBeInTheDocument()
-    expect(tripsApi.saveTripWithExpenses).not.toHaveBeenCalled()
-
-    await choose('Estado', 'En curso')
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar viaje' }))
     await waitFor(() => {
       expect(tripsApi.saveTripWithExpenses).toHaveBeenCalledWith(
         'new-trip',
@@ -576,7 +570,8 @@ describe('the form', () => {
           origin: 'León',
           destination: 'Tegucigalpa',
           price: 18000,
-          status: 'in_progress',
+          status: 'done',
+          endAt: null,
           driverIds: ['driver-1', 'driver-2'],
         }),
         true,
@@ -815,6 +810,9 @@ describe('the trip', () => {
     expect(income).toHaveTextContent('Precio del viajeC$25,000.00 NIO')
     expect(income).toHaveTextContent('Parada en LeónC$2,500.00 NIO')
     expect(income).toHaveTextContent('TotalC$27,500.00 NIO')
+    // Its days, without time (backend specs/0045 RF-5, CA-5): saved at 08:00
+    expect(screen.getByText('mar 6 oct 2026')).toBeInTheDocument()
+    expect(screen.getByText('Sin fecha')).toBeInTheDocument()
   })
 
   // backend specs/0042 RF-6, CA-3
