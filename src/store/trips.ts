@@ -1,9 +1,8 @@
 import { create } from 'zustand'
-import { endOfMonth, startOfMonth } from 'date-fns'
 import type { Trip } from 'schemas/trips'
 import { useSessionStore } from 'store/session'
 import type { Period } from 'types'
-import { toWholeDays } from 'utils/period'
+import { defaultPeriod, toWholeDays } from 'utils/period'
 import { reportError } from 'utils/reportError'
 import {
   DEFAULT_TRIP_ORDER,
@@ -17,12 +16,6 @@ import {
 const api = () => import('services/trips')
 
 export type TripsStatus = 'idle' | 'loading' | 'ready' | 'error'
-
-/** This month, from its first day to its last (specs/0025 RF-6). */
-export const currentMonth = (now = new Date()): Period => ({
-  start: startOfMonth(now),
-  end: endOfMonth(now),
-})
 
 /** How the list shows its trips (specs/0030). */
 export interface TripsView {
@@ -40,7 +33,7 @@ const DEFAULT_VIEW: TripsView = {
 
 interface TripsState {
   orgId: string | null
-  /** null until chosen: the current month. */
+  /** null until chosen: the last 30 days (specs/0044 RF-6). */
   chosenPeriod: Period | null
   items: Trip[]
   /** More trips than read started in the period (RF-7). */
@@ -68,7 +61,7 @@ interface TripsState {
 
 export const tripsPeriodOf = (
   state: Pick<TripsState, 'chosenPeriod'>
-): Period => state.chosenPeriod ?? currentMonth()
+): Period => state.chosenPeriod ?? defaultPeriod()
 
 const newestFirst = (trips: Trip[]) =>
   [...trips].sort((a, b) => b.startAt.getTime() - a.startAt.getTime())

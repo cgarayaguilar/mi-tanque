@@ -1,12 +1,15 @@
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import type { Period } from 'types'
 
-// Pure date helpers for the history's period. Kept apart from the stores so
+// Pure date helpers for a list's period. Kept apart from the stores so
 // the calendar (a lazy chunk) can use them without pulling in IndexedDB.
 
-/** The last week, through the end of today. */
+/**
+ * The period a list opens with: the last 30 days, today included (backend
+ * specs/0044 RF-6), as "Los últimos 30 días" of the calendar.
+ */
 export const defaultPeriod = (now = new Date()): Period => ({
-  start: startOfDay(subDays(now, 7)),
+  start: startOfDay(subDays(now, 29)),
   end: endOfDay(now),
 })
 

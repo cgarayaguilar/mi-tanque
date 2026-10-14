@@ -19,11 +19,12 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('the default period is the last week through the end of today', () => {
+// backend specs/0044 RF-6
+test('the default period is the last 30 days, today included', () => {
   const period = defaultPeriod(new Date(2026, 8, 30, 9, 15))
 
   expect(period).toEqual({
-    start: new Date(2026, 8, 23),
+    start: new Date(2026, 8, 1),
     end: new Date(2026, 8, 30, 23, 59, 59, 999),
   })
 })

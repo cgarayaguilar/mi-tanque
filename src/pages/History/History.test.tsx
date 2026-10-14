@@ -61,7 +61,7 @@ test('explains an empty period and offers to change it', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Cambiar periodo' }))
   // (jsdom has no layout, so the calendar itself may log; not checked here)
   expect(
-    await screen.findByRole('dialog', { name: 'Selecciona un periodo' })
+    await screen.findByRole('dialog', { name: 'Elige el periodo' })
   ).toBeInTheDocument()
 })
 
@@ -176,11 +176,11 @@ test('the period picker is an accessible dialog that can be cancelled', async ()
 
   fireEvent.click(
     await screen.findByRole('button', {
-      name: 'Periodo: 23 sep – 30 sep 2026. Cambiar',
+      name: 'Periodo: 1 sep – 30 sep 2026. Cambiar',
     })
   )
   expect(
-    await screen.findByRole('dialog', { name: 'Selecciona un periodo' })
+    await screen.findByRole('dialog', { name: 'Elige el periodo' })
   ).toBeInTheDocument()
 
   fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))

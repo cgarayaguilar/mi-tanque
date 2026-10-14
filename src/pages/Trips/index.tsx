@@ -807,6 +807,8 @@ function TripsScreen() {
             onClose={() => {
               setPickerIsOpen(false)
             }}
+            // Scheduled trips are in the days to come (specs/0044 RF-3)
+            allowFuture
           />
         </Suspense>
       )}

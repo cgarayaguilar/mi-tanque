@@ -16,7 +16,7 @@ export type CloudHistoryStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 interface CloudHistoryState {
   orgId: string | null
-  /** null until chosen: the last week through today (like the basic mode). */
+  /** null until chosen: the last 30 days (specs/0044 RF-6), as the basic mode. */
   chosenPeriod: Period | null
   equipmentId: string | null
   /** Only one trip's (backend specs/0042 RF-8). */

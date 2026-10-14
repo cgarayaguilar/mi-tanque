@@ -6,10 +6,9 @@ import {
 } from 'schemas/expenseCategories'
 import type { Expense } from 'schemas/expenses'
 import { selectActiveRole, useSessionStore } from 'store/session'
-import { currentMonth } from 'store/trips'
 import type { Period } from 'types'
 import { NO_EXPENSE_FILTERS, type ExpenseFilters } from 'utils/expenseFilters'
-import { toWholeDays } from 'utils/period'
+import { defaultPeriod, toWholeDays } from 'utils/period'
 import { reportError } from 'utils/reportError'
 import { canWriteFleet } from 'utils/roles'
 
@@ -26,7 +25,7 @@ interface ExpensesState {
   orgId: string | null
   categories: ExpenseCategory[]
   categoriesStatus: ExpensesStatus
-  /** null until chosen: the current month. */
+  /** null until chosen: the last 30 days (specs/0044 RF-6). */
   chosenPeriod: Period | null
   items: Expense[]
   truncated: boolean
@@ -64,7 +63,7 @@ interface ExpensesState {
 
 export const expensesPeriodOf = (
   state: Pick<ExpensesState, 'chosenPeriod'>
-): Period => state.chosenPeriod ?? currentMonth()
+): Period => state.chosenPeriod ?? defaultPeriod()
 
 const newestFirst = (expenses: Expense[]) =>
   [...expenses].sort((a, b) => b.takenAt.getTime() - a.takenAt.getTime())
