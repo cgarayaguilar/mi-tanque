@@ -198,10 +198,15 @@ const rowOf = (
   numbered: boolean
 ): ReportRow => {
   const { names, plates } = input
-  const owned = input.ownershipOf(trip)
+  const internal = input.kind === 'internal'
   const money = (amount: number) => cellMoney(trip.currency, amount)
   const income = tripIncome(trip)
   const profit = income - trip.expensesTotal
+  // Whose the equipment is stays inside: the client's support says only
+  // its plates (owner, 2026-10-18)
+  const owned = internal
+    ? input.ownershipOf(trip)
+    : { truck: null, trailer: null }
   const truck = thirdParty(
     plates.truck(trip.truckId, trip.truckName),
     owned.truck

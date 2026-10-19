@@ -259,6 +259,26 @@ describe('the support for the client', () => {
     ])
   })
 
+  // Regression (owner, 2026-10-18): "(de un tercero)" is internal, and
+  // showed in the client's support
+  // After N.º, Fecha and Ruta: Camión and Remolque
+  test("a third party's truck and trailer go by their plates only", () => {
+    const theirs = input({
+      ownershipOf: () => ({ truck: 'third_party', trailer: 'third_party' }),
+    })
+    const [support] = tripReport({ ...theirs, kind: 'client' }).sections
+    expect(support?.rows[0]?.cells.slice(3, 5)).toEqual([
+      'M 123-456',
+      'R 98-765',
+    ])
+    expect(
+      JSON.stringify(tripReport({ ...theirs, kind: 'client' }))
+    ).not.toMatch(/tercero/)
+    // The internal report still says it
+    const [internal] = tripReport(theirs).sections
+    expect(internal?.rows[0]?.cells[3]).toMatch(/de un tercero/)
+  })
+
   test('without a trip number, no N.º column', () => {
     const plain = tripReport(input({ kind: 'client', trips: trips.slice(1) }))
     expect(plain.head[0]).toBe('Fecha')

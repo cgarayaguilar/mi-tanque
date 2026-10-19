@@ -304,7 +304,9 @@ en cada push y PR.
   sola tabla con Precio, Otros ingresos y Total, y "N.º" si algún viaje lo tiene). Exporta lo que se
   ve, sin leer otra vez el servidor. El contenido lo arma `tripReport` (`utils/tripReport`, pura,
   con tests) según su `kind`; el encabezado del interno usa `appliedFilters` de
-  `components/FilterSheet`. Camión y remolque van con su placa de hoy en la flota (o su nombre).
+  `components/FilterSheet`. Camión y remolque van con su placa de hoy en la flota (o su nombre);
+  "(de un tercero)" sale solo en el interno: el soporte para el cliente no dice de quién es el
+  equipo.
   Lo dibuja `services/tripPdf` con jsPDF y `jspdf-autotable` (carta horizontal, encabezado de
   tabla en cada hoja, "Página N de M"), cargado con `import()` al tocar una opción. La fuente es
   **Inter recortada** (`src/assets/fonts`, con su licencia y el comando del recorte), incluida con
